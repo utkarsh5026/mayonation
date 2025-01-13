@@ -1,15 +1,4 @@
-export type EaseFn = (t: number) => number;
-export type EaseFnName =
-  | "linear"
-  | "easeIn"
-  | "easeOut"
-  | "easeInOut"
-  | "easeInQuad"
-  | "easeOutQuad"
-  | "easeInOutQuad"
-  | "easeInCubic"
-  | "easeOutCubic"
-  | "easeInOutCubic";
+import type { EaseFn, EaseFnName } from "./types";
 
 /**
  * The linear easing moves at a constant speed from start to finish.
