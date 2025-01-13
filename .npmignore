@@ -1,0 +1,10 @@
+src/
+examples/
+docs/
+tests/
+.github/
+.vscode/
+.idea/
+*.log
+*.config.js
+tsconfig.json 
