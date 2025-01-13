@@ -5,6 +5,7 @@ import {
   TransformAxis,
   TransformPropertyName,
 } from "../core/types";
+import { decomposeMatrix } from "./geom";
 import {
   interpolateLinear,
   interpolateRotation,
@@ -314,66 +315,6 @@ class TransformHandler {
     this.hasStateChanges = false;
     this.computeTransform();
   }
-}
-
-/**
- * Decomposes a DOMMatrix into individual transform components.
- * This function extracts translation, rotation, scale, and skew values from a matrix
- * transformation, making it easier to manipulate and interpolate individual properties.
- *
- * The decomposition follows these steps:
- * 1. Translation: Directly extracted from matrix.e (tx) and matrix.f (ty)
- * 2. Rotation: Calculated using Euler angles from the rotation sub-matrix
- * 3. Scale: Derived from the length of the transformed basis vectors
- * 4. Skew: Computed from the non-orthogonal relationships between axes
- *
- * Matrix component reference:
- * [m11 m12 m13 m14]
- * [m21 m22 m23 m24]
- * [m31 m32 m33 m34]
- * [m41 m42 m43 m44]
- *
- * @param matrix - The DOMMatrix to decompose
- * @returns TransformState object containing separated transform components:
- *          - translate: {x, y, z} in pixels
- *          - rotate: {x, y, z} in degrees
- *          - scale: {x, y, z} as multipliers
- *          - skew: {x, y} in degrees
- */
-function decomposeMatrix(matrix: DOMMatrix): TransformState {
-  const translate = {
-    x: matrix.e,
-    y: matrix.f,
-    z: 0,
-  };
-
-  const rotate = {
-    x: Math.atan2(matrix.m23, matrix.m33),
-    y: Math.atan2(
-      -matrix.m13,
-      Math.sqrt(matrix.m23 * matrix.m23 + matrix.m33 * matrix.m33)
-    ),
-    z: Math.atan2(matrix.m12, matrix.m11),
-  };
-
-  const rotateDeg = {
-    x: rotate.x * (180 / Math.PI),
-    y: rotate.y * (180 / Math.PI),
-    z: rotate.z * (180 / Math.PI),
-  };
-
-  const scale = {
-    x: Math.sqrt(matrix.m11 * matrix.m11 + matrix.m12 * matrix.m12),
-    y: Math.sqrt(matrix.m21 * matrix.m21 + matrix.m22 * matrix.m22),
-    z: Math.sqrt(matrix.m31 * matrix.m31 + matrix.m32 * matrix.m32),
-  };
-
-  const skew = {
-    x: Math.atan2(matrix.m21, matrix.m22) * (180 / Math.PI),
-    y: Math.atan2(matrix.m12, matrix.m22) * (180 / Math.PI),
-  };
-
-  return { translate, rotate: rotateDeg, scale, skew };
 }
 
 export default TransformHandler;
