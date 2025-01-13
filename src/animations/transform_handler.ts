@@ -24,15 +24,33 @@ const transformProperties = new Map<TransformPropertyName, NumericUnit>([
   ["skewY", "deg"],
 ]);
 
+/**
+ * Handles transform animations and state management for DOM elements.
+ * Manages translation, rotation, scale and skew transformations.
+ */
 class TransformHandler {
+  /** Current transform state containing all transform values */
   private transformState: TransformState;
+
+  /** Flag indicating if transform state has changed and needs recomputing */
   private hasStateChanges: boolean = false;
+
+  /** Cached transform string to avoid recomputing when unchanged */
   private currentTransform: string = "";
 
+  /** Valid units for rotation transforms */
   static readonly rotationUnits: NumericUnit[] = ["deg"];
+
+  /** Valid units for scale transforms */
   static readonly scaleUnits: NumericUnit[] = ["px", "%", "em", "rem"];
+
+  /** Valid units for translation transforms */
   static readonly translationUnits: NumericUnit[] = ["px", "%", "em", "rem"];
 
+  /**
+   * Creates a new TransformHandler instance.
+   * @param el - The DOM element to handle transforms for
+   */
   constructor(el: HTMLElement) {
     this.transformState = {
       translate: { x: 0, y: 0, z: 0 },
@@ -43,6 +61,11 @@ class TransformHandler {
     this.parseInitialTransforms(el);
   }
 
+  /**
+   * Gets the allowed units for a transform property.
+   * @param property - The transform property name
+   * @returns Array of valid units for the property
+   */
   protected getAllowedUnits(property: TransformPropertyName): NumericUnit[] {
     if (property.startsWith("translate"))
       return TransformHandler.translationUnits;
@@ -52,6 +75,10 @@ class TransformHandler {
     return ["px"];
   }
 
+  /**
+   * Parses and sets initial transform values from an element's computed style.
+   * @param element - The element to parse transforms from
+   */
   private parseInitialTransforms(element: HTMLElement) {
     const { transform } = window.getComputedStyle(element);
     if (transform && transform !== "none") {
@@ -60,6 +87,10 @@ class TransformHandler {
     }
   }
 
+  /**
+   * Generates a CSS transform string from the current transform state.
+   * @returns CSS transform string
+   */
   private generateTransformString(): string {
     const { translate, rotate, scale, skew } = this.transformState;
 
@@ -86,6 +117,14 @@ class TransformHandler {
     return transforms.join(" ");
   }
 
+  /**
+   * Interpolates between two transform values based on progress.
+   * @param property - The transform property being interpolated
+   * @param from - Starting transform value
+   * @param to - Ending transform value
+   * @param progress - Animation progress from 0 to 1
+   * @returns Interpolated transform value
+   */
   public interpolate(
     property: TransformPropertyName,
     from: AnmimationValue,
@@ -102,6 +141,11 @@ class TransformHandler {
     }
   }
 
+  /**
+   * Parses a transform property into its state key and axis.
+   * @param property - Transform property name
+   * @returns Tuple of [state key, axis]
+   */
   private parseTransformProperty(
     property: string
   ): [keyof TransformState, TransformAxis] {
@@ -138,10 +182,20 @@ class TransformHandler {
     return results[0];
   }
 
+  /**
+   * Checks if a property is a shorthand that affects multiple axes.
+   * @param property - Transform property name
+   * @returns True if property is shorthand
+   */
   private isShorthandProperty(property: string): boolean {
     return property === "translate" || property === "scale";
   }
 
+  /**
+   * Updates the internal transform state for a property.
+   * @param property - Transform property to update
+   * @param value - New transform value
+   */
   private updateTransformState(
     property: TransformPropertyName,
     value: AnmimationValue
@@ -162,6 +216,11 @@ class TransformHandler {
     });
   }
 
+  /**
+   * Computes and returns the current CSS transform string.
+   * Only recomputes if state has changed.
+   * @returns CSS transform string
+   */
   public computeTransform(): string {
     if (!this.hasStateChanges) return this.currentTransform;
 
@@ -170,6 +229,11 @@ class TransformHandler {
     return this.currentTransform;
   }
 
+  /**
+   * Updates a single transform property.
+   * @param property - Transform property to update
+   * @param value - New transform value
+   */
   public updateTransform(
     property: TransformPropertyName,
     value: AnmimationValue
@@ -178,6 +242,10 @@ class TransformHandler {
     this.hasStateChanges = true;
   }
 
+  /**
+   * Updates multiple transform properties at once.
+   * @param updates - Map of properties and values to update
+   */
   public updateTransforms(
     updates: Map<TransformPropertyName, AnmimationValue>
   ): void {
@@ -187,6 +255,11 @@ class TransformHandler {
     this.hasStateChanges = true;
   }
 
+  /**
+   * Gets the current value of a transform property.
+   * @param property - Transform property name
+   * @returns Current value and unit
+   */
   public getCurrentTransform(property: TransformPropertyName): AnmimationValue {
     const [stateKey, axis] = this.parseTransformProperty(property);
 
@@ -200,6 +273,12 @@ class TransformHandler {
     return { value: currentValue, unit: transformProperties.get(property)! };
   }
 
+  /**
+   * Creates an animation value with the correct unit for a property.
+   * @param property - Transform property name
+   * @param value - Numeric value
+   * @returns Animation value with unit
+   */
   public parseTransformValue(
     property: TransformPropertyName,
     value: number
@@ -207,10 +286,18 @@ class TransformHandler {
     return { value: value, unit: transformProperties.get(property)! };
   }
 
+  /**
+   * Checks if a property is a valid transform property.
+   * @param property - Property name to check
+   * @returns True if valid transform property
+   */
   public static isTransformProperty(property: string): boolean {
     return transformProperties.has(property as TransformPropertyName);
   }
 
+  /**
+   * Resets transform state back to initial values.
+   */
   public reset(): void {
     this.transformState = {
       translate: { x: 0, y: 0, z: 0 },
