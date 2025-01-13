@@ -1,36 +1,181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animation Library Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add Roboto Mono font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .box {
-            width: 100px;
-            height: 100px;
-            background-color: #3498db;
-            margin: 20px;
-        }
+        /* Remove the old styles as we'll use Tailwind instead */
     </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"Roboto Mono"', 'monospace'],
+                    },
+                },
+            },
+        }
+    </script>
 </head>
 
-<body>
-    <div class="box" id="animationTarget"></div>
-    <button id="startAnimation">Start Animation</button>
+<body class="bg-gray-900 min-h-screen p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Title and description -->
+        <h1 class="text-4xl font-bold text-white mb-4 font-mono">Animation Playground</h1>
+        <p class="text-gray-400 mb-8 font-mono">Experiment with different animation properties</p>
+
+        <!-- Main content area - side by side layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Preview area -->
+            <div class="bg-gray-800 rounded-lg p-8 flex items-center justify-center h-[600px]">
+                <div id="myBox" class="w-[200px] h-[100px] bg-blue-500 rounded-lg shadow-lg"></div>
+            </div>
+
+            <!-- Controls wrapper -->
+            <div class="space-y-6">
+                <!-- Transform Properties -->
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-white font-semibold mb-4 font-mono">Transform Properties</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-300 font-mono">
+                                <input type="checkbox" id="rotateCheck" class="mr-2">
+                                Rotate
+                                <span class="ml-2 text-gray-500 text-sm">(0° to 360°)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="rotateValue" value="270" min="0" max="360" 
+                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                <span id="rotateDisplay" class="text-gray-300 font-mono w-12">270°</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-300 font-mono">
+                                <input type="checkbox" id="scaleCheck" class="mr-2">
+                                Scale
+                                <span class="ml-2 text-gray-500 text-sm">(0.1x to 3x)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="scaleValue" value="2" min="0.1" max="3" step="0.1"
+                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                <span id="scaleDisplay" class="text-gray-300 font-mono w-12">2x</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-300 font-mono">
+                                <input type="checkbox" id="translateCheck" class="mr-2">
+                                Translate X
+                                <span class="ml-2 text-gray-500 text-sm">(-300px to 300px)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="translateValue" value="200" min="-300" max="300"
+                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                <span id="translateDisplay" class="text-gray-300 font-mono w-12">200px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Animation Settings -->
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-white font-semibold mb-4 font-mono">Animation Settings</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-300 font-mono">
+                                Duration
+                                <span class="ml-2 text-gray-500 text-sm">(100ms to 3000ms)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="durationValue" value="1000" min="100" max="3000" step="100"
+                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                <span id="durationDisplay" class="text-gray-300 font-mono w-16">1000ms</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-300 font-mono">
+                                Easing
+                                <span class="ml-2 text-gray-500 text-sm">(timing function)</span>
+                            </label>
+                            <select id="easingValue" 
+                                class="w-full bg-gray-700 text-white rounded px-3 py-2 font-mono">
+                                <option value="linear">Linear</option>
+                                <option value="easeInOut" selected>Ease In Out</option>
+                                <option value="easeIn">Ease In</option>
+                                <option value="easeOut">Ease Out</option>
+                            </select>
+                            <p class="text-gray-500 text-sm font-mono mt-1">
+                                • Linear: Constant speed
+                                • Ease In Out: Slow start and end
+                                • Ease In: Slow start
+                                • Ease Out: Slow end
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Play button -->
+                <button onclick="playAnimation()" 
+                    class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors">
+                    Play Animation
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
-        import { animate } from '../src/index.ts'
+        import { Animation } from "../src/core/animation.ts";
 
-        document.getElementById('startAnimation').onclick = () => {
-            animate('#animationTarget', {
-                x: 200,
-                opacity: 0.5
-            }, {
-                duration: 1000,
-                easing: 'easeOutQuad'
+        const box = document.getElementById('myBox');
+
+        window.playAnimation = () => {
+            const properties = {};
+            
+            // Collect selected transformations
+            if (document.getElementById('rotateCheck').checked) {
+                properties.rotate = Number(document.getElementById('rotateValue').value);
+            }
+            if (document.getElementById('scaleCheck').checked) {
+                properties.scale = Number(document.getElementById('scaleValue').value);
+            }
+            if (document.getElementById('translateCheck').checked) {
+                properties.translateX = Number(document.getElementById('translateValue').value);
+            }
+
+            // Only animate if at least one property is selected
+            if (Object.keys(properties).length > 0) {
+                new Animation(box, properties, {
+                    duration: Number(document.getElementById('durationValue').value),
+                    easing: document.getElementById('easingValue').value
+                }).play();
+            }
+        };
+    </script>
+
+    <script>
+        // Update display values when sliders change
+        const updateDisplay = (inputId, displayId, suffix = '') => {
+            const input = document.getElementById(inputId);
+            const display = document.getElementById(displayId);
+            input.addEventListener('input', () => {
+                display.textContent = input.value + suffix;
             });
-        }
+        };
+
+        // Initialize all displays
+        updateDisplay('rotateValue', 'rotateDisplay', '°');
+        updateDisplay('scaleValue', 'scaleDisplay', 'x');
+        updateDisplay('translateValue', 'translateDisplay', 'px');
+        updateDisplay('durationValue', 'durationDisplay', 'ms');
     </script>
 </body>
 
