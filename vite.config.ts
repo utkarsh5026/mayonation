@@ -11,10 +11,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Provide globals for UMD build
-        globals: {
-          // Add any external dependencies here
-        },
+        exports: "named",
       },
     },
   },
