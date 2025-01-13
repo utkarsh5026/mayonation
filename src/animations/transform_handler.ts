@@ -85,27 +85,41 @@ class TransformHandler {
   private generateTransformString(): string {
     const { translate, rotate, scale, skew } = this.transformState;
 
-    const transforms = [];
+    const transformOrder = [
+      {
+        check: () =>
+          translate.x !== 0 || translate.y !== 0 || translate.z !== 0,
+        generate: () =>
+          `translate3d(${translate.x}px, ${translate.y}px, ${translate.z}px)`,
+      },
+      {
+        // Handle rotations in specific ZYX order to match decomposition
+        check: () => rotate.z !== 0,
+        generate: () => `rotateZ(${rotate.z}deg)`,
+      },
+      {
+        check: () => rotate.y !== 0,
+        generate: () => `rotateY(${rotate.y}deg)`,
+      },
+      {
+        check: () => rotate.x !== 0,
+        generate: () => `rotateX(${rotate.x}deg)`,
+      },
+      {
+        check: () => scale.x !== 1 || scale.y !== 1 || scale.z !== 1,
+        generate: () => `scale3d(${scale.x}, ${scale.y}, ${scale.z})`,
+      },
+      // Last to apply (leftmost in CSS string)
+      {
+        check: () => skew.x !== 0 || skew.y !== 0,
+        generate: () => `skew(${skew.x}deg, ${skew.y}deg)`,
+      },
+    ];
 
-    if (translate.x !== 0 || translate.y !== 0 || translate.z !== 0) {
-      transforms.push(
-        `translate3d(${translate.x}px, ${translate.y}px, ${translate.z}px)`
-      );
-    }
-
-    if (rotate.x !== 0) transforms.push(`rotateX(${rotate.x}deg)`);
-    if (rotate.y !== 0) transforms.push(`rotateY(${rotate.y}deg)`);
-    if (rotate.z !== 0) transforms.push(`rotateZ(${rotate.z}deg)`);
-
-    if (scale.x !== 1 || scale.y !== 1 || scale.z !== 1) {
-      transforms.push(`scale3d(${scale.x}, ${scale.y}, ${scale.z})`);
-    }
-
-    if (skew.x !== 0 || skew.y !== 0) {
-      transforms.push(`skew(${skew.x}deg, ${skew.y}deg)`);
-    }
-
-    return transforms.join(" ");
+    return transformOrder
+      .filter(({ check }) => check())
+      .map(({ generate }) => generate())
+      .join(" ");
   }
 
   /**
