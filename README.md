@@ -11,3 +11,7 @@ A lightweight, performant TypeScript animation library for smooth DOM animations
 - 📦 Tiny footprint
 - 🔄 Pause, resume, and destroy controls
 
+
+
+The code is written by me and the documentation here is AI generated 
+
