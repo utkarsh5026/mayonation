@@ -1,4 +1,4 @@
-import { AnmimationValue } from "../core/types";
+import { AnmimationValue, RotationOptions } from "../core/types";
 
 /**
  * Interpolates between two scale values using logarithmic interpolation.
@@ -74,16 +74,36 @@ export function interpolateScale(
 export function interpolateRotation(
   from: AnmimationValue,
   to: AnmimationValue,
-  progress: number
+  progress: number,
+  options?: RotationOptions
 ): AnmimationValue {
-  const fromRad = from.value * (Math.PI / 180);
-  const toRad = to.value * (Math.PI / 180);
+  const { maintainRevolution = false, direction = "clockwise" } = options || {};
 
-  let diff = toRad - fromRad;
-  if (Math.abs(diff) > Math.PI) diff -= Math.sign(diff) * 2 * Math.PI;
+  let fromDeg = from.value;
+  let toDeg = to.value;
 
-  const interpolatedRad = fromRad + diff * progress;
-  return { value: interpolatedRad * (180 / Math.PI), unit: "deg" };
+  if (!maintainRevolution) {
+    fromDeg = normalizeAngle(fromDeg);
+    toDeg = normalizeAngle(toDeg);
+  }
+
+  let diff = toDeg - fromDeg;
+  if (!maintainRevolution) {
+    switch (direction) {
+      case "clockwise":
+        if (diff < 0) diff += 360;
+        break;
+      case "counterclockwise":
+        if (diff > 0) diff -= 360;
+        break;
+      case "shortest":
+        if (Math.abs(diff) > 180) {
+          diff -= Math.sign(diff) * 360;
+        }
+        break;
+    }
+  }
+  return { value: fromDeg + diff * progress, unit: "deg" };
 }
 
 /**
@@ -106,4 +126,14 @@ export function interpolateLinear(
     value: from.value + (to.value - from.value) * progress,
     unit: from.unit,
   };
+}
+
+/**
+ * Normalizes an angle to be within the range of 0 to 360 degrees.
+ *
+ * @param angle - The angle to normalize, in degrees
+ * @returns The normalized angle, in degrees
+ */
+function normalizeAngle(angle: number) {
+  return ((angle % 360) + 360) % 360;
 }

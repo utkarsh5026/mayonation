@@ -185,3 +185,8 @@ export type TransformState = {
 };
 
 export type TransformAxis = "x" | "y" | "z";
+
+export type RotationOptions = {
+  maintainRevolution?: boolean;
+  direction?: "clockwise" | "counterclockwise" | "shortest";
+};
