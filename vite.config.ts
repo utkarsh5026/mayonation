@@ -5,13 +5,14 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "AnimationLibrary",
-      fileName: "animation-library",
-      formats: ["es", "umd"],
+      name: "mate",
+      fileName: (format) =>
+        `animation-library.${format === "es" ? "mjs" : "umd.js"}`,
     },
     rollupOptions: {
+      external: [],
       output: {
-        exports: "named",
+        globals: {},
       },
     },
   },

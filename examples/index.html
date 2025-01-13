@@ -43,42 +43,126 @@
                     <h2 class="text-white font-semibold mb-4 font-mono">Transform Properties</h2>
                     
                     <div class="space-y-6">
-                        <div class="space-y-2">
-                            <label class="flex items-center text-gray-300 font-mono">
-                                <input type="checkbox" id="rotateCheck" class="mr-2">
-                                Rotate
-                                <span class="ml-2 text-gray-500 text-sm">(0° to 360°)</span>
-                            </label>
-                            <div class="flex items-center gap-4">
-                                <input type="range" id="rotateValue" value="270" min="0" max="360" 
-                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                                <span id="rotateDisplay" class="text-gray-300 font-mono w-12">270°</span>
+                        <!-- Rotation Controls -->
+                        <div class="space-y-4">
+                            <h3 class="text-gray-300 font-mono">Rotation</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="rotateXCheck" class="mr-2">
+                                    Rotate X
+                                    <span class="ml-2 text-gray-500 text-sm">(0° to 360°)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="rotateXValue" value="0" min="0" max="360" 
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="rotateXDisplay" class="text-gray-300 font-mono w-12">0°</span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="rotateYCheck" class="mr-2">
+                                    Rotate Y
+                                    <span class="ml-2 text-gray-500 text-sm">(0° to 360°)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="rotateYValue" value="0" min="0" max="360" 
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="rotateYDisplay" class="text-gray-300 font-mono w-12">0°</span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="rotateZCheck" class="mr-2">
+                                    Rotate Z
+                                    <span class="ml-2 text-gray-500 text-sm">(0° to 360°)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="rotateZValue" value="0" min="0" max="360" 
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="rotateZDisplay" class="text-gray-300 font-mono w-12">0°</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="space-y-2">
-                            <label class="flex items-center text-gray-300 font-mono">
-                                <input type="checkbox" id="scaleCheck" class="mr-2">
-                                Scale
-                                <span class="ml-2 text-gray-500 text-sm">(0.1x to 3x)</span>
-                            </label>
-                            <div class="flex items-center gap-4">
-                                <input type="range" id="scaleValue" value="2" min="0.1" max="3" step="0.1"
-                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                                <span id="scaleDisplay" class="text-gray-300 font-mono w-12">2x</span>
+                        <!-- Scale Controls -->
+                        <div class="space-y-4">
+                            <h3 class="text-gray-300 font-mono">Scale</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="scaleXCheck" class="mr-2">
+                                    Scale X
+                                    <span class="ml-2 text-gray-500 text-sm">(0.1x to 3x)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="scaleXValue" value="1" min="0.1" max="3" step="0.1"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="scaleXDisplay" class="text-gray-300 font-mono w-12">1x</span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="scaleYCheck" class="mr-2">
+                                    Scale Y
+                                    <span class="ml-2 text-gray-500 text-sm">(0.1x to 3x)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="scaleYValue" value="1" min="0.1" max="3" step="0.1"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="scaleYDisplay" class="text-gray-300 font-mono w-12">1x</span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="scaleZCheck" class="mr-2">
+                                    Scale Z
+                                    <span class="ml-2 text-gray-500 text-sm">(0.1x to 3x)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="scaleZValue" value="1" min="0.1" max="3" step="0.1"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="scaleZDisplay" class="text-gray-300 font-mono w-12">1x</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="space-y-2">
-                            <label class="flex items-center text-gray-300 font-mono">
-                                <input type="checkbox" id="translateCheck" class="mr-2">
-                                Translate X
-                                <span class="ml-2 text-gray-500 text-sm">(-300px to 300px)</span>
-                            </label>
-                            <div class="flex items-center gap-4">
-                                <input type="range" id="translateValue" value="200" min="-300" max="300"
-                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                                <span id="translateDisplay" class="text-gray-300 font-mono w-12">200px</span>
+                        <!-- Translation Controls -->
+                        <div class="space-y-4">
+                            <h3 class="text-gray-300 font-mono">Translation</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="translateXCheck" class="mr-2">
+                                    Translate X
+                                    <span class="ml-2 text-gray-500 text-sm">(-300px to 300px)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="translateXValue" value="0" min="-300" max="300"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="translateXDisplay" class="text-gray-300 font-mono w-12">0px</span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="translateYCheck" class="mr-2">
+                                    Translate Y
+                                    <span class="ml-2 text-gray-500 text-sm">(-300px to 300px)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="translateYValue" value="0" min="-300" max="300"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="translateYDisplay" class="text-gray-300 font-mono w-12">0px</span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center text-gray-300 font-mono">
+                                    <input type="checkbox" id="translateZCheck" class="mr-2">
+                                    Translate Z
+                                    <span class="ml-2 text-gray-500 text-sm">(-300px to 300px)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="translateZValue" value="0" min="-300" max="300"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                                    <span id="translateZDisplay" class="text-gray-300 font-mono w-12">0px</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -140,16 +224,18 @@
         window.playAnimation = () => {
             const properties = {};
             
-            // Collect selected transformations
-            if (document.getElementById('rotateCheck').checked) {
-                properties.rotate = Number(document.getElementById('rotateValue').value);
-            }
-            if (document.getElementById('scaleCheck').checked) {
-                properties.scale = Number(document.getElementById('scaleValue').value);
-            }
-            if (document.getElementById('translateCheck').checked) {
-                properties.translateX = Number(document.getElementById('translateValue').value);
-            }
+            // Collect all transform properties
+            ['X', 'Y', 'Z'].forEach(axis => {
+                if (document.getElementById(`rotate${axis}Check`).checked) {
+                    properties[`rotate${axis}`] = Number(document.getElementById(`rotate${axis}Value`).value);
+                }
+                if (document.getElementById(`scale${axis}Check`).checked) {
+                    properties[`scale${axis}`] = Number(document.getElementById(`scale${axis}Value`).value);
+                }
+                if (document.getElementById(`translate${axis}Check`).checked) {
+                    properties[`translate${axis}`] = Number(document.getElementById(`translate${axis}Value`).value);
+                }
+            });
 
             // Only animate if at least one property is selected
             if (Object.keys(properties).length > 0) {
@@ -162,7 +248,7 @@
     </script>
 
     <script>
-        // Update display values when sliders change
+        // Update all display values
         const updateDisplay = (inputId, displayId, suffix = '') => {
             const input = document.getElementById(inputId);
             const display = document.getElementById(displayId);
@@ -172,9 +258,11 @@
         };
 
         // Initialize all displays
-        updateDisplay('rotateValue', 'rotateDisplay', '°');
-        updateDisplay('scaleValue', 'scaleDisplay', 'x');
-        updateDisplay('translateValue', 'translateDisplay', 'px');
+        ['X', 'Y', 'Z'].forEach(axis => {
+            updateDisplay(`rotate${axis}Value`, `rotate${axis}Display`, '°');
+            updateDisplay(`scale${axis}Value`, `scale${axis}Display`, 'x');
+            updateDisplay(`translate${axis}Value`, `translate${axis}Display`, 'px');
+        });
         updateDisplay('durationValue', 'durationDisplay', 'ms');
     </script>
 </body>
