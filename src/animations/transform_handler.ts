@@ -1,17 +1,17 @@
-import {
-  NumericUnit,
-  TransformState,
-  AnmimationValue,
-  TransformAxis,
-} from "../types";
+import { TransformState, TransformAxis } from "../types";
 import { decomposeMatrix } from "./geom";
 import {
   interpolateLinear,
   interpolateRotation,
   interpolateScale,
 } from "./interpolate";
+import {
+  type NumericValue,
+  type AnimationUnit,
+  createValue,
+} from "../core/animation-val";
 
-const transformProperties = new Map<TransformPropertyName, NumericUnit>([
+const transformProperties = new Map<TransformPropertyName, AnimationUnit>([
   ["translate", "px"],
   ["translateX", "px"],
   ["translateY", "px"],
@@ -44,13 +44,13 @@ export class TransformHandler {
   private currentTransform: string = "";
 
   /** Valid units for rotation transforms */
-  static readonly rotationUnits: NumericUnit[] = ["deg"];
+  static readonly rotationUnits: AnimationUnit[] = ["deg"];
 
   /** Valid units for scale transforms */
-  static readonly scaleUnits: NumericUnit[] = ["px", "%", "em", "rem"];
+  static readonly scaleUnits: AnimationUnit[] = ["px", "%", "em", "rem"];
 
   /** Valid units for translation transforms */
-  static readonly translationUnits: NumericUnit[] = ["px", "%", "em", "rem"];
+  static readonly translationUnits: AnimationUnit[] = ["px", "%", "em", "rem"];
 
   /**
    * Creates a new TransformHandler instance.
@@ -132,10 +132,10 @@ export class TransformHandler {
    */
   public interpolate(
     property: TransformPropertyName,
-    from: AnmimationValue,
-    to: AnmimationValue,
+    from: NumericValue,
+    to: NumericValue,
     progress: number
-  ): AnmimationValue {
+  ): NumericValue {
     switch (true) {
       case property.startsWith("rotate"):
         return interpolateRotation(from, to, progress);
@@ -203,7 +203,7 @@ export class TransformHandler {
    */
   private updateTransformState(
     property: TransformPropertyName,
-    value: AnmimationValue
+    value: NumericValue
   ): void {
     const axes: TransformAxis[] = [];
     const [stateKey, axis] = this.parseTransformProperty(property);
@@ -241,7 +241,7 @@ export class TransformHandler {
    */
   public updateTransform(
     property: TransformPropertyName,
-    value: AnmimationValue
+    value: NumericValue
   ): void {
     this.updateTransformState(property, value);
     this.hasStateChanges = true;
@@ -252,7 +252,7 @@ export class TransformHandler {
    * @param updates - Map of properties and values to update
    */
   public updateTransforms(
-    updates: Map<TransformPropertyName, AnmimationValue>
+    updates: Map<TransformPropertyName, NumericValue>
   ): void {
     updates.forEach((value, property) => {
       this.updateTransformState(property, value);
@@ -265,7 +265,7 @@ export class TransformHandler {
    * @param property - Transform property name
    * @returns Current value and unit
    */
-  public getCurrentTransform(property: TransformPropertyName): AnmimationValue {
+  public getCurrentTransform(property: TransformPropertyName): NumericValue {
     const [stateKey, axis] = this.parseTransformProperty(property);
 
     if (!(axis in this.transformState[stateKey])) {
@@ -276,11 +276,20 @@ export class TransformHandler {
 
     const transform = this.transformState[stateKey];
     if (axis === "x")
-      return { value: transform.x, unit: transformProperties.get(property)! };
+      return createValue.numeric(
+        transform.x,
+        transformProperties.get(property)!
+      );
     if (axis === "y")
-      return { value: transform.y, unit: transformProperties.get(property)! };
+      return createValue.numeric(
+        transform.y,
+        transformProperties.get(property)!
+      );
     if (axis === "z" && "z" in transform)
-      return { value: transform.z, unit: transformProperties.get(property)! };
+      return createValue.numeric(
+        transform.z,
+        transformProperties.get(property)!
+      );
 
     throw new Error(
       `Invalid transform axis: ${axis} for property: ${property}`
@@ -296,8 +305,8 @@ export class TransformHandler {
   public parseTransformValue(
     property: TransformPropertyName,
     value: number
-  ): AnmimationValue {
-    return { value: value, unit: transformProperties.get(property)! };
+  ): NumericValue {
+    return createValue.numeric(value, transformProperties.get(property)!);
   }
 
   /**
