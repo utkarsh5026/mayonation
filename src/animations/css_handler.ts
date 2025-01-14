@@ -83,7 +83,7 @@ export class CSSHandler {
     this.currentValues = new Map();
     this.initialValues = new Map();
     this.options = {
-      colorSpace: options.colorSpace || "hsl",
+      colorSpace: options.colorSpace ?? "hsl",
     };
   }
 
