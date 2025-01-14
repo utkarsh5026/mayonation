@@ -1,3 +1,5 @@
+import type { RGB, HSL, ColorSpace } from "./color";
+
 /**
  * Base interface for all interpolators
  * Each interpolator handles a specific type of value (numbers, colors, etc.)
@@ -5,28 +7,6 @@
 interface Interpolator<T> {
   interpolate(from: T, to: T, progress: number): T;
 }
-
-/**
- * Represents an RGB color with red, green, and blue components.
- * Each component should be an integer between 0 and 255.
- */
-type RGB = {
-  r: number;
-  g: number;
-  b: number;
-};
-
-/**
- * Represents an HSL color with hue, saturation, and lightness components.
- * - h (hue): Number between 0 and 360
- * - s (saturation): Number between 0 and 100
- * - l (lightness): Number between 0 and 100
- */
-type HSL = {
-  h: number;
-  s: number;
-  l: number;
-};
 
 /**
  * Interpolates between numeric values using different mathematical spaces.
@@ -105,7 +85,7 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
    *   - "rgb": Red-Green-Blue color space (default)
    *   - "hsl": Hue-Saturation-Lightness color space
    */
-  constructor(private readonly space: "rgb" | "hsl" = "rgb") {}
+  constructor(private readonly space: ColorSpace = "rgb") {}
 
   /**
    * Interpolates between two colors
