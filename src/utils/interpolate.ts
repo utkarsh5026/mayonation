@@ -157,9 +157,7 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
     }
 
     // Correct the interpolation to ensure it takes the shortest path
-    console.log(h1, diff, progress);
     const interpolatedHue = (h1 + diff * progress + 360) % 360;
-    console.log(interpolatedHue);
 
     return {
       h: Math.round(interpolatedHue),
