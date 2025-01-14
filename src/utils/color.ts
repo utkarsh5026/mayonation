@@ -143,6 +143,31 @@ export function hslToRgb({ h, s, l }: HSL): RGB {
 }
 
 /**
+ * Converts an RGB or HSL color object to a CSS string.
+ *
+ * @param {RGB | HSL} color - The color object to convert
+ * @returns {string} The CSS string representation of the color
+ *
+ * @example
+ * const cssString = toCSSString({r: 255, g: 0, b: 0}); // "rgb(255, 0, 0)"
+ * const cssString2 = toCSSString({h: 0, s: 100, l: 50}); // "hsl(0, 100%, 50%)"
+ */
+export function toCSSString(color: RGB | HSL): string {
+  if (isRGBColor(color)) {
+    const { r, g, b, a } = color;
+    return a !== undefined
+      ? `rgba(${r}, ${g}, ${b}, ${a})`
+      : `rgb(${r}, ${g}, ${b})`;
+  } else if (isHSLColor(color)) {
+    const { h, s, l, a } = color;
+    return a !== undefined
+      ? `hsla(${h}, ${s}%, ${l}%, ${a})`
+      : `hsl(${h}, ${s}%, ${l}%)`;
+  }
+  return "";
+}
+
+/**
  * Parses an RGB color string into an RGB object.
  * Accepts format: rgb(r,g,b) where r,g,b are integers 0-255.
  *
