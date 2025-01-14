@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": true,
+    "noEmit": false,
+    "isolatedModules": true,
+    
+    // Module settings
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    
+    // Strict type checking
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.stories.tsx",
+    "dist"
+  ],
+  "include": [
+    "src/**/*"
+  ]
+} 
