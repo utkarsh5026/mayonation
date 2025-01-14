@@ -1,4 +1,4 @@
-import type { TransformState } from "../core/types";
+import type { TransformState } from "../types";
 
 /**
  * Decomposes a DOMMatrix into individual transform components.
