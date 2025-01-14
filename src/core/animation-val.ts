@@ -50,20 +50,20 @@ export type AnimationUnit =
 /**
  * Represents a numeric value with its unit
  */
-export interface NumericValue {
+export type NumericValue = {
   type: "numeric";
   value: number;
   unit: AnimationUnit;
-}
+};
 
 /**
  * Represents a color value in either RGB or HSL space
  */
-export interface ColorValue {
+export type ColorValue = {
   type: "color";
   space: ColorSpace;
   value: RGB | HSL;
-}
+};
 
 export type AnimationValue = NumericValue | ColorValue;
 
