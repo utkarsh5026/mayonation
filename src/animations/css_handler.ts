@@ -136,7 +136,9 @@ export class CSSHandler {
    * @param property - CSS property name
    * @returns true if the property can be animated
    */
-  public static isAnimatableProperty(property: string): boolean {
+  public static isAnimatableProperty(
+    property: string
+  ): property is CSSPropertyName {
     return (
       cssPropertyUnits.has(property as CSSPropertyName) ||
       CSSHandler.colorProperties.has(property as CSSPropertyName)
@@ -234,7 +236,7 @@ export class CSSHandler {
    * @returns Normalized AnimationValue
    * @throws If the value type is not supported
    */
-  private parseValue(property: CSSPropertyName, value: string): AnimationValue {
+  public parseValue(property: CSSPropertyName, value: string): AnimationValue {
     if (CSSHandler.colorProperties.has(property)) {
       return this.parseColorValue(value);
     }
