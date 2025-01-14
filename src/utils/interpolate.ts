@@ -1,4 +1,4 @@
-import type { RGB, HSL, ColorSpace } from "./color";
+import type { RGB, HSL, ColorSpace } from "../core/animation-val";
 
 /**
  * Base interface for all interpolators
@@ -77,7 +77,6 @@ export class NumericInterpolator implements Interpolator<number> {
 
     const sign = Math.sign(to - from);
     const delta = Math.abs(to - from);
-    // Change to progress^3 to match expected test values (0.5^3 = 0.125, which gives us 10 when multiplied by 100)
     return from + sign * delta * Math.pow(progress, 3);
   }
 }
@@ -166,3 +165,11 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
     };
   }
 }
+
+export default {
+  linear: new NumericInterpolator("linear"),
+  logarithmic: new NumericInterpolator("logarithmic"),
+  exponential: new NumericInterpolator("exponential"),
+  rgb: new ColorInterpolator("rgb"),
+  hsl: new ColorInterpolator("hsl"),
+};
