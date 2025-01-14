@@ -45,12 +45,20 @@ export class NumericInterpolator implements Interpolator<number> {
     }
   }
 
+  /**
+   * Interpolates between two numbers using logarithmic space
+   * used in scale animations
+   */
   private logInterpolate(from: number, to: number, progress: number): number {
     const logFrom = Math.log(Math.max(from, Number.EPSILON));
     const logTo = Math.log(Math.max(to, Number.EPSILON));
     return Math.exp(logFrom + (logTo - logFrom) * progress);
   }
 
+  /**
+   * Interpolates between two numbers using linear space
+   * used in most animations
+   */
   private linearInterpolate(
     from: number,
     to: number,
@@ -59,6 +67,10 @@ export class NumericInterpolator implements Interpolator<number> {
     return from + (to - from) * progress;
   }
 
+  /**
+   * Interpolates between two numbers using exponential space
+   * used in scale animations
+   */
   private expInterpolate(from: number, to: number, progress: number): number {
     const sign = Math.sign(to - from);
     const delta = Math.abs(to - from);
