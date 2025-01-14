@@ -1,4 +1,5 @@
-import { AnmimationValue, RotationOptions } from "../core/types";
+import { AnmimationValue, RotationOptions } from "../types";
+import { NumericInterpolator } from "../utils/interpolate";
 
 /**
  * Interpolates between two scale values using logarithmic interpolation.
@@ -36,10 +37,12 @@ export function interpolateScale(
     throw new Error("Scale values must be positive numbers");
   }
 
-  const fromLog = Math.log(from.value);
-  const toLog = Math.log(to.value);
-  const interpolatedLog = fromLog + (toLog - fromLog) * progress;
-  return { value: Math.exp(interpolatedLog), unit: from.unit };
+  const interpolator = new NumericInterpolator("logarithmic");
+  const value = interpolator.interpolate(from.value, to.value, progress);
+  return {
+    value,
+    unit: from.unit,
+  };
 }
 
 /**
@@ -122,8 +125,10 @@ export function interpolateLinear(
   to: AnmimationValue,
   progress: number
 ): AnmimationValue {
+  const interpolator = new NumericInterpolator("linear");
+  const value = interpolator.interpolate(from.value, to.value, progress);
   return {
-    value: from.value + (to.value - from.value) * progress,
+    value,
     unit: from.unit,
   };
 }
