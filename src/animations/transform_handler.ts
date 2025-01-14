@@ -4,7 +4,7 @@ import {
   AnmimationValue,
   TransformAxis,
   TransformPropertyName,
-} from "../core/types";
+} from "../types";
 import { decomposeMatrix } from "./geom";
 import {
   interpolateLinear,
@@ -275,8 +275,17 @@ class TransformHandler {
       );
     }
 
-    const currentValue = this.transformState[stateKey][axis];
-    return { value: currentValue, unit: transformProperties.get(property)! };
+    const transform = this.transformState[stateKey];
+    if (axis === "x")
+      return { value: transform.x, unit: transformProperties.get(property)! };
+    if (axis === "y")
+      return { value: transform.y, unit: transformProperties.get(property)! };
+    if (axis === "z" && "z" in transform)
+      return { value: transform.z, unit: transformProperties.get(property)! };
+
+    throw new Error(
+      `Invalid transform axis: ${axis} for property: ${property}`
+    );
   }
 
   /**
