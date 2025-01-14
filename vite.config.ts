@@ -5,18 +5,13 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "mate",
-      fileName: (format) =>
-        `animation-library.${format === "es" ? "mjs" : "umd.js"}`,
+      name: "mayonation",
+      formats: ["es", "umd"],
+      fileName: (format) => `index.${format === "es" ? "mjs" : "js"}`,
     },
-    rollupOptions: {
-      external: [],
-      output: {
-        globals: {},
-      },
-    },
+    sourcemap: true,
   },
   server: {
-    open: "/examples/index.html", // Automatically open browser
+    open: "/examples/index.html",
   },
 });
