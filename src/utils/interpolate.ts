@@ -110,6 +110,9 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
    * @returns The interpolated color in the same format as the input
    * @throws Will throw if mixing RGB and HSL color formats
    */
+  public interpolate(from: RGB, to: RGB, progress: number): RGB;
+  public interpolate(from: HSL, to: HSL, progress: number): HSL;
+
   public interpolate(
     from: RGB | HSL,
     to: RGB | HSL,
@@ -166,10 +169,8 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
   }
 }
 
-export default {
-  linear: new NumericInterpolator("linear"),
-  logarithmic: new NumericInterpolator("logarithmic"),
-  exponential: new NumericInterpolator("exponential"),
-  rgb: new ColorInterpolator("rgb"),
-  hsl: new ColorInterpolator("hsl"),
-};
+export const rgb = new ColorInterpolator("rgb");
+export const hsl = new ColorInterpolator("hsl");
+export const linear = new NumericInterpolator("linear");
+export const logarithmic = new NumericInterpolator("logarithmic");
+export const exponential = new NumericInterpolator("exponential");
