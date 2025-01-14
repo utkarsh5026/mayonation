@@ -1,29 +1,10 @@
-/**
- * Represents the supported color spaces for color parsing and conversion.
- * @type {"rgb" | "hsl"}
- */
-export type ColorSpace = "rgb" | "hsl";
-
-/**
- * Represents an RGB color with red, green, and blue components.
- * Each component should be an integer between 0 and 255.
- */
-export type RGB = {
-  r: number;
-  g: number;
-  b: number;
-};
-
-/**
- * Represents an HSL color with hue, saturation, and lightness components.
- * Each component should be an integer between 0 and 360 for hue,
- *  0 and 100 for saturation and lightness.
- */
-export type HSL = {
-  h: number;
-  s: number;
-  l: number;
-};
+import {
+  type RGB,
+  type HSL,
+  type ColorSpace,
+  isHSLColor,
+  isRGBColor,
+} from "../core/animation-val";
 
 /**
  * Parses a color string into either RGB or HSL format and optionally converts between spaces.
@@ -58,9 +39,9 @@ export function parseColor(color: string, space: ColorSpace): RGB | HSL {
       throw new Error(`Unsupported color format: ${color}`);
   }
 
-  if (space === "rgb" && isHSL(colorResult)) {
+  if (space === "rgb" && isHSLColor(colorResult)) {
     return hslToRgb(colorResult);
-  } else if (space === "hsl" && isRGB(colorResult)) {
+  } else if (space === "hsl" && isRGBColor(colorResult)) {
     return rgbToHsl(colorResult);
   }
   return colorResult;
@@ -232,24 +213,4 @@ function parseHSLString(color: string): HSL {
     throw new Error(`Invalid HSL color format: ${color}`);
   }
   return { h: values[0], s: values[1], l: values[2] };
-}
-
-/**
- * Type guard to check if a color object is in RGB format.
- *
- * @param {RGB | HSL} obj - The color object to check
- * @returns {boolean} True if the object is in RGB format
- */
-function isRGB(obj: RGB | HSL): obj is RGB {
-  return "r" in obj && "g" in obj && "b" in obj;
-}
-
-/**
- * Type guard to check if a color object is in HSL format.
- *
- * @param {RGB | HSL} obj - The color object to check
- * @returns {boolean} True if the object is in HSL format
- */
-function isHSL(obj: RGB | HSL): obj is HSL {
-  return "h" in obj && "s" in obj && "l" in obj;
 }
