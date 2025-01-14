@@ -94,9 +94,18 @@ export class CSSHandler {
    * @returns Normalized ColorValue object
    */
   private parseColorValue(value: string): ColorValue {
-    const color = parseColor(value, "rgb");
-    const { r, g, b, a } = color;
-    return createValue.rgb(r, g, b, a);
+    switch (this.options.colorSpace) {
+      case "rgb": {
+        const { r, g, b, a } = parseColor(value, "rgb");
+        return createValue.rgb(r, g, b, a);
+      }
+      case "hsl": {
+        const { h, s, l, a } = parseColor(value, "hsl");
+        return createValue.hsl(h, s, l, a);
+      }
+      default:
+        throw new Error(`Unsupported color space: ${this.options.colorSpace}`);
+    }
   }
 
   /**
