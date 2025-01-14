@@ -1,5 +1,5 @@
-import { AnmimationValue, RotationOptions } from "../types";
-import { NumericInterpolator } from "../utils/interpolate";
+import { linear, logarithmic } from "../utils/interpolate";
+import { type NumericValue, createValue } from "../core/animation-val";
 
 /**
  * Interpolates between two scale values using logarithmic interpolation.
@@ -29,20 +29,16 @@ import { NumericInterpolator } from "../utils/interpolate";
  * // Returns {value: 2, unit: ''}
  */
 export function interpolateScale(
-  from: AnmimationValue,
-  to: AnmimationValue,
+  from: NumericValue,
+  to: NumericValue,
   progress: number
-): AnmimationValue {
+): NumericValue {
   if (from.value <= 0 || to.value <= 0) {
     throw new Error("Scale values must be positive numbers");
   }
 
-  const interpolator = new NumericInterpolator("logarithmic");
-  const value = interpolator.interpolate(from.value, to.value, progress);
-  return {
-    value,
-    unit: from.unit,
-  };
+  const value = logarithmic.interpolate(from.value, to.value, progress);
+  return createValue.numeric(value, from.unit);
 }
 
 /**
@@ -75,11 +71,11 @@ export function interpolateScale(
  * // Returns {value: 0, unit: 'deg'}
  */
 export function interpolateRotation(
-  from: AnmimationValue,
-  to: AnmimationValue,
+  from: NumericValue,
+  to: NumericValue,
   progress: number,
   options?: RotationOptions
-): AnmimationValue {
+): NumericValue {
   const { maintainRevolution = false, direction = "clockwise" } = options || {};
 
   let fromDeg = from.value;
@@ -106,7 +102,9 @@ export function interpolateRotation(
         break;
     }
   }
-  return { value: fromDeg + diff * progress, unit: "deg" };
+
+  const value = fromDeg + diff * progress;
+  return createValue.numeric(value, "deg");
 }
 
 /**
@@ -121,16 +119,12 @@ export function interpolateRotation(
  * @returns Interpolated value with same unit as input
  */
 export function interpolateLinear(
-  from: AnmimationValue,
-  to: AnmimationValue,
+  from: NumericValue,
+  to: NumericValue,
   progress: number
-): AnmimationValue {
-  const interpolator = new NumericInterpolator("linear");
-  const value = interpolator.interpolate(from.value, to.value, progress);
-  return {
-    value,
-    unit: from.unit,
-  };
+): NumericValue {
+  const value = linear.interpolate(from.value, to.value, progress);
+  return createValue.numeric(value, from.unit);
 }
 
 /**
@@ -142,3 +136,8 @@ export function interpolateLinear(
 function normalizeAngle(angle: number) {
   return ((angle % 360) + 360) % 360;
 }
+
+export type RotationOptions = {
+  maintainRevolution?: boolean;
+  direction?: "clockwise" | "counterclockwise" | "shortest";
+};
