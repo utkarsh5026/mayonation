@@ -314,7 +314,9 @@ export class TransformHandler {
    * @param property - Property name to check
    * @returns True if valid transform property
    */
-  public static isTransformProperty(property: string): boolean {
+  public static isTransformProperty(
+    property: string
+  ): property is TransformPropertyName {
     return transformProperties.has(property as TransformPropertyName);
   }
 
