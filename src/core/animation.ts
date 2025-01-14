@@ -2,13 +2,11 @@ import type {
   AnimationTarget,
   AnimationOptions,
   AnimationConfig,
-  EaseFn,
-  EaseFnName,
   TransformPropertyName,
-} from "./types";
+} from "../types";
 import TransformHandler from "../animations/transform_handler";
 import CSSHandler from "../animations/css_handler";
-import { easeFns } from "./ease_fns";
+import { easeFns, EaseFn, EaseFnName } from "./ease_fns";
 
 export class Animation {
   private targets: AnimationTarget[] = [];
@@ -104,6 +102,7 @@ export class Animation {
   }
 
   private animate(currTime: number) {
+    console.log("animate called");
     if (!this.startTime) {
       this.startTime = currTime;
     }

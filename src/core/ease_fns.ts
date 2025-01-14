@@ -1,4 +1,24 @@
-import type { EaseFn, EaseFnName } from "./types";
+/**
+ * A function that takes a time value between 0 and 1 and returns an eased value between 0 and 1.
+ * Used to control the rate of change during animations.
+ */
+export type EaseFn = (t: number) => number;
+
+/**
+ * Built-in easing function names that can be used to control animation timing.
+ * Each provides a different style of acceleration and deceleration.
+ */
+export type EaseFnName =
+  | "linear" // Constant rate of change
+  | "easeIn" // Accelerates from start
+  | "easeOut" // Decelerates to end
+  | "easeInOut" // Accelerates in middle, decelerates at ends
+  | "easeInQuad" // Quadratic acceleration
+  | "easeOutQuad" // Quadratic deceleration
+  | "easeInOutQuad" // Quadratic acceleration and deceleration
+  | "easeInCubic" // Cubic acceleration
+  | "easeOutCubic" // Cubic deceleration
+  | "easeInOutCubic"; // Cubic acceleration and deceleration
 
 /**
  * The linear easing moves at a constant speed from start to finish.
@@ -99,3 +119,8 @@ export const easeFns: Record<EaseFnName, EaseFn> = {
   easeOutCubic,
   easeInOutCubic,
 };
+
+/**
+ * List of all available ease functions.
+ */
+export const easeFnsList = Object.keys(easeFns) as EaseFnName[];
