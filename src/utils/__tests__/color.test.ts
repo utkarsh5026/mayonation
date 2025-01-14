@@ -1,5 +1,6 @@
 /// <reference types="jest" />
-import { parseColor, rgbToHsl, hslToRgb } from "./color";
+import { parseColor, rgbToHsl, hslToRgb, toCSSString } from "../color";
+import type { RGB, HSL } from "../../core/animation-val";
 
 describe("Color Utilities", () => {
   describe("parseColor", () => {
@@ -97,5 +98,27 @@ describe("Color Utilities", () => {
       });
       expect(hslToRgb({ h: 0, s: 0, l: 0 })).toEqual({ r: 0, g: 0, b: 0 });
     });
+  });
+});
+
+describe("toCSSString", () => {
+  it("should convert RGB object to CSS rgb string", () => {
+    const rgb: RGB = { r: 255, g: 0, b: 0 };
+    expect(toCSSString(rgb)).toBe("rgb(255, 0, 0)");
+  });
+
+  it("should convert RGB object with alpha to CSS rgba string", () => {
+    const rgba: RGB = { r: 255, g: 0, b: 0, a: 0.5 };
+    expect(toCSSString(rgba)).toBe("rgba(255, 0, 0, 0.5)");
+  });
+
+  it("should convert HSL object to CSS hsl string", () => {
+    const hsl: HSL = { h: 0, s: 100, l: 50 };
+    expect(toCSSString(hsl)).toBe("hsl(0, 100%, 50%)");
+  });
+
+  it("should convert HSL object with alpha to CSS hsla string", () => {
+    const hsla: HSL = { h: 0, s: 100, l: 50, a: 0.5 };
+    expect(toCSSString(hsla)).toBe("hsla(0, 100%, 50%, 0.5)");
   });
 });
