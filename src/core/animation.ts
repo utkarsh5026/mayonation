@@ -1,11 +1,9 @@
-import type {
-  AnimationTarget,
-  AnimationOptions,
-  AnimationConfig,
-  TransformPropertyName,
-} from "../types";
-import TransformHandler from "../animations/transform_handler";
-import CSSHandler from "../animations/css_handler";
+import type { AnimationProperty } from "../types";
+import {
+  TransformHandler,
+  type TransformPropertyName,
+} from "../animations/transform_handler";
+import { CSSHandler, type CSSPropertyName } from "../animations/css_handler";
 import { easeFns, EaseFn, EaseFnName } from "./ease_fns";
 
 export class Animation {
@@ -210,3 +208,59 @@ export class Animation {
     this.targets = [];
   }
 }
+
+/**
+ * Options for configuring animation behavior.
+ * Controls timing, easing and lifecycle callbacks.
+ */
+export type AnimationOptions = {
+  duration: number; // Animation duration in ms
+  delay?: number; // Animation delay in ms
+  easing?: EaseFnName | EaseFn; // Easing function
+  onComplete?: () => void; // Called when animation completes
+  onStart?: () => void; // Called when animation starts
+  onUpdate?: (progress: number) => void; // Called on each frame
+};
+
+/**
+ * Groups the properties being animated for a single element.
+ */
+export type AnimationTarget = {
+  element: HTMLElement; // Element being animated
+  transformProperties: Map<TransformPropertyName, AnimationProperty>; // Transform animations
+  cssProperties: Map<CSSPropertyName, AnimationProperty>; // CSS property animations
+};
+
+/**
+ * Configuration object for creating animations.
+ * Defines the target values and animation behavior.
+ */
+export type AnimationConfig = {
+  translateX?: number; // Target X translation
+  translateY?: number; // Target Y translation
+  translateZ?: number; // Target Z translation
+
+  rotate?: number; // Target rotation angle
+  rotateX?: number; // Target rotation angle on X axis
+  rotateY?: number; // Target rotation angle on Y axis
+  rotateZ?: number; // Target rotation angle on Z axis
+
+  scale?: number | [number, number]; // Target scale factor(s)
+  scaleX?: number; // Target scale factor on X axis
+  scaleY?: number; // Target scale factor on Y axis
+  scaleZ?: number; // Target scale factor on Z axis
+
+  opacity?: number; // Target opacity
+  backgroundColor?: string; // Target background color
+  width?: number | string; // Target width
+  height?: number | string; // Target height
+
+  duration?: number; // Animation duration in ms
+  delay?: number; // Animation delay in ms
+  easing?: string | ((t: number) => number); // Easing function
+
+  // Lifecycle callbacks
+  onStart?: () => void; // Called when animation starts
+  onUpdate?: (progress: number) => void; // Called on each animation frame
+  onComplete?: () => void; // Called when animation completes
+};

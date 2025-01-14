@@ -3,7 +3,6 @@ import {
   TransformState,
   AnmimationValue,
   TransformAxis,
-  TransformPropertyName,
 } from "../types";
 import { decomposeMatrix } from "./geom";
 import {
@@ -34,7 +33,7 @@ const transformProperties = new Map<TransformPropertyName, NumericUnit>([
  * Handles transform animations and state management for DOM elements.
  * Manages translation, rotation, scale and skew transformations.
  */
-class TransformHandler {
+export class TransformHandler {
   /** Current transform state containing all transform values */
   private transformState: TransformState;
 
@@ -326,4 +325,23 @@ class TransformHandler {
   }
 }
 
-export default TransformHandler;
+/**
+ * CSS transform properties that can be animated.
+ * Includes translation, rotation, scale and skew transformations.
+ */
+export type TransformPropertyName =
+  | "translate" // 2D translation shorthand
+  | "translateX" // X-axis translation
+  | "translateY" // Y-axis translation
+  | "translateZ" // Z-axis translation
+  | "rotate" // 2D rotation shorthand
+  | "rotateX" // X-axis rotation
+  | "rotateY" // Y-axis rotation
+  | "rotateZ" // Z-axis rotation
+  | "scale" // Uniform scale shorthand
+  | "scaleX" // X-axis scale
+  | "scaleY" // Y-axis scale
+  | "scaleZ" // Z-axis scale
+  | "skewX" // X-axis skew
+  | "skewY" // Y-axis skew
+  | "skew"; // 2D skew shorthand
