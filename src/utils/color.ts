@@ -23,7 +23,10 @@ import {
  * // Parse RGB string to HSL
  * const hsl = parseColor("rgb(255,0,0)", "hsl"); // {h: 0, s: 100, l: 50}
  */
-export function parseColor(color: string, space: ColorSpace): RGB | HSL {
+export function parseColor<T extends ColorSpace>(
+  color: string,
+  space: T
+): T extends "rgb" ? RGB : HSL {
   let colorResult: RGB | HSL;
   switch (true) {
     case color.startsWith("#"):
@@ -40,11 +43,11 @@ export function parseColor(color: string, space: ColorSpace): RGB | HSL {
   }
 
   if (space === "rgb" && isHSLColor(colorResult)) {
-    return hslToRgb(colorResult);
+    return hslToRgb(colorResult) as any;
   } else if (space === "hsl" && isRGBColor(colorResult)) {
-    return rgbToHsl(colorResult);
+    return rgbToHsl(colorResult) as any as T extends "rgb" ? RGB : HSL;
   }
-  return colorResult;
+  return colorResult as T extends "rgb" ? RGB : HSL;
 }
 
 /**
