@@ -12,6 +12,6 @@ export default defineConfig({
     sourcemap: true,
   },
   server: {
-    open: "/examples/index.html",
+    open: "/html/index.html",
   },
 });
