@@ -11,7 +11,7 @@ import {
   isNumericValue,
 } from "../../core/animation-val";
 import { parseColor, toCSSString } from "../../utils/color";
-import { type CSSPropertyName, cssPropertyUnits } from "./css_units";
+import { type CSSPropertyName, cssPropertyUnits } from "./units";
 import {
   parseBorderRadius,
   parseBorderWidth,

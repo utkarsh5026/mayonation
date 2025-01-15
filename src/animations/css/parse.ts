@@ -3,7 +3,7 @@ import {
   type NumericValue,
   type AnimationUnit,
 } from "../../core/animation-val";
-import type { CSSPropertyName } from "./css_units";
+import type { CSSPropertyName } from "./units";
 
 /**
  * Parses an opacity value from a CSS string
