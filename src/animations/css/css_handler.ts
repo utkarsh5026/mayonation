@@ -1,36 +1,24 @@
-import { camelToDash } from "../utils/string";
-import { rgb, hsl, linear } from "../utils/interpolate";
+import { camelToDash } from "../../utils/string";
+import { rgb, hsl, linear } from "../../utils/interpolate";
 import {
   type AnimationValue,
-  type AnimationUnit,
   type ColorValue,
   type ColorSpace,
   type RGB,
   type HSL,
-  type NumericValue,
   createValue,
   isColorValue,
   isNumericValue,
-} from "../core/animation-val";
-import { parseColor, toCSSString } from "../utils/color";
-
-// Map of CSS properties to their valid units
-const cssPropertyUnits = new Map<CSSPropertyName, AnimationUnit[]>([
-  ["width", ["px", "%", "em", "rem", "vh", "vw"]],
-  ["height", ["px", "%", "em", "rem", "vh", "vw"]],
-  ["opacity", [""]],
-  ["borderRadius", ["px", "%", "em", "rem"]],
-  ["borderWidth", ["px", "em", "rem"]],
-]);
-
-// Add this near the top with other constants
-const cssPropertyPatterns = new Map<CSSPropertyName, RegExp[]>([
-  ["opacity", [/^(0|1|0?\.\d+)$/, /^$/]],
-  ["width", [/^-?\d+\.?\d*(px|%|em|rem|vh|vw)$/]],
-  ["height", [/^-?\d+\.?\d*(px|%|em|rem|vh|vw)$/]],
-  ["borderRadius", [/^-?\d+\.?\d*(px|%|em|rem)$/]],
-  ["borderWidth", [/^-?\d+\.?\d*(px|em|rem)$/]],
-]);
+} from "../../core/animation-val";
+import { parseColor, toCSSString } from "../../utils/color";
+import { type CSSPropertyName, cssPropertyUnits } from "./css_units";
+import {
+  parseBorderRadius,
+  parseBorderWidth,
+  parseOpacity,
+  parseWidth,
+  parseHeight,
+} from "./css_parse";
 
 type CssHandlerOptions = {
   colorSpace?: ColorSpace;
@@ -287,59 +275,3 @@ export class CSSHandler {
     return value;
   }
 }
-
-/**
- * CSS properties that can be animated besides transforms.
- * Includes visual properties like opacity, dimensions, and borders.
- */
-export type CSSPropertyName =
-  | "opacity" // Element transparency
-  | "backgroundColor" // Background color
-  | "width" // Element width
-  | "height" // Element height
-  | "borderRadius" // Corner rounding
-  | "border" // Border shorthand
-  | "borderColor" // Border color
-  | "borderStyle" // Border style
-  | "borderWidth" // Border thickness
-  | "color" // Text color
-  | "outlineColor" // Outline color
-  | "textDecorationColor" // Text decoration color
-  | "textEmphasisColor"; // Text emphasis color
-
-// Add these helper functions
-export const parseOpacity = (value: string): NumericValue => {
-  if (value === "") return createValue.numeric(1, "");
-  const num = parseFloat(value);
-  if (isNaN(num) || num < 0 || num > 1)
-    throw new Error(`Invalid opacity value: ${value}`);
-  return createValue.numeric(num, "");
-};
-
-export const parseWidth = (value: string): NumericValue => {
-  const regex = /^(-?\d+\.?\d*)(px|%|em|rem|vh|vw)$/;
-  const match = regex.exec(value);
-  if (!match) throw new Error(`Invalid width value: ${value}`);
-  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
-};
-
-export const parseHeight = (value: string): NumericValue => {
-  const regex = /^(-?\d+\.?\d*)(px|%|em|rem|vh|vw)$/;
-  const match = regex.exec(value);
-  if (!match) throw new Error(`Invalid height value: ${value}`);
-  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
-};
-
-export const parseBorderRadius = (value: string): NumericValue => {
-  const regex = /^(-?\d+\.?\d*)(px|%|em|rem)$/;
-  const match = regex.exec(value);
-  if (!match) throw new Error(`Invalid border radius value: ${value}`);
-  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
-};
-
-export const parseBorderWidth = (value: string): NumericValue => {
-  const regex = /^(-?\d+\.?\d*)(px|em|rem)$/;
-  const match = regex.exec(value);
-  if (!match) throw new Error(`Invalid border width value: ${value}`);
-  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
-};
