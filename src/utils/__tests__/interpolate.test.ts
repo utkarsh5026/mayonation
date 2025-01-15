@@ -1,5 +1,5 @@
 import { NumericInterpolator, ColorInterpolator } from "../interpolate";
-
+import { describe, expect, test } from "vitest";
 describe("NumericInterpolator", () => {
   describe("linear interpolation", () => {
     const interpolator = new NumericInterpolator("linear");
