@@ -8,6 +8,7 @@ import {
   isHSLColor,
   AnimationValue,
 } from "../animation-val";
+import { describe, expect, test } from "vitest";
 
 describe("Animation Value Tests", () => {
   test("createValue.numeric should create a NumericValue", () => {
