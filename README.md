@@ -86,3 +86,5 @@ I hope you find this library useful in your projects. Happy animating! 🎨
 ---
 
 Feel free to adjust the content to better fit your style or add any additional information you think is necessary.
+
+![Tests](https://github.com/utkarsh5026/mayonation/actions/workflows/test.yml/badge.svg)
