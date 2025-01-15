@@ -1,4 +1,4 @@
-/// <reference types="jest" />
+import { describe, it, expect } from "vitest";
 import { parseColor, rgbToHsl, hslToRgb, toCSSString } from "../color";
 import type { RGB, HSL } from "../../core/animation-val";
 
