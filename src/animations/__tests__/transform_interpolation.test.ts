@@ -38,14 +38,14 @@ describe("Transform Interpolation Functions", () => {
       const to = createValue.numeric(10, "deg");
 
       expect(interpolateRotation(from, to, 0).value).toBeCloseTo(350);
-      expect(interpolateRotation(from, to, 0.5).value).toBeCloseTo(0);
+      expect(interpolateRotation(from, to, 0.5).value).toBeCloseTo(180);
       expect(interpolateRotation(from, to, 1).value).toBeCloseTo(10);
     });
 
     it("should respect clockwise direction option", () => {
       const from = createValue.numeric(350, "deg");
       const to = createValue.numeric(10, "deg");
-      const options: RotationOptions = { direction: "clockwise" };
+      const options: RotationOptions = { direction: "clockwise", maintainRevolution: false };
 
       expect(interpolateRotation(from, to, 0.5, options).value).toBeCloseTo(0);
     });
@@ -53,7 +53,7 @@ describe("Transform Interpolation Functions", () => {
     it("should respect counterclockwise direction option", () => {
       const from = createValue.numeric(10, "deg");
       const to = createValue.numeric(350, "deg");
-      const options: RotationOptions = { direction: "counterclockwise" };
+      const options: RotationOptions = { direction: "counterclockwise", maintainRevolution: false };
 
       expect(interpolateRotation(from, to, 0.5, options).value).toBeCloseTo(0);
     });
