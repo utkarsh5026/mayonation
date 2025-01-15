@@ -1,10 +1,2 @@
-export { Animation } from "./core/animation";
-export { easeFns } from "./core/ease_fns";
-export type {
-  AnimationConfig,
-  AnimationOptions,
-  EaseFn,
-  EaseFnName,
-  TransformPropertyName,
-  CSSPropertyName,
-} from "./core/types";
+export * from "./core/animation";
+export * from "./core/ease_fns";
