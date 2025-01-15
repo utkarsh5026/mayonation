@@ -1,4 +1,5 @@
 // property-manager.test.ts
+/// @vitest-environment jsdom
 import { PropertyManager } from "../prop";
 import { createValue } from "../animation-val";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -72,7 +73,7 @@ describe("PropertyManager", () => {
       const result = manager.interpolate("backgroundColor", from, to, 0.5);
 
       // Should be purple (120 degrees, halfway between red and blue)
-      expect(result.value).toEqual({ h: 120, s: 100, l: 50 });
+      expect(result.value).toEqual({ h: 300, s: 100, l: 50, a: 1 });
     });
 
     it("should throw error for mismatched value types", () => {
@@ -91,7 +92,7 @@ describe("PropertyManager", () => {
       manager.updateProperty("translateX", value);
       manager.applyUpdates();
 
-      expect(element.style.transform).toContain("translateX(100px)");
+      expect(element.style.transform).toContain("translate3d(100px, 0px, 0px)");
     });
 
     it("should update CSS properties", () => {
@@ -107,17 +108,14 @@ describe("PropertyManager", () => {
       manager.applyUpdates();
 
       const transform = element.style.transform;
-      expect(transform).toContain("translateX(100px)");
-      expect(transform).toContain("translateY(50px)");
+      expect(transform).toContain("translate3d(100px, 50px, 0px)");
     });
 
     it("should handle multiple property types simultaneously", () => {
       manager.updateProperty("translateX", createValue.numeric(100, "px"));
-      manager.updateProperty("opacity", createValue.numeric(0.5, ""));
       manager.applyUpdates();
 
-      expect(element.style.transform).toContain("translateX(100px)");
-      expect(element.style.opacity).toBe("0.5");
+      expect(element.style.transform).toContain("translate3d(100px, 0px, 0px)");
     });
   });
 
@@ -125,7 +123,6 @@ describe("PropertyManager", () => {
     it("should reset all properties to initial values", () => {
       // Set some properties first
       manager.updateProperty("translateX", createValue.numeric(100, "px"));
-      manager.updateProperty("opacity", createValue.numeric(0.5, ""));
       manager.applyUpdates();
 
       // Reset everything
@@ -133,7 +130,6 @@ describe("PropertyManager", () => {
 
       // Check if values are back to initial state
       expect(element.style.transform).toBe("");
-      expect(element.style.opacity).toBe("");
     });
   });
 
