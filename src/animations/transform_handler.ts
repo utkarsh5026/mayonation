@@ -509,6 +509,7 @@ export function interpolateScale(
  * @param from - Starting rotation value in degrees with format {value: number, unit: string}
  * @param to - Ending rotation value in degrees with format {value: number, unit: string}
  * @param progress - Animation progress from 0 to 1
+ * @param options -
  * @returns Interpolated rotation value in degrees with 'deg' unit
  *
  * @example
