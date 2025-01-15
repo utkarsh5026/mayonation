@@ -23,6 +23,15 @@ const cssPropertyUnits = new Map<CSSPropertyName, AnimationUnit[]>([
   ["borderWidth", ["px", "em", "rem"]],
 ]);
 
+// Add this near the top with other constants
+const cssPropertyPatterns = new Map<CSSPropertyName, RegExp[]>([
+  ["opacity", [/^(0|1|0?\.\d+)$/, /^$/]],
+  ["width", [/^-?\d+\.?\d*(px|%|em|rem|vh|vw)$/]],
+  ["height", [/^-?\d+\.?\d*(px|%|em|rem|vh|vw)$/]],
+  ["borderRadius", [/^-?\d+\.?\d*(px|%|em|rem)$/]],
+  ["borderWidth", [/^-?\d+\.?\d*(px|em|rem)$/]],
+]);
+
 type CssHandlerOptions = {
   colorSpace?: ColorSpace;
 };
@@ -106,23 +115,6 @@ export class CSSHandler {
       default:
         throw new Error(`Unsupported color space: ${this.options.colorSpace}`);
     }
-  }
-
-  /**
-   * Parses a CSS numeric value string into a normalized NumericValue
-   * Extracts the number and unit (px, %, etc)
-   * @param value - CSS numeric string (e.g. "100px", "50%")
-   * @returns Normalized NumericValue object
-   * @throws If the value cannot be parsed as a number with optional unit
-   */
-  private parseNumericValue(value: string): NumericValue {
-    const regex = /^(-?\d+\.?\d*)([a-z%]*)$/;
-    const match = regex.exec(value);
-    if (!match) {
-      throw new Error(`Invalid numeric value: ${value}`);
-    }
-
-    return createValue.numeric(parseFloat(match[1]), (match[2] || "") as any);
   }
 
   /**
@@ -246,15 +238,26 @@ export class CSSHandler {
    * @throws If the value type is not supported
    */
   public parseValue(property: CSSPropertyName, value: string): AnimationValue {
+    // Handle color properties first
     if (CSSHandler.colorProperties.has(property)) {
       return this.parseColorValue(value);
     }
 
-    if (RegExp(/^-?\d+\.?\d*([a-z%]+)?$/).exec(value)) {
-      return this.parseNumericValue(value);
+    // Use specific parsers for each property
+    switch (property) {
+      case "opacity":
+        return parseOpacity(value);
+      case "width":
+        return parseWidth(value);
+      case "height":
+        return parseHeight(value);
+      case "borderRadius":
+        return parseBorderRadius(value);
+      case "borderWidth":
+        return parseBorderWidth(value);
+      default:
+        throw new Error(`Unsupported property: ${property}`);
     }
-
-    throw new Error(`Unsupported value type: ${value}`);
   }
 
   /**
@@ -271,6 +274,8 @@ export class CSSHandler {
     const cssValue = this.computedStyles.getPropertyValue(
       camelToDash(property)
     );
+
+    console.log("getCurrentValue", property, cssValue, camelToDash(property));
 
     // Store initial value for reset functionality
     if (!this.initialValues.has(property)) {
@@ -301,3 +306,40 @@ export type CSSPropertyName =
   | "outlineColor" // Outline color
   | "textDecorationColor" // Text decoration color
   | "textEmphasisColor"; // Text emphasis color
+
+// Add these helper functions
+export const parseOpacity = (value: string): NumericValue => {
+  if (value === "") return createValue.numeric(1, "");
+  const num = parseFloat(value);
+  if (isNaN(num) || num < 0 || num > 1)
+    throw new Error(`Invalid opacity value: ${value}`);
+  return createValue.numeric(num, "");
+};
+
+export const parseWidth = (value: string): NumericValue => {
+  const regex = /^(-?\d+\.?\d*)(px|%|em|rem|vh|vw)$/;
+  const match = regex.exec(value);
+  if (!match) throw new Error(`Invalid width value: ${value}`);
+  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
+};
+
+export const parseHeight = (value: string): NumericValue => {
+  const regex = /^(-?\d+\.?\d*)(px|%|em|rem|vh|vw)$/;
+  const match = regex.exec(value);
+  if (!match) throw new Error(`Invalid height value: ${value}`);
+  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
+};
+
+export const parseBorderRadius = (value: string): NumericValue => {
+  const regex = /^(-?\d+\.?\d*)(px|%|em|rem)$/;
+  const match = regex.exec(value);
+  if (!match) throw new Error(`Invalid border radius value: ${value}`);
+  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
+};
+
+export const parseBorderWidth = (value: string): NumericValue => {
+  const regex = /^(-?\d+\.?\d*)(px|em|rem)$/;
+  const match = regex.exec(value);
+  if (!match) throw new Error(`Invalid border width value: ${value}`);
+  return createValue.numeric(parseFloat(match[1]), match[2] as AnimationUnit);
+};

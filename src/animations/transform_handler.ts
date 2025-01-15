@@ -38,20 +38,15 @@ export class TransformHandler {
   /** Cached transform string to avoid recomputing when unchanged */
   private currentTransform: string = "";
 
-  /** Valid units for rotation transforms */
-  static readonly rotationUnits: AnimationUnit[] = ["deg"];
-
-  /** Valid units for scale transforms */
-  static readonly scaleUnits: AnimationUnit[] = ["px", "%", "em", "rem"];
-
-  /** Valid units for translation transforms */
-  static readonly translationUnits: AnimationUnit[] = ["px", "%", "em", "rem"];
+  /** The DOM element to handle transforms for */
+  private readonly element: HTMLElement;
 
   /**
    * Creates a new TransformHandler instance.
    * @param el - The DOM element to handle transforms for
    */
   constructor(el: HTMLElement) {
+    this.element = el;
     this.transformState = {
       translate: { x: 0, y: 0, z: 0 },
       rotate: { x: 0, y: 0, z: 0 },
@@ -317,7 +312,7 @@ export class TransformHandler {
   }
 
   /**
-   * Resets transform state back to initial values.
+   * Resets transform state back to initial values and updates the element.
    */
   public reset(): void {
     this.transformState = {
@@ -327,8 +322,9 @@ export class TransformHandler {
       skew: { x: 0, y: 0 },
     };
     this.currentTransform = "";
-    this.hasStateChanges = false;
-    this.computeTransform();
+    this.hasStateChanges = true;
+    const transform = this.computeTransform();
+    this.element.style.transform = transform;
   }
 }
 
