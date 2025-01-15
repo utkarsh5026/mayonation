@@ -4,6 +4,7 @@ import {
   createValue,
 } from "../core/animation-val";
 import { linear, logarithmic } from "../utils/interpolate";
+import { validateProgress } from "./utils";
 
 const transformProperties = new Map<TransformPropertyName, AnimationUnit>([
   ["translate", "px"],
@@ -130,6 +131,7 @@ export class TransformHandler {
     to: NumericValue,
     progress: number
   ): NumericValue {
+    validateProgress(progress);
     switch (true) {
       case property.startsWith("rotate"):
         return interpolateRotation(from, to, progress);
@@ -517,13 +519,13 @@ export function interpolateScale(
  * interpolateRotation({value: 350, unit: 'deg'}, {value: 10, unit: 'deg'}, 0.5)
  * // Returns {value: 0, unit: 'deg'}
  */
-function interpolateRotation(
+export function interpolateRotation(
   from: NumericValue,
   to: NumericValue,
   progress: number,
   options?: RotationOptions
 ): NumericValue {
-  const { maintainRevolution = false, direction = "clockwise" } = options || {};
+  const { maintainRevolution = true, direction = "clockwise" } = options || {};
 
   let fromDeg = from.value;
   let toDeg = to.value;
@@ -550,7 +552,9 @@ function interpolateRotation(
     }
   }
 
-  const value = fromDeg + diff * progress;
+  const value = !maintainRevolution
+    ? (fromDeg + diff * progress) % 360
+    : fromDeg + diff * progress;
   return createValue.numeric(value, "deg");
 }
 
@@ -565,7 +569,7 @@ function interpolateRotation(
  * @param progress - Animation progress from 0 to 1
  * @returns Interpolated value with same unit as input
  */
-function interpolateLinear(
+export function interpolateLinear(
   from: NumericValue,
   to: NumericValue,
   progress: number
@@ -580,7 +584,7 @@ function interpolateLinear(
  * @param angle - The angle to normalize, in degrees
  * @returns The normalized angle, in degrees
  */
-function normalizeAngle(angle: number) {
+export function normalizeAngle(angle: number) {
   return ((angle % 360) + 360) % 360;
 }
 
