@@ -4,6 +4,9 @@ Welcome to Mayonation, a lightweight and performant animation library for the we
 
 **See the [live preview](https://utkarsh5026.github.io/mayosite/). 🚀**
 
+![Tests](https://github.com/utkarsh5026/mayonation/actions/workflows/test.yml/badge.svg)
+
+
 ## Features
 
 - **High-performance Transform Animations**: Easily animate properties like translate, rotate, and scale.
@@ -87,4 +90,3 @@ I hope you find this library useful in your projects. Happy animating! 🎨
 
 Feel free to adjust the content to better fit your style or add any additional information you think is necessary.
 
-![Tests](https://github.com/utkarsh5026/mayonation/actions/workflows/test.yml/badge.svg)
