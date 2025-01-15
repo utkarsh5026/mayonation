@@ -2,9 +2,10 @@ import {
   TransformHandler,
   type TransformPropertyName,
 } from "../animations/transform_handler";
-import { CSSHandler, type CSSPropertyName } from "../animations/css_handler";
+import { CSSHandler } from "../animations/css/handler";
 import { easeFns, type EaseFn, type EaseFnName } from "./ease_fns";
 import { type AnimationValue, isNumericValue } from "./animation-val";
+import { type CSSPropertyName } from "../animations/css/units";
 
 /**
  * Core animation class that handles animating HTML elements.

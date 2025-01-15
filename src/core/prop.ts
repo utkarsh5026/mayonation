@@ -2,14 +2,13 @@ import {
   TransformHandler,
   type TransformPropertyName,
 } from "../animations/transform_handler";
-import { CSSHandler,
-  type CSSPropertyName } from "../animations/css_handler";
+import { CSSHandler } from "../animations/css/handler";
 import {
   isNumericValue,
   type AnimationValue,
   type ColorSpace,
 } from "./animation-val";
-
+import { type CSSPropertyName } from "../animations/css/units";
 export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
 
 /**

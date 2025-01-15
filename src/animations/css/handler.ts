@@ -18,7 +18,7 @@ import {
   parseOpacity,
   parseWidth,
   parseHeight,
-} from "./css_parse";
+} from "./parse";
 
 type CssHandlerOptions = {
   colorSpace?: ColorSpace;
