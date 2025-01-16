@@ -9,6 +9,10 @@ import {
   type ColorSpace,
 } from "./animation-val";
 import { type CSSPropertyName } from "../animations/css/units";
+
+/**
+ * A property that can be animated like a transform or a CSS property.
+ */
 export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
 
 /**
@@ -25,14 +29,11 @@ export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
 export class PropertyManager {
   private readonly transformHandler: TransformHandler;
   private readonly cssHandler: CSSHandler;
-  private readonly space: ColorSpace;
-
   private readonly activeProperties: Set<AnimatableProperty> = new Set();
 
   constructor(private readonly element: HTMLElement, space?: ColorSpace) {
     this.transformHandler = new TransformHandler(element);
     this.cssHandler = new CSSHandler(element, { colorSpace: space });
-    this.space = space ?? "hsl";
   }
 
   /**
@@ -135,10 +136,20 @@ export class PropertyManager {
   }
 }
 
+/**
+ * Checks if a property is a transform property
+ * @param property - The property to check
+ * @returns true if the property is a transform property
+ */
 const isTransProp = (
   property: AnimatableProperty
 ): property is TransformPropertyName =>
   TransformHandler.isTransformProperty(property);
 
+/**
+ * Checks if a property is a CSS property
+ * @param property - The property to check
+ * @returns true if the property is a CSS property
+ */
 const isCSSProp = (property: AnimatableProperty): property is CSSPropertyName =>
   CSSHandler.isAnimatableProperty(property);
