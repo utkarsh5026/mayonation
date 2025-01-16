@@ -1,23 +1,35 @@
+export type TranslateProperties =
+  | "translate" // 2D translation shorthand
+  | "translateX" // X-axis translation
+  | "translateY" // Y-axis translation
+  | "translateZ"; // Z-axis translation
+
+export type RotateProperties =
+  | "rotate" // 2D rotation shorthand
+  | "rotateX" // X-axis rotation
+  | "rotateY" // Y-axis rotation
+  | "rotateZ"; // Z-axis rotation
+
+export type ScaleProperties =
+  | "scale" // Uniform scale shorthand
+  | "scaleX" // X-axis scale
+  | "scaleY" // Y-axis scale
+  | "scaleZ"; // Z-axis scale
+
+export type SkewProperties =
+  | "skewX" // X-axis skew
+  | "skewY" // Y-axis skew
+  | "skew"; // 2D skew shorthand
+
 /**
  * CSS transform properties that can be animated.
  * Includes translation, rotation, scale and skew transformations.
  */
 export type TransformPropertyName =
-  | "translate" // 2D translation shorthand
-  | "translateX" // X-axis translation
-  | "translateY" // Y-axis translation
-  | "translateZ" // Z-axis translation
-  | "rotate" // 2D rotation shorthand
-  | "rotateX" // X-axis rotation
-  | "rotateY" // Y-axis rotation
-  | "rotateZ" // Z-axis rotation
-  | "scale" // Uniform scale shorthand
-  | "scaleX" // X-axis scale
-  | "scaleY" // Y-axis scale
-  | "scaleZ" // Z-axis scale
-  | "skewX" // X-axis skew
-  | "skewY" // Y-axis skew
-  | "skew"; // 2D skew shorthand
+  | TranslateProperties
+  | ScaleProperties
+  | RotateProperties
+  | SkewProperties;
 
 /**
  * Represents the complete transform state of an element.
@@ -81,3 +93,54 @@ export type TransformConfig = Partial<{
   /** Skew around Y-axis (deg, rad, turn) */
   skewY: number | string;
 }>;
+
+/**
+ * Checks if a property is a translate transform property
+ * @param prop - The property name to check
+ * @returns True if the property is a translate property (translate, translateX, translateY, translateZ)
+ */
+export const isTranslateProp = (prop: string): prop is TranslateProperties => {
+  return (
+    prop === "translate" ||
+    prop === "translateX" ||
+    prop === "translateY" ||
+    prop === "translateZ"
+  );
+};
+
+/**
+ * Checks if a property is a rotate transform property
+ * @param prop - The property name to check
+ * @returns True if the property is a rotate property (rotate, rotateX, rotateY, rotateZ)
+ */
+export const isRotateProp = (prop: string): prop is RotateProperties => {
+  return (
+    prop === "rotate" ||
+    prop === "rotateX" ||
+    prop === "rotateY" ||
+    prop === "rotateZ"
+  );
+};
+
+/**
+ * Checks if a property is a scale transform property
+ * @param prop - The property name to check
+ * @returns True if the property is a scale property (scale, scaleX, scaleY, scaleZ)
+ */
+export const isScaleProp = (prop: string): prop is ScaleProperties => {
+  return (
+    prop === "scale" ||
+    prop === "scaleX" ||
+    prop === "scaleY" ||
+    prop === "scaleZ"
+  );
+};
+
+/**
+ * Checks if a property is a skew transform property
+ * @param prop - The property name to check
+ * @returns True if the property is a skew property (skew, skewX, skewY)
+ */
+export const isSkewProp = (prop: string): prop is SkewProperties => {
+  return prop === "skew" || prop === "skewX" || prop === "skewY";
+};
