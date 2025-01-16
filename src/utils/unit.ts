@@ -1,6 +1,4 @@
 const BASE_FONT_SIZE_PX = 16;
-const RADIANS_TO_DEGREES = 180;
-const TURNS_TO_DEGREES = 360;
 
 /**
  * Types of supported CSS units
