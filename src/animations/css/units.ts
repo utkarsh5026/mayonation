@@ -27,3 +27,44 @@ export type CSSPropertyName =
   | "outlineColor" // Outline color
   | "textDecorationColor" // Text decoration color
   | "textEmphasisColor"; // Text emphasis color
+
+/**
+ * Configuration type for CSS properties that can be animated.
+ */
+export type CssPropertyConfig = {
+  /** Opacity value between 0 and 1 */
+  opacity: number;
+  
+  /** CSS color value for background (hex, rgb, rgba, etc) */
+  backgroundColor: string;
+  
+  /** Element width in px, %, em, rem or other valid CSS units */
+  width: number | string;
+  
+  /** Element height in px, %, em, rem or other valid CSS units */
+  height: number | string;
+  
+  /** Border radius in px, %, em, rem or other valid CSS units */
+  borderRadius: number | string;
+  
+  /** Complete border shorthand value (e.g. "1px solid black") */
+  border: string;
+  
+  /** Border color value (hex, rgb, rgba, etc) */
+  borderColor: string;
+  
+  /** Border style (solid, dashed, dotted, etc) */
+  borderStyle: string;
+  
+  /** Text color value (hex, rgb, rgba, etc) */
+  color: string;
+  
+  /** Outline color value (hex, rgb, rgba, etc) */
+  outlineColor: string;
+  
+  /** Text decoration color value (hex, rgb, rgba, etc) */
+  textDecorationColor: string;
+  
+  /** Text emphasis color value (hex, rgb, rgba, etc) */
+  textEmphasisColor: string;
+};
