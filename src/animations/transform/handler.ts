@@ -1,13 +1,12 @@
-import {
-  type NumericValue,
-  type AnimationUnit,
-  createValue,
-} from "../../core/animation-val";
+import { type NumericValue, createValue } from "../../core/animation-val";
 import { validateProgress } from "../utils";
-import type {
-  TransformState,
-  TransformAxis,
-  TransformPropertyName,
+import {
+  type TransformState,
+  type TransformAxis,
+  type TransformPropertyName,
+  isTranslateProp,
+  isRotateProp,
+  isSkewProp,
 } from "./units";
 import {
   decomposeMatrix,
@@ -15,6 +14,8 @@ import {
   interpolateRotation,
   interpolateScale,
 } from "./math";
+import type { AnimationUnit } from "../../utils/unit";
+import { parseValue } from "../../utils/unit";
 
 const transformProperties = new Map<TransformPropertyName, AnimationUnit>([
   ["translate", "px"],
@@ -308,6 +309,37 @@ export class TransformHandler {
     value: number
   ): NumericValue {
     return createValue.numeric(value, transformProperties.get(property)!);
+  }
+
+  public parse(
+    property: TransformPropertyName,
+    value: number | string
+  ): NumericValue {
+    if (typeof value === "number") {
+      let unit: AnimationUnit;
+
+      switch (true) {
+        case isTranslateProp(property):
+          unit = "px";
+          break;
+        case isRotateProp(property):
+        case isSkewProp(property):
+          unit = "deg";
+          break;
+        default:
+          unit = "";
+      }
+
+      return createValue.numeric(value, unit);
+    }
+    try {
+      const parsed = parseValue(value);
+      return createValue.numeric(parsed.value, parsed.unit);
+    } catch (error) {
+      throw new Error(
+        `Invalid value "${value}" for the property "${property}" `
+      );
+    }
   }
 
   /**

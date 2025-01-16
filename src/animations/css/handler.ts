@@ -1,23 +1,23 @@
 import { camelToDash } from "../../utils/string";
-import { rgb, hsl, linear } from "../../utils/interpolate";
+import { hsl, linear, rgb } from "../../utils/interpolate";
 import {
   type AnimationValue,
-  type ColorValue,
   type ColorSpace,
-  type RGB,
-  type HSL,
+  type ColorValue,
   createValue,
+  type HSL,
   isColorValue,
   isNumericValue,
+  type RGB,
 } from "../../core/animation-val";
 import { parseColor, toCSSString } from "../../utils/color";
 import { type CSSPropertyName, cssPropertyUnits } from "./units";
 import {
   parseBorderRadius,
   parseBorderWidth,
+  parseHeight,
   parseOpacity,
   parseWidth,
-  parseHeight,
 } from "./parse";
 
 type CssHandlerOptions = {
@@ -200,8 +200,7 @@ export class CSSHandler {
     property: CSSPropertyName,
     value: AnimationValue
   ): void {
-    const cssValue = this.convertToCSS(property, value);
-    this.el.style[property as any] = cssValue;
+    this.el.style[property as any] = this.convertToCSS(property, value);
     this.currentValues.set(property, value);
   }
 
@@ -226,12 +225,10 @@ export class CSSHandler {
    * @throws If the value type is not supported
    */
   public parseValue(property: CSSPropertyName, value: string): AnimationValue {
-    // Handle color properties first
     if (CSSHandler.colorProperties.has(property)) {
       return this.parseColorValue(value);
     }
 
-    // Use specific parsers for each property
     switch (property) {
       case "opacity":
         return parseOpacity(value);
