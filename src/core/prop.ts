@@ -132,6 +132,24 @@ export class PropertyManager {
       this.element.style.transform = this.transformHandler.computeTransform();
     }
   }
+
+  /**
+   * Parses a raw value into an AnimationValue for the given property
+   * @param property - The animatable property to parse the value for
+   * @param value - The raw value to parse, can be a string for CSS properties or number for transforms
+   * @returns The parsed AnimationValue, or null if parsing fails
+   */
+  public parse(
+    property: AnimatableProperty,
+    value: string | number
+  ): AnimationValue | null {
+    if (isCSSProp(property))
+      return this.cssHandler.parseValue(property, value.toString());
+    else if (isTransProp(property))
+      return this.transformHandler.parse(property, value);
+
+    return null;
+  }
 }
 
 /**
