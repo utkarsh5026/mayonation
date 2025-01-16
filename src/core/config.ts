@@ -1,6 +1,7 @@
 import type { EaseFn, EaseFnName } from "./ease_fns";
 import type { TransformConfig } from "../animations/transform/units";
 import type { CssPropertyConfig } from "../animations/css/units";
+import type { AnimationValue } from "./animation-val";
 
 /**
  * Animation lifecycle callback functions
@@ -50,3 +51,11 @@ export type PropertiesConfig = TransformConfig &
   CssPropertyConfig &
   AnimationOptions &
   AnimationCallbacks;
+
+/**
+ * Configuration type for internal properties used by the animation engine
+ */
+export type InternalPropertiesConfig = {
+  transform: Map<keyof TransformConfig, AnimationValue>;
+  css: Map<keyof CssPropertyConfig, AnimationValue>;
+};
