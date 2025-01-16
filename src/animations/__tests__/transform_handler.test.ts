@@ -1,7 +1,8 @@
 /// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { TransformHandler, TransformPropertyName } from "../transform_handler";
+import type { TransformPropertyName } from "../transform/units";
+import { TransformHandler } from "../transform/handler";
 import { createValue, NumericValue } from "../../core/animation-val";
 
 describe("TransformHandler", () => {

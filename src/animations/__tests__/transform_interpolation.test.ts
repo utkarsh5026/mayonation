@@ -4,7 +4,7 @@ import {
   interpolateRotation,
   interpolateLinear,
   type RotationOptions,
-} from "../transform_handler";
+} from "../transform/math";
 import { describe, it, expect } from "vitest";
 
 describe("Transform Interpolation Functions", () => {
@@ -45,7 +45,10 @@ describe("Transform Interpolation Functions", () => {
     it("should respect clockwise direction option", () => {
       const from = createValue.numeric(350, "deg");
       const to = createValue.numeric(10, "deg");
-      const options: RotationOptions = { direction: "clockwise", maintainRevolution: false };
+      const options: RotationOptions = {
+        direction: "clockwise",
+        maintainRevolution: false,
+      };
 
       expect(interpolateRotation(from, to, 0.5, options).value).toBeCloseTo(0);
     });
@@ -53,7 +56,10 @@ describe("Transform Interpolation Functions", () => {
     it("should respect counterclockwise direction option", () => {
       const from = createValue.numeric(10, "deg");
       const to = createValue.numeric(350, "deg");
-      const options: RotationOptions = { direction: "counterclockwise", maintainRevolution: false };
+      const options: RotationOptions = {
+        direction: "counterclockwise",
+        maintainRevolution: false,
+      };
 
       expect(interpolateRotation(from, to, 0.5, options).value).toBeCloseTo(0);
     });
