@@ -1,7 +1,5 @@
-import {
-  TransformHandler,
-  type TransformPropertyName,
-} from "../animations/transform_handler";
+import { TransformHandler } from "../animations/transform/handler";
+import type { TransformPropertyName } from "../animations/transform/units";
 import { CSSHandler } from "../animations/css/handler";
 import {
   isNumericValue,
