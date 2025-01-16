@@ -1,3 +1,5 @@
+import type { AnimationUnit } from "../utils/unit";
+
 /**
  * Represents the supported color spaces for color parsing and conversion.
  * @type {"rgb" | "hsl"}
@@ -26,26 +28,6 @@ export type HSL = {
   l: number;
   a?: number;
 };
-
-/**
- * Represents all possible CSS units for animations
- */
-export type AnimationUnit =
-  | "px"
-  | "pt"
-  | "cm"
-  | "mm" // Absolute length
-  | "em"
-  | "rem"
-  | "%"
-  | "vh"
-  | "vw" // Relative length
-  | "deg"
-  | "rad"
-  | "turn" // Angles
-  | ""
-  | "ms"
-  | "s"; // Special
 
 /**
  * Represents a numeric value with its unit
