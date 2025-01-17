@@ -357,6 +357,7 @@ export class Timeline {
       precision: 0.001,
       ...options,
     };
+    this.tick = this.tick.bind(this);
   }
 
   /**
