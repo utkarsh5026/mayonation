@@ -41,14 +41,11 @@ export class PropertyManager {
    * @returns Current value of the property
    */
   public getCurrentValue(property: AnimatableProperty): AnimationValue {
-    switch (true) {
-      case isTransProp(property):
-        return this.transformHandler.getCurrentTransform(property);
-      case isCSSProp(property):
-        return this.cssHandler.getCurrentValue(property);
-      default:
-        throw new Error(`Unsupported property: ${property}`);
-    }
+    if (isTransProp(property))
+      return this.transformHandler.getCurrentTransform(property);
+    else if (isCSSProp(property))
+      return this.cssHandler.getCurrentValue(property);
+    else throw new Error(`Unsupported property: ${property}`);
   }
 
   /**
