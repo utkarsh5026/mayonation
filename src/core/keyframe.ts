@@ -291,8 +291,10 @@ export class KeyframeManager {
     return result;
   }
 
+  /**
+   * Gets the fallback value if not provided
+   */
   private getFallbackValue(prop: AnimatableProperty): AnimationValue {
-    // Implement appropriate fallback values based on property type
     return this.propManager.getCurrentValue(prop);
   }
 
