@@ -4,7 +4,7 @@ import { AnimationValue } from "../core/animation-val";
  * Interface for handling animations on elements.
  * Provides methods for resetting, applying updates, interpolating values, updating attributes, validating attributes, getting valid attributes, parsing values, and getting current values.
  */
-export interface AnimationHandler {
+interface AnimationHandler {
   /**
    * Resets all attributes to their initial values.
    */
@@ -63,3 +63,5 @@ export interface AnimationHandler {
    */
   getCurrentValue(attribute: string): AnimationValue;
 }
+
+export default AnimationHandler;

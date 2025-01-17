@@ -5,7 +5,7 @@ import {
 } from "../../core/animation-val";
 import { linear } from "../../utils/interpolate";
 import { convertLength, parseValue } from "../../utils/unit";
-import { AnimationHandler } from "../handler";
+import AnimationHandler from "../handler";
 
 /**
  * Defines the attributes for different types of SVG shapes.
