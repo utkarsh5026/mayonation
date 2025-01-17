@@ -1,8 +1,8 @@
 import {
   createValue,
   type NumericValue,
-  type AnimationUnit,
 } from "../../core/animation-val";
+import type {AnimationUnit} from "../../utils/unit";
 import type { CSSPropertyName } from "./units";
 
 /**
