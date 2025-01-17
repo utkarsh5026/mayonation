@@ -2,7 +2,6 @@
 
 import { TimelineSegment } from "../timeline";
 import { KeyframeManager } from "../keyframe";
-import { easeFns } from "../ease_fns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("TimelineSegment", () => {
