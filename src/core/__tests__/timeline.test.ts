@@ -103,6 +103,71 @@ describe("Timeline", () => {
     });
   });
 
+  describe("Playback Controls", () => {
+    let timeline: Timeline;
+    let element: HTMLElement;
+
+    beforeEach(() => {
+      timeline = new Timeline({});
+      element = document.createElement("div");
+      timeline.add(element, {
+        duration: 1000,
+        opacity: 0,
+      });
+    });
+
+    it("should play animation", () => {
+      const startSpy = vi.fn();
+      timeline.on("start", startSpy);
+
+      timeline.play();
+      expect(timeline["state"]).toBe("playing");
+      expect(startSpy).toHaveBeenCalledWith({ time: 0 });
+    });
+
+    it("should pause animation", () => {
+      const pauseSpy = vi.fn();
+      timeline.on("pause", pauseSpy);
+
+      timeline.play();
+      now += 500;
+      timeline.pause();
+
+      expect(timeline["state"]).toBe("paused");
+      expect(pauseSpy).toHaveBeenCalledWith({
+        time: timeline["currentTime"],
+      });
+    });
+
+    it("should resume animation", () => {
+      const resumeSpy = vi.fn();
+      timeline.on("resume", resumeSpy);
+
+      timeline.play();
+      now += 500;
+      timeline.pause();
+      timeline.resume();
+
+      expect(timeline["state"]).toBe("playing");
+      expect(resumeSpy).toHaveBeenCalled();
+    });
+
+    it("should reset animation", () => {
+      timeline.play();
+      now += 500;
+      timeline.reset();
+
+      expect(timeline["currentTime"]).toBe(0);
+      expect(timeline["state"]).toBe("idle");
+      expect(timeline["startTime"]).toBeNull();
+    });
+
+    it("should seek to position", () => {
+      timeline.seek(500);
+      expect(timeline["currentTime"]).toBe(500);
+    });
+  });
+
   describe("Cleanup", () => {
     it("should properly destroy timeline", () => {
       const timeline = new Timeline({});
