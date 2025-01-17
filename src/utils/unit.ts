@@ -79,7 +79,6 @@ export function convertLength(
     case "px":
       return num;
     case "%":
-      // Assumes percentage of parent width for horizontal properties
       return (num / 100) * context.parentSize.width;
     case "em":
       return num * context.fontSize;
