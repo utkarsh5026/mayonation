@@ -7,6 +7,7 @@ import {
   type ColorSpace,
 } from "./animation-val";
 import { type CSSPropertyName } from "../animations/css/units";
+import { toCSSString } from "../utils/color";
 
 /**
  * A property that can be animated like a transform or a CSS property.
@@ -149,6 +150,19 @@ export class PropertyManager {
       return this.transformHandler.parse(property, value);
 
     return null;
+  }
+
+  /**
+   * Converts an AnimationValue into a string representation.
+   *
+   * For numeric values, it concatenates the value with its unit. For non-numeric values, it uses a utility function to convert the value to a CSS string.
+   *
+   * @param val - The AnimationValue to be stringified.
+   * @returns A string representation of the AnimationValue.
+   */
+  public static stringifyValue(val: AnimationValue) {
+    if (isNumericValue(val)) return `${val.value}${val.unit}`;
+    else return toCSSString(val.value);
   }
 }
 
