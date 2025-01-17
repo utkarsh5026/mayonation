@@ -1,4 +1,5 @@
-# Mayonation
+# 🎨 Mayonation
+
 
 Welcome to Mayonation, a lightweight and performant animation library for the web. This library is designed to make animating HTML elements simple and efficient, providing a powerful API to enhance your web projects. I developed this project as a learning project for animations.
 
@@ -7,86 +8,183 @@ Welcome to Mayonation, a lightweight and performant animation library for the we
 ![Tests](https://github.com/utkarsh5026/mayonation/actions/workflows/test.yml/badge.svg)
 
 
-## Features
+## Why Mayonation?
 
-- **High-performance Transform Animations**: Easily animate properties like translate, rotate, and scale.
-- **CSS Property Animations**: Animate properties such as opacity, colors, and dimensions.
-- **Customizable Easing Functions**: Choose from a variety of easing functions for smooth animations.
-- **Multiple Targets**: Animate multiple elements simultaneously.
-- **Lifecycle Hooks**: Utilize hooks for animation start, update, and completion events.
-- **Pause, Resume, and Destroy Controls**: Manage your animations with ease.
+- 🪶 **Lightweight AF** - Tiny footprint that won't bloat your bundle
+- 🎯 **Dead Simple API** - Chain methods like a boss
+- 🚀 **Performance First** - Optimized for silky smooth 60fps
+- 🎮 **Timeline Support** - Create complex sequences with ease
+- 🎨 **CSS & Transform** - Animate any property you want
+- 📦 **TypeScript Ready** - Full type support out of the box
 
-## Installation
-
-You can install Mayonation via npm:
+## Quick Start
 
 ```bash
 npm install mayonation
 ```
 
-Or, if you prefer yarn:
-
-```bash
-yarn add mayonation
-```
-
-## Usage
-
-Here's a quick example to get you started:
+### Basic Animation
 
 ```typescript
-import { Animation } from 'mayonation';
+import { animate } from 'mayonation'
 
-const element = document.querySelector('.my-element');
-
-const animation = new Animation(element, {
-  translateX: 100,
-  opacity: 0.5,
-  duration: 1000,
-  easing: 'easeInOut'
-});
-
-animation.play();
+// Make it move!
+animate('.my-box')
+  .to({
+    translateX: 100,
+    opacity: 0.5
+  })
+  .duration(1000)
+  .easing('easeOutQuad')
+  .play()
 ```
 
-## API
+### Keyframe Magic
 
-### `Animation`
+```typescript
+animate('#bouncy-ball')
+  .keyframes([
+    { translateY: 0, offset: 0 },
+    { translateY: 200, offset: 0.5 },
+    { translateY: 0, offset: 1 }
+  ])
+  .duration(2000)
+  .play()
+```
 
-- **Constructor**: `new Animation(targets, properties, options)`
+### Timeline Power
 
-  - `targets`: HTMLElement or array of HTMLElements to animate.
-  - `properties`: Object defining the properties and target values to animate.
-  - `options`: Configuration options including duration, delay, easing, and lifecycle callbacks.
-- **Methods**:
+```typescript
+import { timeline } from 'mayonation'
 
-  - `play()`: Starts or resumes the animation.
-  - `pause()`: Pauses the animation.
-  - `resume()`: Resumes a paused animation.
-  - `destroy()`: Cleans up resources used by the animation.
+timeline()
+  .add('.box1', {
+    translateX: 100,
+    duration: 1000
+  })
+  .add('.box2', {
+    scale: 2
+  }, '+=500')  // Starts 500ms after previous
+  .add('.box3', {
+    opacity: 0
+  }, 2000)     // Starts at specific time
+  .play()
+```
 
-### Options
+## 🛠️ Features
 
-- `duration`: Duration of the animation in milliseconds.
-- `delay`: Delay before the animation starts in milliseconds.
-- `easing`: Easing function name or custom function.
-- `onComplete`: Callback function when the animation completes.
-- `onStart`: Callback function when the animation starts.
-- `onUpdate`: Callback function on each animation frame.
+### Transform Animations
 
-## Contributing
+- Scale, rotate, translate with GPU acceleration
+- Chain multiple transforms seamlessly
+- Perfect for smooth UI transitions
 
-Contributions are welcome! Feel free to fork the repository and submit pull requests. Whether it's bug fixes, feature requests, or documentation improvements, your input is appreciated.
+### CSS Properties
 
-## License
+- Animate colors, dimensions, opacity
+- Smart unit handling (px, %, em, rem)
+- Automatic value interpolation
 
-This project is licensed under the MIT License.
+### Easing Functions
+
+```typescript
+animate('.element')
+  .to({ scale: 1.5 })
+  .easing('easeInOutQuad')  // Built-in easings
+  .duration(500)
+  .play()
+```
+
+Available easings:
+
+- `linear`
+- `easeIn`, `easeOut`, `easeInOut`
+- `easeInQuad`, `easeOutQuad`, `easeInOutQuad`
+- `easeInCubic`, `easeOutCubic`, `easeInOutCubic`
+
+### Timeline Control
+
+- Precise timing control
+- Relative or absolute positioning
+- Loop and reverse options
+- Pause, resume, and seek
+
+## 🎮 API Reference
+
+### `animate(target)`
+
+Creates a simple animation instance.
+
+**Target can be:**
+
+- CSS selector string
+- HTML Element
+- Array of elements
+
+**Methods:**
+
+- `.to(properties)` - Set target values
+- `.keyframes(frames)` - Define keyframe sequence
+- `.duration(ms)` - Set animation length
+- `.easing(name)` - Set easing function
+- `.delay(ms)` - Add initial delay
+- `.play()` - Start animation
+
+### `timeline(options?)`
+
+Creates a complex animation sequence.
+
+**Options:**
+
+- `loop: boolean` - Loop the timeline
+- `precision: number` - Animation precision in ms
+
+**Methods:**
+
+- `.add(target, properties, position?)` - Add animation
+- `.play()` - Start timeline
+- `.pause()` - Pause timeline
+- `.resume()` - Resume timeline
+- `.seek(time)` - Jump to position
+
+## 🚀 Examples
+
+### Fade and Move
+
+```typescript
+animate('.card')
+  .to({
+    opacity: 0,
+    translateY: -50
+  })
+  .duration(500)
+  .easing('easeInOutCubic')
+  .play()
+```
+
+### Staggered Animation
+
+```typescript
+timeline()
+  .add('.item-1', { scale: 1.2 })
+  .add('.item-2', { scale: 1.2 }, '+=100')
+  .add('.item-3', { scale: 1.2 }, '+=100')
+  .play()
+```
+
+## 🤝 Contributing
+
+Found a bug? Want to add a feature? Contributions are welcome! Check out our [GitHub repo](https://github.com/utkarsh5026/mayonation).
+
+## 📝 License
+
+MIT © [Utkarsh Priyadarshi](https://github.com/utkarsh5026)
 
 ---
 
-I hope you find this library useful in your projects. Happy animating! 🎨
+Made with ❤️ for smooth animations
 
----
+```
 
-Feel free to adjust the content to better fit your style or add any additional information you think is necessary.
-
+This README maintains a friendly, approachable tone while providing comprehensive documentation. It highlights the key features and includes practical examples that developers can quickly copy and use. The emojis and formatting make it visually engaging while still maintaining professionalism.
+```
