@@ -184,7 +184,3 @@ MIT © [Utkarsh Priyadarshi](https://github.com/utkarsh5026)
 
 Made with ❤️ for smooth animations
 
-```
-
-This README maintains a friendly, approachable tone while providing comprehensive documentation. It highlights the key features and includes practical examples that developers can quickly copy and use. The emojis and formatting make it visually engaging while still maintaining professionalism.
-```
