@@ -18,11 +18,9 @@ import type { AnimationUnit } from "../../utils/unit";
 import { parseValue } from "../../utils/unit";
 
 const transformProperties = new Map<TransformPropertyName, AnimationUnit>([
-  ["translate", "px"],
   ["translateX", "px"],
   ["translateY", "px"],
   ["translateZ", "px"],
-  ["rotate", "deg"],
   ["rotateX", "deg"],
   ["rotateY", "deg"],
   ["rotateZ", "deg"],
@@ -30,7 +28,6 @@ const transformProperties = new Map<TransformPropertyName, AnimationUnit>([
   ["scaleX", ""],
   ["scaleY", ""],
   ["scaleZ", ""],
-  ["skew", "deg"],
   ["skewX", "deg"],
   ["skewY", "deg"],
 ]);

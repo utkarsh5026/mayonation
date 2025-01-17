@@ -27,11 +27,6 @@ describe("TransformHandler", () => {
       expect(handler.computeTransform()).toBe("translate3d(100px, 0px, 0px)");
     });
 
-    it("should handle rotation updates", () => {
-      handler.updateTransform("rotate", createValue.numeric(90, "deg"));
-      expect(handler.computeTransform()).toBe("rotateZ(90deg)");
-    });
-
     it("should handle scale updates", () => {
       handler.updateTransform("scale", createValue.numeric(2, ""));
       expect(handler.computeTransform()).toBe("scale3d(2, 2, 1)");
@@ -40,13 +35,13 @@ describe("TransformHandler", () => {
     it("should handle multiple transform updates", () => {
       const updates = new Map<TransformPropertyName, NumericValue>([
         ["translateX", createValue.numeric(100, "px")],
-        ["rotate", createValue.numeric(90, "deg")],
         ["scale", createValue.numeric(2, "")],
+        ["rotateX", createValue.numeric(90, "deg")],
       ]);
 
       handler.updateTransforms(updates);
       expect(handler.computeTransform()).toBe(
-        "translate3d(100px, 0px, 0px) rotateZ(90deg) scale3d(2, 2, 1)"
+        "translate3d(100px, 0px, 0px) rotateX(90deg) scale3d(2, 2, 1)"
       );
     });
 
@@ -58,21 +53,6 @@ describe("TransformHandler", () => {
     it("should handle fractional translations", () => {
       handler.updateTransform("translateX", createValue.numeric(10.5, "px"));
       expect(handler.computeTransform()).toBe("translate3d(10.5px, 0px, 0px)");
-    });
-
-    it("should handle multiple axis translations", () => {
-      handler.updateTransform("translate", createValue.numeric(100, "px"));
-      expect(handler.computeTransform()).toBe("translate3d(100px, 100px, 0px)");
-    });
-
-    it("should handle rotation beyond 360 degrees", () => {
-      handler.updateTransform("rotate", createValue.numeric(720, "deg"));
-      expect(handler.computeTransform()).toBe("rotateZ(720deg)");
-    });
-
-    it("should handle negative rotation", () => {
-      handler.updateTransform("rotate", createValue.numeric(-90, "deg"));
-      expect(handler.computeTransform()).toBe("rotateZ(-90deg)");
     });
 
     it("should handle fractional scale values", () => {
@@ -111,16 +91,6 @@ describe("TransformHandler", () => {
       expect(result).toEqual(createValue.numeric(50, "px"));
     });
 
-    it("should interpolate rotation using shortest path", () => {
-      const result = handler.interpolate(
-        "rotate",
-        createValue.numeric(0, "deg"),
-        createValue.numeric(180, "deg"),
-        0.5
-      );
-      expect(result).toEqual(createValue.numeric(90, "deg"));
-    });
-
     it("should interpolate scale logarithmically", () => {
       const result = handler.interpolate(
         "scale",
@@ -134,7 +104,7 @@ describe("TransformHandler", () => {
 
     it("should handle rotation interpolation beyond 360 degrees", () => {
       const result = handler.interpolate(
-        "rotate",
+        "rotateX",
         createValue.numeric(0, "deg"),
         createValue.numeric(720, "deg"),
         0.5
@@ -144,7 +114,7 @@ describe("TransformHandler", () => {
 
     it("should handle negative to positive rotation interpolation", () => {
       const result = handler.interpolate(
-        "rotate",
+        "rotateX",
         createValue.numeric(-180, "deg"),
         createValue.numeric(180, "deg"),
         0.5
@@ -178,7 +148,7 @@ describe("TransformHandler", () => {
   describe("reset", () => {
     it("should reset all transforms to initial state", () => {
       handler.updateTransform("translateX", createValue.numeric(100, "px"));
-      handler.updateTransform("rotate", createValue.numeric(90, "deg"));
+      handler.updateTransform("rotateY", createValue.numeric(90, "deg"));
       handler.reset();
       expect(handler.computeTransform()).toBe("");
     });
@@ -195,7 +165,7 @@ describe("TransformHandler", () => {
     it("should maintain transform order consistency", () => {
       const updates = new Map<TransformPropertyName, NumericValue>([
         ["scale", createValue.numeric(2, "")],
-        ["rotate", createValue.numeric(90, "deg")],
+        ["rotateX", createValue.numeric(90, "deg")],
         ["translateX", createValue.numeric(100, "px")],
       ]);
 
@@ -203,7 +173,7 @@ describe("TransformHandler", () => {
       const transform = handler.computeTransform();
       // Order should be: translate -> rotate -> scale
       expect(transform).toBe(
-        "translate3d(100px, 0px, 0px) rotateZ(90deg) scale3d(2, 2, 1)"
+        "translate3d(100px, 0px, 0px) rotateX(90deg) scale3d(2, 2, 1)"
       );
     });
 
@@ -229,13 +199,13 @@ describe("TransformHandler", () => {
 
     it("should handle zero values correctly", () => {
       handler.updateTransform("translateX", createValue.numeric(0, "px"));
-      handler.updateTransform("rotate", createValue.numeric(0, "deg"));
+      handler.updateTransform("rotateX", createValue.numeric(0, "deg"));
       handler.updateTransform("scale", createValue.numeric(1, ""));
       expect(handler.computeTransform()).toBe("");
     });
 
     it("should validate transform property units", () => {
-      const value = handler.parseTransformValue("rotate", 90);
+      const value = handler.parseTransformValue("rotateX", 90);
       expect(value.unit).toBe("deg");
     });
   });

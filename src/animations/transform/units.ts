@@ -1,11 +1,9 @@
 export type TranslateProperties =
-  | "translate" // 2D translation shorthand
   | "translateX" // X-axis translation
   | "translateY" // Y-axis translation
   | "translateZ"; // Z-axis translation
 
 export type RotateProperties =
-  | "rotate" // 2D rotation shorthand
   | "rotateX" // X-axis rotation
   | "rotateY" // Y-axis rotation
   | "rotateZ"; // Z-axis rotation
@@ -18,8 +16,7 @@ export type ScaleProperties =
 
 export type SkewProperties =
   | "skewX" // X-axis skew
-  | "skewY" // Y-axis skew
-  | "skew"; // 2D skew shorthand
+  | "skewY"; // Y-axis skew
 
 /**
  * CSS transform properties that can be animated.
@@ -81,12 +78,14 @@ export type TransformConfig = Partial<{
   /** Rotate around Z-axis (deg, rad, turn) */
   rotateZ: number | string;
 
+  /** Scale 2D - 1 is normal size, 2 is double, 0.5 is half  */
+  scale: number;
   /** Scale width - 1 is normal size, 2 is double, 0.5 is half */
-  scaleX: number | string;
+  scaleX: number;
   /** Scale height - 1 is normal size, 2 is double, 0.5 is half */
-  scaleY: number | string;
+  scaleY: number;
   /** Scale depth - 1 is normal size, 2 is double, 0.5 is half */
-  scaleZ: number | string;
+  scaleZ: number;
 
   /** Skew around X-axis (deg, rad, turn) */
   skewX: number | string;

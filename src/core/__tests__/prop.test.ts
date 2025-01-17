@@ -136,7 +136,6 @@ describe("PropertyManager", () => {
   describe("isAnimatable", () => {
     it("should validate transform properties", () => {
       expect(PropertyManager.isAnimatable("translateX")).toBe(true);
-      expect(PropertyManager.isAnimatable("rotate")).toBe(true);
       expect(PropertyManager.isAnimatable("scale")).toBe(true);
     });
 
@@ -163,10 +162,6 @@ describe("PropertyManager", () => {
         createValue.numeric(25, "px")
       );
 
-      // Rotation properties (deg)
-      expect(manager.parse("rotate", 45)).toEqual(
-        createValue.numeric(45, "deg")
-      );
       expect(manager.parse("rotateX", 90)).toEqual(
         createValue.numeric(90, "deg")
       );
@@ -270,9 +265,6 @@ describe("PropertyManager", () => {
 
       expect(manager.parse("translateX", -100)).toEqual(
         createValue.numeric(-100, "px")
-      );
-      expect(manager.parse("rotate", -360)).toEqual(
-        createValue.numeric(-360, "deg")
       );
 
       expect(manager.parse("opacity", "1")).toEqual(createValue.numeric(1, ""));

@@ -1,4 +1,4 @@
-import type { AnimationUnit } from "../../core/animation-val";
+import type { AnimationUnit } from "../../utils/unit";
 
 // Map of CSS properties to their valid units
 export const cssPropertyUnits = new Map<CSSPropertyName, AnimationUnit[]>([
@@ -55,6 +55,9 @@ export type CssPropertyConfig = Partial<{
 
   /** Border style (solid, dashed, dotted, etc) */
   borderStyle: string;
+
+  /** Width of the border  */
+  borderWidth: number | string;
 
   /** Text color value (hex, rgb, rgba, etc) */
   color: string;
