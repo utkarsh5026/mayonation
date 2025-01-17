@@ -102,4 +102,21 @@ describe("Timeline", () => {
       );
     });
   });
+
+  describe("Cleanup", () => {
+    it("should properly destroy timeline", () => {
+      const timeline = new Timeline({});
+      const element = document.createElement("div");
+      timeline.add(element, {
+        duration: 1000,
+        opacity: 0,
+      });
+
+      timeline.play();
+      timeline.destroy();
+      expect(timeline["segments"].length).toBe(0);
+      expect(timeline["eventListeners"].size).toBe(0);
+      expect(timeline["rafID"]).toBeNull();
+    });
+  });
 });
