@@ -168,6 +168,44 @@ describe("Timeline", () => {
     });
   });
 
+  describe("Event Handling", () => {
+    let timeline: Timeline;
+
+    beforeEach(() => {
+      timeline = new Timeline({});
+      const element = document.createElement("div");
+      timeline.add(element, {
+        duration: 1000,
+        opacity: 0,
+      });
+    });
+
+    it("should register and trigger event listeners", () => {
+      const callback = vi.fn();
+      timeline.on("start", callback);
+      timeline.play();
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("should remove event listeners", () => {
+      const callback = vi.fn();
+      timeline.on("start", callback);
+      timeline.off("start", callback);
+      timeline.play();
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should handle multiple event listeners", () => {
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+      timeline.on("start", callback1);
+      timeline.on("start", callback2);
+      timeline.play();
+      expect(callback1).toHaveBeenCalled();
+      expect(callback2).toHaveBeenCalled();
+    });
+  });
+
   describe("Cleanup", () => {
     it("should properly destroy timeline", () => {
       const timeline = new Timeline({});
