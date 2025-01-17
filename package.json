@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
+    "@types/jsdom": "^21.1.7",
     "concurrently": "^8.2.2",
     "happy-dom": "^16.6.0",
     "jsdom": "^26.0.0",
