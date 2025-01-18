@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { PathUtils, PathError } from "../svg/path";
+import PathUtils from "../svg/path_utils";
+import { PathError } from "../svg/unit";
 
 describe("PathUtils", () => {
   describe("parsePath", () => {
