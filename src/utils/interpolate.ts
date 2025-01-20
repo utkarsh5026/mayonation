@@ -21,9 +21,14 @@ export class NumericInterpolator implements Interpolator<number> {
    *   - "linear": Standard linear interpolation (default)
    *   - "logarithmic": Better for values that change by orders of magnitude
    *   - "exponential": Creates accelerating or decelerating transitions
+   *   - "angle": Interpolates angles in a circular manner
    */
   constructor(
-    private readonly space: "linear" | "logarithmic" | "exponential" = "linear"
+    private readonly space:
+      | "linear"
+      | "logarithmic"
+      | "exponential"
+      | "angle" = "linear"
   ) {}
 
   /**
@@ -40,9 +45,28 @@ export class NumericInterpolator implements Interpolator<number> {
       case "exponential":
         return this.expInterpolate(from, to, progress);
       case "linear":
+        return this.linearInterpolate(from, to, progress);
+      case "angle":
+        return this.angleInterpolate(from, to, progress);
       default:
         return this.linearInterpolate(from, to, progress);
     }
+  }
+
+  private angleInterpolate(from: number, to: number, progress: number): number {
+    const normalize = (angle: number) => ((angle % 360) + 360) % 360;
+
+    let startAngle = normalize(from);
+    let endAngle = normalize(to);
+    let diff = endAngle - startAngle;
+
+    if (Math.abs(diff) > 180) {
+      if (diff > 0) diff -= 360;
+      else diff += 360;
+    }
+
+    const result = startAngle + progress * diff;
+    return normalize(result);
   }
 
   /**
@@ -144,11 +168,9 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
     let h1 = from.h;
     let h2 = to.h;
 
-    // Normalize hues to 0-360 range
     h1 = ((h1 % 360) + 360) % 360;
     h2 = ((h2 % 360) + 360) % 360;
 
-    // Calculate the shortest path
     let diff = h2 - h1;
     if (diff > 180) {
       diff -= 360;
@@ -156,7 +178,6 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
       diff += 360;
     }
 
-    // Correct the interpolation to ensure it takes the shortest path
     const interpolatedHue = (h1 + diff * progress + 360) % 360;
 
     return {
@@ -167,8 +188,18 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
   }
 }
 
+/**
+ * Clamps a progress value between 0 and 1.
+ * @param progress - The progress value to clamp.
+ * @returns The clamped progress value.
+ */
+export const clampProgress = (progress: number): number => {
+  return Math.max(0, Math.min(1, progress));
+};
+
 export const rgb = new ColorInterpolator("rgb");
 export const hsl = new ColorInterpolator("hsl");
 export const linear = new NumericInterpolator("linear");
 export const logarithmic = new NumericInterpolator("logarithmic");
 export const exponential = new NumericInterpolator("exponential");
+export const angle = new NumericInterpolator("angle");
