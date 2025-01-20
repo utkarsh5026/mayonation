@@ -62,7 +62,38 @@ export type InterpolationOptions = Partial<{
   includeAngle: boolean;
 }>;
 
+/**
+ * LineInterpolator provides functionality for interpolating points along a straight line.
+ * This is useful for creating smooth animations between two points or generating
+ * evenly spaced points along a line segment.
+ */
 export class LineInterpolator {
+  /**
+   * Interpolates points between two positions with configurable parameters.
+   *
+   * @param from - The starting point with x,y coordinates and optional pressure/angle
+   * @param to - The ending point with x,y coordinates and optional pressure/angle
+   * @param progress - A value between 0-1 indicating how far along the line to interpolate
+   * @param opts - Optional configuration:
+   *   - steps: Number of interpolation steps (default: 10)
+   *   - includePressure: Whether to interpolate pressure values (default: true)
+   *   - includeAngle: Whether to interpolate angle values (default: true)
+   *
+   * @returns An array of interpolated points between start and end positions
+   *
+   * @throws {InterpolationError} If the points are invalid or too close together
+   *
+   * @example
+   * ```ts
+   * const interpolator = new LineInterpolator();
+   * const points = interpolator.interpolate(
+   *   {x: 0, y: 0},
+   *   {x: 10, y: 10},
+   *   0.5
+   * );
+   * // Returns points from (0,0) to (5,5)
+   * ```
+   */
   public interpolate(
     from: Point,
     to: Point,
@@ -136,6 +167,17 @@ export class LineInterpolator {
     }
   }
 
+  /**
+   * Validates if two points are at a valid distance from each other.
+   * Points that are too close together (less than EPSILON) or at invalid distances
+   * (infinite/NaN) are rejected.
+   *
+   * @param start - The starting point
+   * @param end - The ending point
+   * @returns Object indicating if distance is valid and any error message
+   *
+   * @internal
+   */
   private validateDistance(start: Point, end: Point): ValidateNumberResult {
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
 
@@ -157,14 +199,40 @@ export class LineInterpolator {
   }
 
   /**
-   * Calculates the total length of the line
+   * Calculates the straight-line distance between two points using the Pythagorean theorem.
+   *
+   * @param start - The starting point
+   * @param end - The ending point
+   * @returns The distance between the points
+   *
+   * @example
+   * ```ts
+   * const length = interpolator.calculateLength({x: 0, y: 0}, {x: 3, y: 4});
+   * // Returns 5
+   * ```
    */
   public calculateLength(start: Point, end: Point): number {
     return Math.hypot(end.x - start.x, end.y - start.y);
   }
 
   /**
-   * Gets a point at a specific distance along the line
+   * Gets the coordinates of a point at a specific distance along the line.
+   * Useful for finding intermediate points based on distance rather than percentage.
+   *
+   * @param start - The starting point
+   * @param end - The ending point
+   * @param distance - The distance along the line to find the point
+   * @returns The point at the specified distance
+   *
+   * @example
+   * ```ts
+   * const point = interpolator.getPointAtDistance(
+   *   {x: 0, y: 0},
+   *   {x: 10, y: 0},
+   *   5
+   * );
+   * // Returns {x: 5, y: 0}
+   * ```
    */
   public getPointAtDistance(start: Point, end: Point, distance: number): Point {
     const totalLength = this.calculateLength(start, end);
@@ -179,7 +247,24 @@ export class LineInterpolator {
   }
 
   /**
-   * Gets the angle of the line in degrees
+   * Calculates the angle of the line in degrees relative to the positive x-axis.
+   * - Returns 0° for a horizontal line going right
+   * - Returns 90° for a vertical line going up
+   * - Returns 180° for a horizontal line going left
+   * - Returns -90° for a vertical line going down
+   *
+   * @param start - The starting point
+   * @param end - The ending point
+   * @returns The angle in degrees (-180° to 180°)
+   *
+   * @example
+   * ```ts
+   * const angle = interpolator.getAngle(
+   *   {x: 0, y: 0},
+   *   {x: 10, y: 10}
+   * );
+   * // Returns 45
+   * ```
    */
   public getAngle(start: Point, end: Point): number {
     return Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI);
