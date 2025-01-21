@@ -85,19 +85,17 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Smoothstep provides smooth interpolation with ease-in and ease-out
- * Creates a smooth transition that's differentiable at the endpoints
- */
-export function smoothstep(edge0: number, edge1: number, x: number): number {
-  const normalized = normalize(x, edge0, edge1);
-  const t = clamp(normalized, 0, 1);
-  return t * t * (3 - 2 * t);
-}
-
-/**
  * Normalizes an angle to be within 0-360 degrees
  * Useful for angle-based animations and calculations
  */
 export function normalizeAngle(angle: number): number {
   return ((angle % 360) + 360) % 360;
+}
+
+/**
+ * Calculates the dot product of two vectors
+ * Useful for angle-based calculations and projections
+ */
+export function dotProduct(a: Coordinate, b: Coordinate): number {
+  return a.x * b.x + a.y * b.y;
 }
