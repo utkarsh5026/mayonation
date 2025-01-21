@@ -24,14 +24,20 @@ export const ErrorCodes = {
 
 export const INTERPOLATION_CONSTANTS = {
   EPSILON: 1e-10,
-  MAX_STEPS: 1000,
-  MIN_STEPS: 2,
-  MIN_RADIUS: 1e-6,
   MAX_SAFE_COORDINATE: 1e6,
-  DEFAULT_STEPS: 10,
+
+  MAX_STEPS: 120, // Reduced: ~2 points per frame at 60 FPS
+  MIN_STEPS: 2,
+  DEFAULT_STEPS: 30,
+
+  DEFAULT_MIN_STEP_SIZE: 5,
+  MIN_RADIUS: 1e-6,
+
   MIN_PRESSURE: 0,
   MAX_PRESSURE: 1,
-  DEFAULT_MIN_STEP_SIZE: 1,
+
+  COMPLEXITY_SCALE: 0.5,
+  MAX_COMPLEXITY_FACTOR: 2,
 } as const;
 
 type ValidateNumberResult = {
@@ -501,16 +507,6 @@ export class QuadraticBezierInterpolator {
   private validateControlPoint(points: CurvePoints): ValidateNumberResult {
     if (!points.control1)
       return validResult(false, "Quadratic Bezier requires one control point");
-
-    const validateCoordinate = (value: number, name: string) => {
-      if (
-        !Number.isFinite(value) ||
-        Math.abs(value) > INTERPOLATION_CONSTANTS.MAX_SAFE_COORDINATE
-      ) {
-        return `${name} coordinate is invalid: ${value}`;
-      }
-      return null;
-    };
 
     const xError = validateCoordinate(points.control1.x, "Control point x");
     if (xError) return validResult(false, xError);
@@ -1008,17 +1004,6 @@ export class CubicBezierInterpolator {
       };
     }
 
-    // Validate each point's coordinates are finite
-    const validateCoordinate = (value: number, name: string) => {
-      if (
-        !Number.isFinite(value) ||
-        Math.abs(value) > INTERPOLATION_CONSTANTS.MAX_SAFE_COORDINATE
-      ) {
-        return `${name} coordinate is invalid: ${value}`;
-      }
-      return null;
-    };
-
     const points_to_validate = [
       { point: points.control1, name: "Control point 1" },
       { point: points.control2, name: "Control point 2" },
@@ -1226,4 +1211,17 @@ const pointCreate = (
   angle?: number
 ) => {
   return { x, y, pressure, angle };
+};
+
+/*
+ *  Validate the coordinate to ensure it is a finite number and within the safe bounds
+ */
+const validateCoordinate = (value: number, name: string) => {
+  if (
+    !Number.isFinite(value) ||
+    Math.abs(value) > INTERPOLATION_CONSTANTS.MAX_SAFE_COORDINATE
+  ) {
+    return `${name} coordinate is invalid: ${value}`;
+  }
+  return null;
 };
