@@ -1,343 +1,397 @@
-import type { EaseFn, EaseFnName } from "../../core/ease_fns";
-
-/**
- * Error types for path animation
- */
-export enum PathErrorType {
-  INVALID_PATH = "INVALID_PATH",
-  INVALID_COMMAND = "INVALID_COMMAND",
-  TRANSFORM_ERROR = "TRANSFORM_ERROR",
-  STYLE_ERROR = "STYLE_ERROR",
-  ANIMATION_ERROR = "ANIMATION_ERROR",
-}
-
-export type PathCommandType =
-  | "M"
-  | "L"
-  | "H"
-  | "V"
-  | "C"
-  | "S"
-  | "Q"
-  | "T"
-  | "A"
-  | "Z";
+import type { Point, PathCommandType } from "./unit";
+import { PathInterpolator, InterpolationOptions } from "./path_interpolate";
 
 /**
  * Core PathCommand interface representing a single SVG path command
  * Each command has a type (like M, L, C) and its parameters
  */
-type PathCommand = {
+export type PathCommand = {
   type: PathCommandType; // The command type (M, L, C, etc)
-  values: number[]; // Numeric parameters for the command
+  points: Point[]; // Points for the command
   relative: boolean; // Whether it's a relative command
   endPoint: Point; // End point for the command
   controlPoints?: Point[]; // Control points for curves
+  params?: {
+    radius?: { x: number; y: number };
+    rotation?: number;
+    largeArc?: boolean;
+    sweep?: boolean;
+  };
 };
 
 /**
- * Represents a 2D point in the coordinate system
+ * Validation rules for each command type
  */
-type Point = {
-  x: number;
-  y: number;
-};
+const COMMAND_VALIDATION: Record<
+  PathCommandType,
+  {
+    requiredParams: number;
+    multipleAllowed: boolean;
+  }
+> = {
+  M: { requiredParams: 2, multipleAllowed: true }, // x,y (can have multiple pairs)
+  L: { requiredParams: 2, multipleAllowed: true }, // x,y (can have multiple pairs)
+  H: { requiredParams: 1, multipleAllowed: true }, // x
+  V: { requiredParams: 1, multipleAllowed: true }, // y
+  C: { requiredParams: 6, multipleAllowed: true }, // x1,y1,x2,y2,x,y
+  S: { requiredParams: 4, multipleAllowed: true }, // x2,y2,x,y
+  Q: { requiredParams: 4, multipleAllowed: true }, // x1,y1,x,y
+  T: { requiredParams: 2, multipleAllowed: true }, // x,y
+  A: { requiredParams: 7, multipleAllowed: true }, // rx,ry,angle,large-arc,sweep,x,y
+  Z: { requiredParams: 0, multipleAllowed: false }, // no parameters
+} as const;
 
 /**
- * Configuration options for path animations
+ * SVGPath class handles parsing, manipulation and serialization of SVG path data.
+ * It breaks down complex SVG path strings into a sequence of commands that can be
+ * processed individually.
+ *
+ * SVG paths consist of commands like:
+ * - M/m: Move to point (x,y)
+ * - L/l: Draw line to point (x,y)
+ * - H/h: Draw horizontal line to x
+ * - V/v: Draw vertical line to y
+ * - C/c: Cubic Bézier curve with control points (x1,y1) and (x2,y2) to end point (x,y)
+ * - S/s: Smooth cubic Bézier with one control point (x2,y2) to (x,y)
+ * - Q/q: Quadratic Bézier with control point (x1,y1) to (x,y)
+ * - T/t: Smooth quadratic Bézier to point (x,y)
+ * - A/a: Arc to (x,y) with radius (rx,ry), rotation, and arc flags
+ * - Z/z: Close path
+ *
+ * Uppercase commands use absolute coordinates, lowercase use relative coordinates.
  */
-export type PathAnimationOptions = {
-  duration: number; // Animation duration in ms
-  easing?: EaseFn | EaseFnName; // Easing function
-  autoClose?: boolean; // Whether to auto-close paths
-  precision?: number; // Decimal precision for calculations
-  optimizePaths?: boolean; // Whether to optimize paths
-};
+class SVGPath {
+  private readonly commands: PathCommand[] = [];
+  private readonly ipr: PathInterpolator = new PathInterpolator();
+  private readonly originalPath: string;
 
-export type PathStyleProperties = Partial<{
-  fill: string;
-  stroke: string;
-  strokeWidth: number;
-  opacity: number;
-  dasharray: number[];
-  dashoffset: number;
-}>;
-
-export type PathTransformProperties = Partial<{
-  translate: {
-    x: number;
-    y: number;
-  };
-  rotate: {
-    angle: number;
-    origin?: Point;
-  };
-  scale: {
-    x: number;
-    y: number;
-    origin?: Point;
-  };
-  skew: {
-    x: number;
-    y: number;
-  };
-}>;
-
-export type PathAnimationConfig = Partial<{
-  targetPath: string;
-  styleProperties: PathStyleProperties;
-  transformProperties: PathTransformProperties;
-  options: PathAnimationOptions;
-  drawingEffect: {
-    enabled: boolean;
-    reverse: boolean;
-  };
-}>;
-
-const PATH_ATTRIBUTE_NAME = "d";
-
-export class PathError extends Error {
-  constructor(
-    public type: PathErrorType,
-    message: string,
-    public details?: any
-  ) {
-    super(message);
-    this.name = "PathError";
-  }
-}
-
-/**
- * This class provides utility methods for parsing and manipulating SVG path commands.
- * It includes methods for parsing a path string into an array of PathCommand objects,
- * converting PathCommand objects back into a path string, and making relative path
- * commands absolute by adjusting their coordinates based on a reference point.
- */
-export class PathUtils {
   /**
-   * Parses an SVG path string into an array of PathCommand objects.
-   *
-   * @param path - The SVG path string to parse.
-   * @returns An array of PathCommand objects representing the parsed path.
-   * @throws PathError if the path is invalid or cannot be parsed.
+   * Creates a new SVGPath instance from a path data string
+   * @param pathData - SVG path data string (e.g. "M0,0 L100,100")
    */
-  public static parsePath(path: string): PathCommand[] {
-    const commands: PathCommand[] = [];
-    const commandRegex = /([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)/g;
-
-    let match;
-
-    try {
-      while ((match = commandRegex.exec(path)) !== null) {
-        const [_, type, valueString] = match;
-        const values = valueString
-          .trim()
-          .split(/[\s,]+/)
-          .filter((v) => v !== "")
-          .map((v) => parseFloat(v));
-
-        const command = this.createCommand(type, values);
-        commands.push(command);
-      }
-
-      if (commands.length === 0 && path.length > 0) {
-        throw new PathError(
-          PathErrorType.INVALID_PATH,
-          `Failed to parse path: ${path}`
-        );
-      }
-    } catch (error) {
-      throw new PathError(
-        PathErrorType.INVALID_PATH,
-        `Failed to parse path: ${error}`,
-        { path }
-      );
-    }
-
-    return commands;
+  constructor(pathData: string) {
+    this.originalPath = pathData;
+    this.parsePathData(pathData);
+    console.dir(this.commands, { depth: null });
   }
 
   /**
-   * Creates a PathCommand object based on the given type and values.
-   *
-   * @param type - The type of the path command (e.g., 'M', 'L', 'C', etc.).
-   * @param values - The values for the path command.
-   * @returns A PathCommand object representing the command.
-   * @throws PathError if the command type is invalid or the number of values is incorrect.
+   * Converts the path commands back to an SVG path string
+   * Handles all command types with proper coordinate formatting
    */
-  private static createCommand(type: string, values: number[]): PathCommand {
-    const isRelative = type === type.toLowerCase();
-    const upperType = type.toUpperCase() as PathCommandType;
+  public toString(): string {
+    return this.commands
+      .map((cmd) => {
+        const type = cmd.type;
 
-    this.validateCommand(upperType, values);
+        switch (type) {
+          case "M":
+          case "L":
+            return type + cmd.points.map((p) => `${p.x},${p.y}`).join(" ");
 
-    const { endPoint, controlPoints } = this.calculateCommandPoints(
-      upperType,
-      values
-    );
+          case "H":
+            return `${type}${cmd.points.map((p) => p.x).join(" ")}`;
+          case "V":
+            return `${type}${cmd.points.map((p) => p.y).join(" ")}`;
 
-    return {
-      type: upperType,
-      values,
-      relative: isRelative,
-      endPoint,
-      controlPoints,
-    };
-  }
+          case "C": {
+            // Cubic Bézier has 2 control points followed by end point
+            const [cp1, cp2] = cmd.controlPoints!;
+            return `${type}${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${cmd.points[0].x},${cmd.points[0].y}`;
+          }
 
-  /**
-   * Calculates the end point and control points for a PathCommand based on its type and values.
-   *
-   * @param type - The type of the path command.
-   * @param values - The values for the path command.
-   * @returns An object containing the end point and control points for the command.
-   */
-  private static calculateCommandPoints(
-    type: string,
-    values: number[]
-  ): Pick<PathCommand, "endPoint" | "controlPoints"> {
-    switch (type) {
-      case "M":
-      case "L":
-        return { endPoint: { x: values[0], y: values[1] } };
+          case "S": {
+            // Smooth cubic Bézier has 1 control point followed by end point
+            const [cp2] = cmd.controlPoints!;
+            return `${type}${cp2.x},${cp2.y} ${cmd.points[0].x},${cmd.points[0].y}`;
+          }
 
-      case "H":
-        return {
-          endPoint: { x: values[0], y: 0 }, // Y will be adjusted later
-        };
+          case "Q": {
+            // Quadratic Bézier has 1 control point followed by end point
+            const [cp] = cmd.controlPoints!;
+            return `${type}${cp.x},${cp.y} ${cmd.points[0].x},${cmd.points[0].y}`;
+          }
 
-      case "V":
-        return {
-          endPoint: { x: 0, y: values[0] }, // X will be adjusted later
-        };
+          case "T":
+            return `${type}${cmd.points[0].x},${cmd.points[0].y}`;
 
-      case "C":
-        return {
-          endPoint: { x: values[4], y: values[5] },
-          controlPoints: [
-            { x: values[0], y: values[1] },
-            { x: values[2], y: values[3] },
-          ],
-        };
+          case "A": {
+            const params = cmd.params!;
+            return `${type}${params.radius!.x},${params.radius!.y} ${
+              params.rotation
+            } ${params.largeArc ? 1 : 0} ${params.sweep ? 1 : 0} ${
+              cmd.points[0].x
+            },${cmd.points[0].y}`;
+          }
 
-      case "S":
-      case "Q":
-        return {
-          endPoint: { x: values[2], y: values[3] },
-          controlPoints: [{ x: values[0], y: values[1] }],
-        };
+          case "Z":
+            return type;
 
-      case "T":
-        return {
-          endPoint: { x: values[0], y: values[1] },
-        };
-
-      case "A":
-        return {
-          endPoint: { x: values[5], y: values[6] },
-        };
-
-      case "Z":
-        return {
-          endPoint: { x: 0, y: 0 }, // Will be adjusted to first point
-        };
-
-      default:
-        throw new PathError(
-          PathErrorType.INVALID_COMMAND,
-          `Unknown command type: ${type}`
-        );
-    }
-  }
-
-  /**
-   * Validates a path command based on its type and number of values.
-   *
-   * @param type - The type of the path command.
-   * @param values - The values for the path command.
-   * @throws PathError if the number of values is incorrect for the given command type.
-   */
-  private static validateCommand(type: PathCommandType, values: number[]) {
-    const expectedValues: Record<PathCommandType, number> = {
-      M: 2,
-      L: 2,
-      H: 1,
-      V: 1,
-      C: 6,
-      S: 4,
-      Q: 4,
-      T: 2,
-      A: 7,
-      Z: 0,
-    };
-
-    const expected = expectedValues[type];
-    if (expected === undefined || values.length !== expected) {
-      throw new PathError(
-        PathErrorType.INVALID_COMMAND,
-        `Invalid number of values for command ${type}`,
-        { type, values, expected }
-      );
-    }
-  }
-
-  /**
-   * Converts an array of PathCommand objects back into an SVG path string.
-   *
-   * @param commands - The array of PathCommand objects to convert.
-   * @returns The SVG path string representation of the commands.
-   */
-  public static commandsToPath(commands: PathCommand[]) {
-    return commands
-      .map((command) => {
-        if (command.type === "Z") return "Z";
-
-        const cmdType = command.relative
-          ? command.type.toLowerCase()
-          : command.type;
-        return `${cmdType}${command.values.join(" ")}`;
+          default:
+            return "";
+        }
       })
       .join(" ");
   }
 
   /**
-   * Converts a relative PathCommand object to an absolute one by adjusting its coordinates based on a reference point.
-   *
-   * @param command - The PathCommand object to convert.
-   * @param referencePoint - The reference point to use for conversion.
-   * @returns The absolute PathCommand object.
+   * Returns the original path string that was used to create this SVGPath
    */
-  public static makeAbsolute(
-    command: PathCommand,
-    referencePoint: Point
-  ): PathCommand {
-    if (!command.relative) return command;
-    const { x, y } = referencePoint;
+  public get getOriginalPath(): string {
+    return this.originalPath;
+  }
 
-    const newValues = [...command.values];
-    for (let i = 0; i < newValues.length; i += 2) {
-      if (i + 1 < newValues.length) {
-        newValues[i] += x;
-        newValues[i + 1] += y;
-      } else if (command.type === "H") {
-        newValues[i] += x;
-      } else if (command.type === "V") {
-        newValues[i] += y;
-      }
+  /**
+   * Parses SVG path data string into individual commands
+   * Uses regex to extract command type and parameter values
+   */
+  private parsePathData(pathData: string): void {
+    const commandPattern = /([a-zA-Z])([^a-zA-Z]*)/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = commandPattern.exec(pathData)) !== null) {
+      const [_, type, valueString] = match;
+      const values = valueString
+        .trim()
+        .split(/[\s,]+/)
+        .filter((v) => v !== "")
+        .map(Number);
+
+      const cmd = this.createCommand(type, values);
+      this.commands.push(cmd);
+    }
+  }
+
+  /**
+   * Creates a PathCommand object from command type and parameters
+   * Handles special case of move commands with implicit line commands
+   */
+  private createCommand(type: string, params: number[]): PathCommand {
+    this.validateCommandParams(type, params);
+    if (this.commands.length === 0 && type.toUpperCase() !== "M") {
+      this.commands.push(this.createCommand("M", [0, 0]));
     }
 
+    const command = this.initializeCommand(type);
+    const prevPoint = this.getPreviousEndPoint();
+
+    if (this.isSubsequentMoveCommand(type, params)) {
+      const moveParams = params.slice(0, 2);
+      const lineParams = params.slice(2);
+
+      const moveCmd = this.createCommandPoints(command, moveParams, prevPoint);
+      this.commands.push(moveCmd);
+
+      const lineType = type === "m" ? "l" : "L";
+      return this.createCommand(lineType, lineParams);
+    }
+
+    return this.createCommandPoints(command, params, prevPoint);
+  }
+
+  /**
+   * Creates points and control points for a command based on its type
+   * Handles coordinate calculations for both absolute and relative commands
+   */
+  private createCommandPoints(
+    command: PathCommand,
+    params: number[],
+    prevPoint: Point
+  ): PathCommand {
+    const points = this.pairToPoints(params);
+    switch (command.type) {
+      case "M":
+      case "L": {
+        // M x,y L x,y
+        command.points = points;
+        command.endPoint = command.points[command.points.length - 1];
+        break;
+      }
+
+      case "H": {
+        // H x
+        const x = command.relative ? prevPoint.x + params[0] : params[0];
+        command.points = [{ x, y: prevPoint.y }];
+        command.endPoint = command.points[0];
+        break;
+      }
+
+      case "V": {
+        // V y
+        const y = command.relative ? prevPoint.y + params[0] : params[0];
+        command.points = [{ x: prevPoint.x, y }];
+        command.endPoint = command.points[0];
+        break;
+      }
+
+      case "C": {
+        // C x1,y1 x2,y2 x,y
+        command.points = [points[2]];
+        command.controlPoints = [points[0], points[1]];
+        command.endPoint = command.points[0];
+        break;
+      }
+
+      case "S":
+      case "Q": {
+        // S x2,y2 x,y Q x1,y1 x,y
+        command.points = [points[1]];
+        command.controlPoints = [points[0]];
+        command.endPoint = command.points[0];
+        break;
+      }
+
+      case "T": {
+        // T x,y
+        command.points = points;
+        command.endPoint = command.points[0];
+        break;
+      }
+
+      case "A": {
+        // A rx,ry angle large-arc sweep x,y
+        const [rx, ry, angle, largeArc, sweep, x, y] = params;
+        const endPoint = command.relative
+          ? { x: prevPoint.x + x, y: prevPoint.y + y }
+          : { x, y };
+
+        command.points = [endPoint];
+        command.params = {
+          radius: { x: Math.abs(rx), y: Math.abs(ry) }, // Ensure positive radii
+          rotation: angle % 360, // Normalize angle
+          largeArc: Boolean(largeArc),
+          sweep: Boolean(sweep),
+        };
+        command.endPoint = endPoint;
+        break;
+      }
+
+      case "Z": {
+        // Z
+        const pathStart = this.getStartOfPath();
+        command.points = [pathStart];
+        command.endPoint = pathStart;
+        break;
+      }
+    }
+    return this.handleRelativeCommand(command, prevPoint);
+  }
+
+  /**
+   * Converts relative coordinates to absolute coordinates
+   * For relative commands, coordinates are offset from previous end point
+   */
+  private handleRelativeCommand(
+    command: PathCommand,
+    prevPoint: Point
+  ): PathCommand {
+    if (!command.relative) return command;
+
+    const adjustPoint = (p: Point): Point => ({
+      x: prevPoint.x + p.x,
+      y: prevPoint.y + p.y,
+    });
+
+    const adjusted = { ...command };
+    adjusted.points = command.points.map(adjustPoint);
+    if (command.controlPoints)
+      adjusted.controlPoints = command.controlPoints.map(adjustPoint);
+
+    adjusted.endPoint = adjustPoint(command.endPoint);
+    return adjusted;
+  }
+
+  /**
+   * Validates command parameters against rules defined in COMMAND_VALIDATION
+   * Checks number of parameters and ensures they are valid numbers
+   */
+  private validateCommandParams(type: string, params: number[]): void {
+    const commandType = type.toUpperCase() as PathCommandType;
+    const validation = COMMAND_VALIDATION[commandType];
+
+    if (!validation) throw new Error(`Invalid command type: ${type}`);
+
+    if (params.length === 0 && validation.requiredParams > 0)
+      throw new Error(`Command ${type} requires parameters`);
+
+    if (
+      !validation.multipleAllowed &&
+      params.length !== validation.requiredParams
+    )
+      throw new Error(
+        `Command ${type} requires exactly ${validation.requiredParams} parameters, got ${params.length}`
+      );
+
+    if (
+      validation.multipleAllowed &&
+      params.length % validation.requiredParams !== 0
+    )
+      throw new Error(
+        `Command ${type} requires parameters in multiples of ${validation.requiredParams}, got ${params.length}`
+      );
+
+    if (params.some((param) => !Number.isFinite(param)))
+      throw new Error(`Invalid parameter value for command ${type}`);
+  }
+
+  /**
+   * Creates a new PathCommand object with default values
+   * Sets command type and whether it's relative based on case
+   */
+  private initializeCommand(type: string): PathCommand {
     return {
-      ...command,
-      values: newValues,
-      relative: false,
-      endPoint: {
-        x: command.endPoint.x + x,
-        y: command.endPoint.y + y,
-      },
-      controlPoints: command.controlPoints?.map((point) => ({
-        x: point.x + x,
-        y: point.y + y,
-      })),
+      type: type.toUpperCase() as PathCommandType,
+      points: [],
+      relative: type !== type.toUpperCase(),
+      endPoint: { x: 0, y: 0 },
     };
   }
+
+  /**
+   * Checks if a move command has additional parameters
+   * Move commands can include implicit line commands
+   */
+  private isSubsequentMoveCommand(type: string, params: number[]): boolean {
+    const validation =
+      COMMAND_VALIDATION[type.toUpperCase() as PathCommandType];
+    return (
+      type.toUpperCase() === "M" && params.length > validation.requiredParams
+    );
+  }
+
+  /**
+   * Gets the end point of the previous command
+   * Returns origin (0,0) if this is the first command
+   */
+  private getPreviousEndPoint(): Point {
+    return this.commands.length > 0
+      ? { ...this.commands[this.commands.length - 1].endPoint }
+      : { x: 0, y: 0 };
+  }
+
+  /**
+   * Finds the start point of the current subpath
+   * Used by Z command to close the path
+   */
+  private getStartOfPath(): Point {
+    for (let i = this.commands.length - 1; i >= 0; i--) {
+      const cmd = this.commands[i];
+      if (cmd.type === "M") return cmd.endPoint;
+    }
+    return { x: 0, y: 0 };
+  }
+
+  /**
+   * Converts array of numbers to array of Point objects
+   * Takes pairs of numbers as x,y coordinates
+   */
+  private pairToPoints(params: number[]): Point[] {
+    const points: Point[] = [];
+    for (let i = 0; i < params.length; i += 2) {
+      points.push({ x: params[i], y: params[i + 1] });
+    }
+    return points;
+  }
 }
+
+export default SVGPath;
