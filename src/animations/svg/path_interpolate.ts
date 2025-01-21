@@ -1,7 +1,7 @@
 import { Point } from "./unit";
 import { validateNumber } from "../../utils/type_validate";
 import { angle, clampProgress, linear } from "../../utils/interpolate";
-import { clamp } from "../../utils/math";
+import { clamp, normalizeAngle } from "../../utils/math";
 
 export class InterpolationError extends Error {
   constructor(message: string, public readonly code: string) {
@@ -287,20 +287,14 @@ export class LineInterpolator {
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
 
     if (distance < INTERPOLATION_CONSTANTS.EPSILON) {
-      return {
-        isValid: false,
-        error: "Points are too close together",
-      };
+      return validResult(false, "Points are too close together");
     }
 
     if (!Number.isFinite(distance)) {
-      return {
-        isValid: false,
-        error: "Invalid distance between points",
-      };
+      return validResult(false, "Invalid distance between points");
     }
 
-    return { isValid: true };
+    return validResult(true);
   }
 
   /**
@@ -375,3 +369,374 @@ export class LineInterpolator {
     return Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI);
   }
 }
+
+/**
+ * QuadraticBezierInterpolator generates points along a quadratic Bézier curve.
+ *
+ * A quadratic Bézier curve is defined by 3 points:
+ * - P₀: Start point
+ * - P₁: Control point (determines the curve's shape)
+ * - P₂: End point
+ *
+ * The curve is calculated using the quadratic Bézier formula:
+ * B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+ * where t ranges from 0 to 1
+ *
+ * Key features:
+ * - Smooth interpolation between start and end points
+ * - Control point influences curve shape without being on the curve
+ * - Interpolates position (x,y), pressure, and angle attributes
+ * - Supports adaptive step sizing based on curve complexity
+ *
+ * Mathematical properties:
+ * - The curve always passes through P₀ and P₂
+ * - The curve is tangent to P₀P₁ at P₀ and P₁P₂ at P₂
+ * - The curve lies within the convex hull of the control points
+ */
+export class QuadraticBezierInterpolator {
+  private readonly maxSteps = INTERPOLATION_CONSTANTS.MAX_STEPS;
+  private readonly minSteps = INTERPOLATION_CONSTANTS.MIN_STEPS;
+
+  /**
+   * Calculates a point on the quadratic Bézier curve at parameter t.
+   *
+   * The formula expands to:
+   * x(t) = (1-t)²x₀ + 2(1-t)tx₁ + t²x₂
+   * y(t) = (1-t)²y₀ + 2(1-t)ty₁ + t²y₂
+   *
+   * Where:
+   * - (x₀,y₀) is the start point
+   * - (x₁,y₁) is the control point
+   * - (x₂,y₂) is the end point
+   * - t ∈ [0,1] is the curve parameter
+   */
+  private calculateQuadraticBezierPoint(
+    start: Point,
+    control: Point,
+    end: Point,
+    t: number
+  ): Point {
+    const time = clampProgress(t);
+
+    const point: Point = {
+      x: this.beitzerQuadratic(time, start.x, control.x, end.x),
+      y: this.beitzerQuadratic(time, start.y, control.y, end.y),
+    };
+
+    // Interpolate pressure if available using same Bézier formula
+    if (
+      typeof start.pressure === "number" &&
+      typeof end.pressure === "number"
+    ) {
+      point.pressure = this.beitzerQuadratic(
+        time,
+        start.pressure,
+        control.pressure ?? (start.pressure + end.pressure) / 2,
+        end.pressure
+      );
+    }
+
+    // Interpolate angle with special handling for wraparound
+    if (typeof start.angle === "number" && typeof end.angle === "number") {
+      point.angle = this.interpolateAngle(
+        start.angle,
+        end.angle,
+        time,
+        control.angle
+      );
+    }
+
+    return point;
+  }
+
+  /**
+   * Implements the quadratic Bézier formula for a single component (x, y, or pressure)
+   * B(t) = (1-t)²p₁ + 2(1-t)tp₂ + t²p₃
+   */
+  private beitzerQuadratic(
+    t: number,
+    p1: number,
+    p2: number,
+    p3: number
+  ): number {
+    const tSquared = t * t;
+    const tMinusOne = 1 - t;
+    const tMinusOneSquared = tMinusOne * tMinusOne;
+
+    return tMinusOneSquared * p1 + 2 * tMinusOne * t * p2 + tSquared * p3;
+  }
+
+  /**
+   * Handles angle interpolation with special consideration for wraparound.
+   * For example, interpolating from 350° to 10° should rotate 20° clockwise,
+   * not 340° counterclockwise.
+   */
+  private interpolateAngle(
+    startAngle: number,
+    endAngle: number,
+    t: number,
+    controlAngle?: number
+  ): number {
+    startAngle = normalizeAngle(startAngle);
+    endAngle = normalizeAngle(endAngle);
+
+    if (controlAngle === undefined) {
+      let diff = endAngle - startAngle;
+      if (Math.abs(diff) > 180) diff -= Math.sign(diff) * 360;
+      return normalizeAngle(startAngle + diff * t);
+    }
+
+    controlAngle = normalizeAngle(controlAngle);
+    const result = this.beitzerQuadratic(t, startAngle, controlAngle, endAngle);
+    return normalizeAngle(result);
+  }
+
+  /**
+   * Validates that the control point exists and has finite coordinates
+   * within safe numerical bounds.
+   */
+  private validateControlPoint(points: CurvePoints): ValidateNumberResult {
+    if (!points.control1)
+      return validResult(false, "Quadratic Bezier requires one control point");
+
+    const validateCoordinate = (value: number, name: string) => {
+      if (
+        !Number.isFinite(value) ||
+        Math.abs(value) > INTERPOLATION_CONSTANTS.MAX_SAFE_COORDINATE
+      ) {
+        return `${name} coordinate is invalid: ${value}`;
+      }
+      return null;
+    };
+
+    const xError = validateCoordinate(points.control1.x, "Control point x");
+    if (xError) return validResult(false, xError);
+
+    const yError = validateCoordinate(points.control1.y, "Control point y");
+    if (yError) return validResult(false, yError);
+
+    return validResult(true);
+  }
+
+  /**
+   * Approximates the length of the Bézier curve using linear segments.
+   * More samples provide better approximation but take longer to calculate.
+   */
+  private calculateApproximateLength(
+    start: Point,
+    control: Point,
+    end: Point,
+    samples: number = 50
+  ): number {
+    let length = 0;
+    let previousPoint = start;
+
+    for (let i = 1; i <= samples; i++) {
+      const t = i / samples;
+      const currentPoint = this.calculateQuadraticBezierPoint(
+        start,
+        control,
+        end,
+        t
+      );
+
+      length += Math.hypot(
+        currentPoint.x - previousPoint.x,
+        currentPoint.y - previousPoint.y
+      );
+
+      previousPoint = currentPoint;
+    }
+
+    return length;
+  }
+
+  /**
+   * Main entry point for generating points along a quadratic Bézier curve.
+   *
+   * @param points - The start, control, and end points defining the curve
+   * @param progress - How far along the curve to interpolate (0 to 1)
+   * @param options - Configuration for step size and adaptive sampling
+   * @returns Array of points along the curve
+   */
+  public interpolate(
+    points: CurvePoints,
+    progress: number,
+    options: InterpolationOptions = {}
+  ): Point[] {
+    try {
+      this.validateInputPoints(points);
+      const actualSteps = this.determineStepCount(points, options);
+      const clampedProgress = clampProgress(progress);
+      return this.generateCurvePoints(points, clampedProgress, actualSteps);
+    } catch (error) {
+      if (error instanceof InterpolationError) {
+        throw error;
+      }
+      throw new InterpolationError(
+        `Unexpected error during quadratic Bezier interpolation: ${error}`,
+        ErrorCodes.UNEXPECTED_ERROR
+      );
+    }
+  }
+
+  /**
+   * Validates that required points exist and have valid coordinates
+   */
+  private validateInputPoints(points: CurvePoints): void {
+    if (!points.start || !points.end)
+      throw new InterpolationError(
+        "Start and end points are required",
+        ErrorCodes.INVALID_END_POINT
+      );
+
+    const controlValidation = this.validateControlPoint(points);
+    if (!controlValidation.isValid)
+      throw new InterpolationError(
+        controlValidation.error!,
+        ErrorCodes.INVALID_CONTROL_POINT
+      );
+  }
+
+  /**
+   * Determines how many points to generate along the curve based on:
+   * - Fixed step count from options
+   * - Adaptive step count based on curve length and complexity
+   * - Minimum and maximum step constraints
+   */
+  private determineStepCount(
+    points: CurvePoints,
+    options: InterpolationOptions
+  ): number {
+    const {
+      steps = INTERPOLATION_CONSTANTS.DEFAULT_STEPS,
+      adaptiveSteps = false,
+      minStepSize = INTERPOLATION_CONSTANTS.DEFAULT_MIN_STEP_SIZE,
+    } = options;
+
+    return adaptiveSteps
+      ? this.calculateAdaptiveSteps(
+          points.start,
+          points.control1!,
+          points.end,
+          minStepSize
+        )
+      : this.calculateFixedSteps(steps);
+  }
+
+  /**
+   * Clamps the step count between minimum and maximum values
+   */
+  private calculateFixedSteps(steps: number): number {
+    return clamp(Math.floor(steps), this.minSteps, this.maxSteps);
+  }
+
+  /**
+   * Calculates adaptive step count based on:
+   * 1. Curve length - longer curves need more steps
+   * 2. Curvature - more curved sections need more steps
+   * 3. Minimum step size - ensures sufficient detail
+   * 4. Maximum step limit - prevents excessive computation
+   */
+  private calculateAdaptiveSteps(
+    start: Point,
+    control: Point,
+    end: Point,
+    minStepSize: number
+  ): number {
+    const length = this.calculateApproximateLength(start, control, end);
+    const curvature = this.calculateCurvatureMetric(start, control, end);
+    const stepsPerLength = Math.ceil(length / minStepSize);
+
+    const baseSteps = Math.max(this.minSteps, stepsPerLength);
+    const scaledBaseSteps = Math.min(baseSteps, this.maxSteps / 2);
+    const curvatureSteps = Math.ceil(scaledBaseSteps * curvature);
+
+    return clamp(
+      Math.floor(scaledBaseSteps + curvatureSteps),
+      this.minSteps,
+      this.maxSteps
+    );
+  }
+
+  /**
+   * Calculates a metric for curve complexity based on control point deviation.
+   *
+   * The metric compares the sum of distances:
+   * 1. From start to control point (d₁)
+   * 2. From control point to end (d₂)
+   * With the direct distance from start to end (L)
+   *
+   * Metric = (d₁ + d₂)/L - 1
+   *
+   * This gives:
+   * - 0 for a straight line (control point on the line)
+   * - Higher values for more curved shapes
+   */
+  private calculateCurvatureMetric(
+    start: Point,
+    control: Point,
+    end: Point
+  ): number {
+    const lineLength = Math.hypot(end.x - start.x, end.y - start.y);
+    if (lineLength === 0) return 0;
+
+    const d1 = Math.hypot(control.x - start.x, control.y - start.y);
+    const d2 = Math.hypot(control.x - end.x, control.y - end.y);
+
+    const s = (d1 + d2) / lineLength;
+
+    return Math.max(0, s - 1);
+  }
+
+  /**
+   * Generates the final array of points along the curve by:
+   * 1. Calculating evenly spaced parameters
+   * 2. Computing curve points at each parameter
+   * 3. Validating generated points
+   */
+  private generateCurvePoints(
+    points: CurvePoints,
+    progress: number,
+    steps: number
+  ): Point[] {
+    const result: Point[] = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * progress;
+      const point = this.calculateQuadraticBezierPoint(
+        points.start,
+        points.control1!,
+        points.end,
+        t
+      );
+
+      validateGeneratedPoint(point);
+      result.push(point);
+    }
+
+    return result;
+  }
+}
+
+/**
+ * Validates the result of a validation function and returns an object with isValid and error properties.
+ * @param valid - Whether the validation passed
+ * @param error - The error message if the validation failed
+ * @returns An object with isValid and error properties
+ */
+const validResult = (valid: boolean, error?: string) => {
+  return { isValid: valid, error };
+};
+
+/**
+ * Validates the generated point to ensure it has valid coordinates
+ */
+const validateGeneratedPoint = (point: Point): void => {
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    throw new InterpolationError(
+      "Generated invalid point coordinates",
+      ErrorCodes.UNEXPECTED_ERROR
+    );
+  }
+};
