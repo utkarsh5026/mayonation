@@ -1,7 +1,7 @@
 import { Point } from "./unit";
 import { validateNumber } from "../../utils/type_validate";
 import { angle, clampProgress, linear } from "../../utils/interpolate";
-import { clamp, normalizeAngle } from "../../utils/math";
+import { clamp, distance, normalizeAngle } from "../../utils/math";
 
 export class InterpolationError extends Error {
   constructor(message: string, public readonly code: string) {
@@ -31,7 +31,7 @@ export const INTERPOLATION_CONSTANTS = {
   DEFAULT_STEPS: 10,
   MIN_PRESSURE: 0,
   MAX_PRESSURE: 1,
-  DEFAULT_MIN_STEP_SIZE: 0.1,
+  DEFAULT_MIN_STEP_SIZE: 1,
 } as const;
 
 type ValidateNumberResult = {
@@ -68,6 +68,7 @@ export class PathInterpolator {
   private readonly lp: LineInterpolator = new LineInterpolator();
   private readonly qp: QuadraticBezierInterpolator =
     new QuadraticBezierInterpolator();
+  private readonly cp: CubicBezierInterpolator = new CubicBezierInterpolator();
 
   public interpolate(
     path: PathTypes,
@@ -81,6 +82,7 @@ export class PathInterpolator {
       case "quadratic":
         return this.qp.interpolate(points, progress, opts);
       case "cubic":
+        return this.cp.interpolate(points, progress, opts);
       case "arc":
       default:
         throw new InterpolationError(
@@ -287,13 +289,13 @@ export class LineInterpolator {
    * @internal
    */
   private validateDistance(start: Point, end: Point): ValidateNumberResult {
-    const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    const dist = distance(start, end);
 
-    if (distance < INTERPOLATION_CONSTANTS.EPSILON) {
+    if (dist < INTERPOLATION_CONSTANTS.EPSILON) {
       return validResult(false, "Points are too close together");
     }
 
-    if (!Number.isFinite(distance)) {
+    if (!Number.isFinite(dist)) {
       return validResult(false, "Invalid distance between points");
     }
 
@@ -314,7 +316,7 @@ export class LineInterpolator {
    * ```
    */
   public calculateLength(start: Point, end: Point): number {
-    return Math.hypot(end.x - start.x, end.y - start.y);
+    return distance(start, end);
   }
 
   /**
@@ -463,10 +465,10 @@ export class QuadraticBezierInterpolator {
     p3: number
   ): number {
     const tSquared = t * t;
-    const tMinusOne = 1 - t;
-    const tMinusOneSquared = tMinusOne * tMinusOne;
+    const oneMinusT = 1 - t;
+    const tMinusOneSquared = oneMinusT * oneMinusT;
 
-    return tMinusOneSquared * p1 + 2 * tMinusOne * t * p2 + tSquared * p3;
+    return tMinusOneSquared * p1 + 2 * oneMinusT * t * p2 + tSquared * p3;
   }
 
   /**
@@ -480,17 +482,15 @@ export class QuadraticBezierInterpolator {
     t: number,
     controlAngle?: number
   ): number {
-    startAngle = normalizeAngle(startAngle);
-    endAngle = normalizeAngle(endAngle);
+    if (controlAngle === undefined)
+      return angle.interpolate(startAngle, endAngle, t);
 
-    if (controlAngle === undefined) {
-      let diff = endAngle - startAngle;
-      if (Math.abs(diff) > 180) diff -= Math.sign(diff) * 360;
-      return normalizeAngle(startAngle + diff * t);
-    }
-
-    controlAngle = normalizeAngle(controlAngle);
-    const result = this.beitzerQuadratic(t, startAngle, controlAngle, endAngle);
+    const result = this.beitzerQuadratic(
+      t,
+      normalizeAngle(startAngle),
+      normalizeAngle(controlAngle),
+      normalizeAngle(endAngle)
+    );
     return normalizeAngle(result);
   }
 
@@ -542,11 +542,7 @@ export class QuadraticBezierInterpolator {
         end,
         t
       );
-
-      length += Math.hypot(
-        currentPoint.x - previousPoint.x,
-        currentPoint.y - previousPoint.y
-      );
+      length += distance(currentPoint, previousPoint);
 
       previousPoint = currentPoint;
     }
@@ -635,11 +631,7 @@ export class QuadraticBezierInterpolator {
   }
 
   /**
-   * Calculates adaptive step count based on:
-   * 1. Curve length - longer curves need more steps
-   * 2. Curvature - more curved sections need more steps
-   * 3. Minimum step size - ensures sufficient detail
-   * 4. Maximum step limit - prevents excessive computation
+   * Calculates adaptive step count based on curve complexity
    */
   private calculateAdaptiveSteps(
     start: Point,
@@ -681,14 +673,11 @@ export class QuadraticBezierInterpolator {
     control: Point,
     end: Point
   ): number {
-    const lineLength = Math.hypot(end.x - start.x, end.y - start.y);
+    const lineLength = distance(start, end);
     if (lineLength === 0) return 0;
-
-    const d1 = Math.hypot(control.x - start.x, control.y - start.y);
-    const d2 = Math.hypot(control.x - end.x, control.y - end.y);
-
+    const d1 = distance(control, start);
+    const d2 = distance(control, end);
     const s = (d1 + d2) / lineLength;
-
     return Math.max(0, s - 1);
   }
 
@@ -723,6 +712,489 @@ export class QuadraticBezierInterpolator {
 }
 
 /**
+ * CubicBezierInterpolator generates points along a cubic Bézier curve.
+ *
+ * A cubic Bézier curve is defined by 4 points:
+ * - P₀: Start point
+ * - P₁: First control point
+ * - P₂: Second control point
+ * - P₃: End point
+ *
+ * The curve is calculated using the cubic Bézier formula:
+ * B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+ * where t ranges from 0 to 1
+ *
+ * Key features:
+ * - Smooth interpolation between start and end points
+ * - Two control points provide precise shape control
+ * - Interpolates position (x,y), pressure, and angle attributes
+ * - Supports adaptive step sizing based on curve complexity
+ *
+ * Mathematical properties:
+ * - The curve always passes through P₀ and P₃
+ * - The curve is tangent to P₀P₁ at P₀ and P₂P₃ at P₃
+ * - The curve lies within the convex hull of the control points
+ * - First derivative: B'(t) = 3(1-t)²(P₁-P₀) + 6(1-t)t(P₂-P₁) + 3t²(P₃-P₂)
+ * - Second derivative: B''(t) = 6(1-t)(P₂-2P₁+P₀) + 6t(P₃-2P₂+P₁)
+ */
+export class CubicBezierInterpolator {
+  private readonly minSteps = INTERPOLATION_CONSTANTS.MIN_STEPS;
+  private readonly maxSteps = INTERPOLATION_CONSTANTS.MAX_STEPS;
+
+  /**
+   * Interpolates points along a cubic Bézier curve.
+   *
+   * The method:
+   * 1. Validates input points and parameters
+   * 2. Determines optimal number of steps based on curve complexity
+   * 3. Generates evenly spaced points along the curve
+   * 4. Interpolates pressure and angle attributes if present
+   *
+   * @param points - The curve's defining points (start, end, and two control points)
+   * @param progress - How far along the curve to interpolate (0 to 1)
+   * @param options - Configuration options for interpolation
+   * @returns Array of points along the curve
+   *
+   * @throws {InterpolationError} If inputs are invalid or calculation fails
+   */
+  public interpolate(
+    points: CurvePoints,
+    progress: number,
+    options: InterpolationOptions = {}
+  ): Point[] {
+    try {
+      this.validateInputPoints(points);
+      const clampedProgress = clampProgress(progress);
+      const actualSteps = this.determineStepCount(points, options);
+
+      const result: Point[] = [];
+
+      for (let i = 0; i <= actualSteps; i++) {
+        const t = (i / actualSteps) * clampedProgress;
+        const point = this.calculateCubicBezierPoint(
+          points.start,
+          points.control1!,
+          points.control2!,
+          points.end,
+          t
+        );
+
+        // Validate generated point
+        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+          throw new InterpolationError(
+            "Generated invalid point coordinates",
+            ErrorCodes.UNEXPECTED_ERROR
+          );
+        }
+
+        result.push(point);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof InterpolationError) {
+        throw error;
+      }
+      throw new InterpolationError(
+        `Unexpected error during cubic Bezier interpolation: ${error}`,
+        ErrorCodes.UNEXPECTED_ERROR
+      );
+    }
+  }
+
+  /**
+   * Validates the required points for cubic Bézier interpolation.
+   * A cubic Bézier curve requires 4 valid points:
+   * - Start point (P₀)
+   * - Two control points (P₁, P₂)
+   * - End point (P₃)
+   */
+  private validateInputPoints(points: CurvePoints): void {
+    if (!points.start || !points.end) {
+      throw new InterpolationError(
+        "Start and end points are required",
+        ErrorCodes.INVALID_END_POINT
+      );
+    }
+
+    const controlValidation = this.validateControlPoints(points);
+    if (!controlValidation.isValid) {
+      throw new InterpolationError(
+        controlValidation.error!,
+        ErrorCodes.INVALID_CONTROL_POINT
+      );
+    }
+  }
+
+  /**
+   * Determines the number of interpolation steps based on curve properties.
+   *
+   * Two methods are supported:
+   * 1. Fixed step count: Uses the provided steps value
+   * 2. Adaptive steps: Calculates steps based on:
+   *    - Curve length
+   *    - Curvature complexity
+   *    - Minimum step size requirement
+   */
+  private determineStepCount(
+    points: CurvePoints,
+    options: InterpolationOptions
+  ): number {
+    const {
+      steps = INTERPOLATION_CONSTANTS.DEFAULT_STEPS,
+      adaptiveSteps = false,
+      minStepSize = INTERPOLATION_CONSTANTS.DEFAULT_MIN_STEP_SIZE,
+    } = options;
+
+    return adaptiveSteps
+      ? this.calculateAdaptiveSteps(
+          points.start,
+          points.control1!,
+          points.control2!,
+          points.end,
+          minStepSize
+        )
+      : this.calculateFixedSteps(steps);
+  }
+
+  /**
+   * Ensures the step count is within valid bounds.
+   * Steps are clamped between minSteps and maxSteps to prevent:
+   * - Too few steps (poor curve resolution)
+   * - Too many steps (performance issues)
+   */
+  private calculateFixedSteps(steps: number): number {
+    return clamp(Math.floor(steps), this.minSteps, this.maxSteps);
+  }
+
+  /**
+   * Calculates a point on a cubic Bézier curve at parameter t.
+   *
+   * The formula expands to:
+   * x(t) = (1-t)³x₀ + 3(1-t)²tx₁ + 3(1-t)t²x₂ + t³x₃
+   * y(t) = (1-t)³y₀ + 3(1-t)²ty₁ + 3(1-t)t²y₂ + t³y₃
+   *
+   * Where:
+   * - (x₀,y₀) is the start point
+   * - (x₁,y₁) is the first control point
+   * - (x₂,y₂) is the second control point
+   * - (x₃,y₃) is the end point
+   * - t ∈ [0,1] is the curve parameter
+   */
+  private calculateCubicBezierPoint(
+    start: Point,
+    control1: Point,
+    control2: Point,
+    end: Point,
+    t: number
+  ): Point {
+    const time = clampProgress(t);
+
+    const point: Point = {
+      x: this.cubicBezier(start.x, control1.x, control2.x, end.x, time),
+      y: this.cubicBezier(start.y, control1.y, control2.y, end.y, time),
+    };
+
+    if (
+      typeof start.pressure === "number" &&
+      typeof end.pressure === "number"
+    ) {
+      point.pressure = this.cubicBezier(
+        start.pressure,
+        control1.pressure ?? start.pressure,
+        control2.pressure ?? end.pressure,
+        end.pressure,
+        time
+      );
+    }
+
+    if (typeof start.angle === "number" && typeof end.angle === "number") {
+      point.angle = this.interpolateAngle(
+        start.angle,
+        end.angle,
+        time,
+        control1.angle,
+        control2.angle
+      );
+    }
+
+    return point;
+  }
+
+  /**
+   * Implements the cubic Bézier formula for a single dimension.
+   *
+   * Formula: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+   *
+   * This is the Bernstein polynomial form of the curve where:
+   * - (1-t)³ is the weight for P₀
+   * - 3(1-t)²t is the weight for P₁
+   * - 3(1-t)t² is the weight for P₂
+   * - t³ is the weight for P₃
+   */
+  private cubicBezier(
+    start: number,
+    control1: number,
+    control2: number,
+    end: number,
+    t: number
+  ): number {
+    const oneMinusT = 1 - t;
+    const oneMinusTSquared = oneMinusT * oneMinusT;
+    const oneMinusTCubed = oneMinusTSquared * oneMinusT;
+    const tSquared = t * t;
+    const tCubed = tSquared * t;
+
+    return (
+      oneMinusTCubed * start +
+      3 * oneMinusTSquared * t * control1 +
+      3 * oneMinusT * tSquared * control2 +
+      tCubed * end
+    );
+  }
+
+  /**
+   * Interpolates angles along the Bézier curve with wraparound handling.
+   *
+   * For angles, special handling is needed because:
+   * 1. Angles wrap around (360° = 0°)
+   * 2. The shortest path between angles must be used
+   * 3. Control point angles influence the path of rotation
+   *
+   * The method:
+   * 1. Normalizes all angles to [-180°, 180°]
+   * 2. Uses cubic Bézier interpolation if control angles are provided
+   * 3. Falls back to linear angle interpolation if no control angles
+   */
+  private interpolateAngle(
+    startAngle: number,
+    endAngle: number,
+    t: number,
+    control1Angle?: number,
+    control2Angle?: number
+  ): number {
+    if (control1Angle && control2Angle) {
+      const finalAngle = this.cubicBezier(
+        normalizeAngle(startAngle),
+        normalizeAngle(control1Angle),
+        normalizeAngle(control2Angle),
+        normalizeAngle(endAngle),
+        t
+      );
+
+      return normalizeAngle(finalAngle);
+    }
+    return angle.interpolate(startAngle, endAngle, t);
+  }
+
+  /**
+   * Validates the control points for the cubic Bézier curve.
+   *
+   * Checks:
+   * 1. Both control points must be present
+   * 2. Coordinates must be finite numbers
+   * 3. Coordinates must be within safe bounds
+   *
+   * The MAX_SAFE_COORDINATE constant prevents:
+   * - Overflow in calculations
+   * - Precision loss in floating point math
+   * - Performance issues with extreme values
+   */
+  private validateControlPoints(points: CurvePoints): ValidateNumberResult {
+    if (!points.control1 || !points.control2) {
+      return {
+        isValid: false,
+        error: "Cubic Bezier requires two control points",
+      };
+    }
+
+    // Validate each point's coordinates are finite
+    const validateCoordinate = (value: number, name: string) => {
+      if (
+        !Number.isFinite(value) ||
+        Math.abs(value) > INTERPOLATION_CONSTANTS.MAX_SAFE_COORDINATE
+      ) {
+        return `${name} coordinate is invalid: ${value}`;
+      }
+      return null;
+    };
+
+    const points_to_validate = [
+      { point: points.control1, name: "Control point 1" },
+      { point: points.control2, name: "Control point 2" },
+    ];
+
+    for (const { point, name } of points_to_validate) {
+      const xError = validateCoordinate(point.x, `${name} x`);
+      if (xError) return { isValid: false, error: xError };
+
+      const yError = validateCoordinate(point.y, `${name} y`);
+      if (yError) return { isValid: false, error: yError };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Approximates the length of a cubic Bézier curve using adaptive sampling.
+   *
+   * Method:
+   * 1. Divides curve into samples
+   * 2. Calculates points at each sample
+   * 3. Sums the distances between consecutive points
+   *
+   * This is an approximation because:
+   * - Bézier curve length has no closed-form solution
+   * - More samples = better accuracy but slower performance
+   * - Default 100 samples balances accuracy and speed
+   */
+  private calculateApproximateLength(
+    start: Point,
+    control1: Point,
+    control2: Point,
+    end: Point,
+    samples: number = 100
+  ): number {
+    let length = 0;
+    let previousPoint = start;
+
+    for (let i = 1; i <= samples; i++) {
+      const t = i / samples;
+      const currentPoint = this.calculateCubicBezierPoint(
+        start,
+        control1,
+        control2,
+        end,
+        t
+      );
+
+      length += distance(currentPoint, previousPoint);
+      previousPoint = currentPoint;
+    }
+
+    return length;
+  }
+
+  /**
+   * Calculates adaptive step count based on curve complexity.
+   *
+   * The method considers:
+   * 1. Curve length: Longer curves need more steps
+   * 2. Curvature: More complex shapes need more steps
+   * 3. Minimum step size: Ensures sufficient detail
+   *
+   * Formula for final steps:
+   * 1. baseSteps = ceil(curveLength / minStepSize)
+   * 2. complexityFactor = log₂(1 + curvature * 10) + 1
+   * 3. scaledSteps = ceil(baseSteps * complexityFactor)
+   * 4. Apply logarithmic scaling for high step counts
+   * 5. Clamp between minSteps and maxSteps
+   */
+  private calculateAdaptiveSteps(
+    start: Point,
+    control1: Point,
+    control2: Point,
+    end: Point,
+    minStepSize: number
+  ): number {
+    const length = this.calculateApproximateLength(
+      start,
+      control1,
+      control2,
+      end,
+      8
+    );
+    const baseSteps = Math.ceil(length / minStepSize);
+    const curvature = this.calculateCurvatureMetric(
+      start,
+      control1,
+      control2,
+      end
+    );
+    const complexityFactor = Math.log2(1 + curvature * 10) + 1;
+    const scaledSteps = Math.ceil(baseSteps * complexityFactor);
+    const finalSteps =
+      scaledSteps > this.maxSteps / 2
+        ? Math.ceil(
+            this.maxSteps / 2 + Math.log2(1 + scaledSteps - this.maxSteps / 2)
+          )
+        : scaledSteps;
+
+    return clamp(finalSteps, this.minSteps, this.maxSteps);
+  }
+
+  /**
+   * Calculates a metric for curve complexity.
+   *
+   * The metric combines three factors:
+   * 1. Control Point Deviation:
+   *    - Measures how far control points deviate from the baseline
+   *    - Uses perpendicular distance from control points to start-end line
+   *    - Formula: distance(control, projection) / lineLength
+   *
+   * 2. Control Point Spacing:
+   *    - Measures relative spacing between control points
+   *    - Formula: distance(control1, control2) / lineLength
+   *
+   * 3. Angular Variation:
+   *    - Detects sharp turns in the curve
+   *    - Measures maximum angle difference between segments
+   *    - Normalized to [0,1] by dividing by π
+   *
+   * Final metric = deviation * 0.5 + spacing * 0.2 + angles * 0.3
+   *
+   * Weights prioritize:
+   * - Control point deviation (50%): Most important for curve shape
+   * - Angular variation (30%): Important for detecting sharp turns
+   * - Control point spacing (20%): Less critical but still relevant
+   */
+  private calculateCurvatureMetric(
+    start: Point,
+    control1: Point,
+    control2: Point,
+    end: Point
+  ): number {
+    const lineLength = distance(start, end);
+    if (lineLength === 0) return 0;
+
+    // Calculate control point deviations
+    const getControlDeviation = (control: Point) => {
+      const dotProduct =
+        (control.x - start.x) * (end.x - start.x) +
+        (control.y - start.y) * (end.y - start.y);
+      const projection = dotProduct / (lineLength * lineLength);
+      const projX = start.x + projection * (end.x - start.x);
+      const projY = start.y + projection * (end.y - start.y);
+      return distance(control, pointCreate(projX, projY));
+    };
+
+    // Calculate rate of change between control points
+    const controlPointSpacing = distance(control1, control2) / lineLength;
+
+    // Calculate angles between segments to detect sharp turns
+    const angle1 = Math.atan2(control1.y - start.y, control1.x - start.x);
+    const angle2 = Math.atan2(control2.y - control1.y, control2.x - control1.x);
+    const angle3 = Math.atan2(end.y - control2.y, end.x - control2.x);
+
+    const angleDiff1 = Math.abs(normalizeAngle(angle2 - angle1));
+    const angleDiff2 = Math.abs(normalizeAngle(angle3 - angle2));
+
+    const maxAngleDiff = Math.max(angleDiff1, angleDiff2) / Math.PI;
+
+    // Combine metrics with weighted importance
+    const deviation =
+      (getControlDeviation(control1) + getControlDeviation(control2)) /
+      lineLength;
+    const curvatureMetric =
+      deviation * 0.5 + // Weight for point deviation
+      controlPointSpacing * 0.2 + // Weight for control point spacing
+      maxAngleDiff * 0.3; // Weight for maximum angle difference
+
+    return curvatureMetric;
+  }
+}
+
+/**
  * Validates the result of a validation function and returns an object with isValid and error properties.
  * @param valid - Whether the validation passed
  * @param error - The error message if the validation failed
@@ -742,4 +1214,16 @@ const validateGeneratedPoint = (point: Point): void => {
       ErrorCodes.UNEXPECTED_ERROR
     );
   }
+};
+
+/**
+ * Creates a point object with optional pressure and angle properties
+ */
+const pointCreate = (
+  x: number,
+  y: number,
+  pressure?: number,
+  angle?: number
+) => {
+  return { x, y, pressure, angle };
 };

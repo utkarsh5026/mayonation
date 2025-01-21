@@ -5,6 +5,8 @@ import {
   LineInterpolator,
   QuadraticBezierInterpolator,
   INTERPOLATION_CONSTANTS,
+  CubicBezierInterpolator,
+  CurvePoints,
 } from "../svg/path_interpolate";
 import type { Point } from "../svg/unit";
 import { describe, expect, test, beforeEach, it } from "vitest";
@@ -407,6 +409,220 @@ describe("QuadraticBezierInterpolator", () => {
 
       expectPointsClose(result1[0], points.start);
       expectPointsClose(result2[result2.length - 1], points.end);
+    });
+  });
+});
+
+describe("CubicBezierInterpolator", () => {
+  const interpolator = new CubicBezierInterpolator();
+
+  const createTestPoints = () => ({
+    start: { x: 0, y: 0 },
+    end: { x: 100, y: 100 },
+    control1: { x: 25, y: 75 },
+    control2: { x: 75, y: 25 },
+  });
+
+  describe("input validation", () => {
+    it("should throw error when start point is missing", () => {
+      const points = {
+        end: { x: 100, y: 100 },
+        control1: { x: 25, y: 75 },
+        control2: { x: 75, y: 25 },
+      };
+
+      expect(() =>
+        interpolator.interpolate(points as CurvePoints, 0.5)
+      ).toThrow(InterpolationError);
+      expect(() =>
+        interpolator.interpolate(points as CurvePoints, 0.5)
+      ).toThrow("Start and end points are required");
+    });
+
+    it("should throw error when end point is missing", () => {
+      const points = {
+        start: { x: 0, y: 0 },
+        control1: { x: 25, y: 75 },
+        control2: { x: 75, y: 25 },
+      };
+
+      expect(() =>
+        interpolator.interpolate(points as CurvePoints, 0.5)
+      ).toThrow(InterpolationError);
+      expect(() =>
+        interpolator.interpolate(points as CurvePoints, 0.5)
+      ).toThrow("Start and end points are required");
+    });
+
+    it("should throw error when control points are missing", () => {
+      const points = {
+        start: { x: 0, y: 0 },
+        end: { x: 100, y: 100 },
+      };
+
+      expect(() => interpolator.interpolate(points, 0.5)).toThrow(
+        InterpolationError
+      );
+      expect(() => interpolator.interpolate(points, 0.5)).toThrow(
+        "Cubic Bezier requires two control points"
+      );
+    });
+
+    it("should throw error when control points have invalid coordinates", () => {
+      const points = {
+        start: { x: 0, y: 0 },
+        end: { x: 100, y: 100 },
+        control1: { x: Infinity, y: 75 },
+        control2: { x: 75, y: 25 },
+      };
+
+      expect(() => interpolator.interpolate(points, 0.5)).toThrow(
+        InterpolationError
+      );
+      expect(() => interpolator.interpolate(points, 0.5)).toThrow(
+        "Control point 1 x coordinate is invalid"
+      );
+    });
+  });
+
+  describe("basic interpolation", () => {
+    it("should return start point when progress is 0", () => {
+      const points = createTestPoints();
+      const result = interpolator.interpolate(points, 0);
+
+      expect(result[0]).toEqual(points.start);
+    });
+
+    it("should return end point when progress is 1", () => {
+      const points = createTestPoints();
+      const result = interpolator.interpolate(points, 1);
+
+      expect(result[result.length - 1]).toEqual(points.end);
+    });
+
+    it("should generate intermediate points for progress 0.5", () => {
+      const points = createTestPoints();
+      const result = interpolator.interpolate(points, 0.5);
+
+      expect(result.length).toBeGreaterThan(2);
+      expect(result[0]).toEqual(points.start);
+      expect(result[result.length - 1].x).toBeLessThanOrEqual(points.end.x);
+      expect(result[result.length - 1].y).toBeLessThanOrEqual(points.end.y);
+    });
+  });
+
+  describe("pressure interpolation", () => {
+    it("should interpolate pressure values when available", () => {
+      const points = {
+        start: { x: 0, y: 0, pressure: 0 },
+        end: { x: 100, y: 100, pressure: 1 },
+        control1: { x: 25, y: 75, pressure: 0.3 },
+        control2: { x: 75, y: 25, pressure: 0.7 },
+      };
+
+      const result = interpolator.interpolate(points, 1);
+
+      expect(result[0].pressure).toBe(0);
+      expect(result[result.length - 1].pressure).toBe(1);
+      expect(result[Math.floor(result.length / 2)].pressure).toBeDefined();
+    });
+
+    it("should handle missing pressure values in control points", () => {
+      const points = {
+        start: { x: 0, y: 0, pressure: 0 },
+        end: { x: 100, y: 100, pressure: 1 },
+        control1: { x: 25, y: 75 },
+        control2: { x: 75, y: 25 },
+      };
+
+      const result = interpolator.interpolate(points, 1);
+
+      expect(result[0].pressure).toBe(0);
+      expect(result[result.length - 1].pressure).toBe(1);
+    });
+  });
+
+  describe("angle interpolation", () => {
+    it("should interpolate angle values when available", () => {
+      const points = {
+        start: { x: 0, y: 0, angle: 0 },
+        end: { x: 100, y: 100, angle: 90 },
+        control1: { x: 25, y: 75, angle: 30 },
+        control2: { x: 75, y: 25, angle: 60 },
+      };
+
+      const result = interpolator.interpolate(points, 1);
+
+      expect(result[0].angle).toBe(0);
+      expect(result[result.length - 1].angle).toBe(90);
+    });
+
+    it("should handle angle wraparound correctly", () => {
+      const points = {
+        start: { x: 0, y: 0, angle: 350 },
+        end: { x: 100, y: 100, angle: 10 },
+        control1: { x: 25, y: 75 },
+        control2: { x: 75, y: 25 },
+      };
+
+      const result = interpolator.interpolate(points, 1);
+
+      expect(result[0].angle).toBe(350);
+      expect(result[result.length - 1].angle).toBe(10);
+    });
+  });
+
+  describe("adaptive steps", () => {
+    it("should use more steps for complex curves", () => {
+      const simplePoints = {
+        start: { x: 0, y: 0 },
+        end: { x: 100, y: 100 },
+        control1: { x: 25, y: 25 },
+        control2: { x: 75, y: 75 },
+      };
+
+      const complexPoints = {
+        start: { x: 0, y: 0 },
+        end: { x: 100, y: 100 },
+        control1: { x: 0, y: 100 },
+        control2: { x: 100, y: 0 },
+      };
+
+      const simpleResult = interpolator.interpolate(simplePoints, 1, {
+        adaptiveSteps: true,
+      });
+      const complexResult = interpolator.interpolate(complexPoints, 1, {
+        adaptiveSteps: true,
+      });
+
+      expect(complexResult.length).toBeGreaterThan(simpleResult.length);
+    });
+  });
+
+  describe("curvature calculation", () => {
+    it("should return 0 curvature for straight line", () => {
+      const points = {
+        start: { x: 0, y: 0 },
+        end: { x: 100, y: 100 },
+        control1: { x: 25, y: 25 },
+        control2: { x: 75, y: 75 },
+      };
+
+      const result = interpolator.interpolate(points, 1);
+
+      // Points should roughly form a straight line
+      for (let i = 1; i < result.length - 1; i++) {
+        const prev = result[i - 1];
+        const curr = result[i];
+        const next = result[i + 1];
+
+        // Calculate approximate linearity
+        const dx = next.x - prev.x;
+        const dy = next.y - prev.y;
+        const expectedY = prev.y + (dy / dx) * (curr.x - prev.x);
+
+        expect(Math.abs(curr.y - expectedY)).toBeLessThan(1);
+      }
     });
   });
 });
