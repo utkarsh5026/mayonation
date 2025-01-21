@@ -66,6 +66,8 @@ type PathTypes = "line" | "quadratic" | "cubic" | "arc";
 
 export class PathInterpolator {
   private readonly lp: LineInterpolator = new LineInterpolator();
+  private readonly qp: QuadraticBezierInterpolator =
+    new QuadraticBezierInterpolator();
 
   public interpolate(
     path: PathTypes,
@@ -77,6 +79,7 @@ export class PathInterpolator {
       case "line":
         return this.lp.interpolate(points.start, points.end, progress, opts);
       case "quadratic":
+        return this.qp.interpolate(points, progress, opts);
       case "cubic":
       case "arc":
       default:
