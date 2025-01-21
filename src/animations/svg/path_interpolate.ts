@@ -62,6 +62,32 @@ export type InterpolationOptions = Partial<{
   includeAngle: boolean;
 }>;
 
+type PathTypes = "line" | "quadratic" | "cubic" | "arc";
+
+export class PathInterpolator {
+  private readonly lp: LineInterpolator = new LineInterpolator();
+
+  public interpolate(
+    path: PathTypes,
+    points: CurvePoints,
+    progress: number,
+    opts: InterpolationOptions = {}
+  ): Point[] {
+    switch (path) {
+      case "line":
+        return this.lp.interpolate(points.start, points.end, progress, opts);
+      case "quadratic":
+      case "cubic":
+      case "arc":
+      default:
+        throw new InterpolationError(
+          `Unsupported path type: ${path}`,
+          ErrorCodes.UNEXPECTED_ERROR
+        );
+    }
+  }
+}
+
 /**
  * LineInterpolator provides functionality for interpolating points along a straight line.
  * This is useful for creating smooth animations between two points or generating
