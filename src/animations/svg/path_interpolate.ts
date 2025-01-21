@@ -1,7 +1,12 @@
 import { Point } from "./unit";
 import { validateNumber } from "../../utils/type_validate";
 import { angle, clampProgress, linear } from "../../utils/interpolate";
-import { clamp, distance, normalizeAngle } from "../../utils/math";
+import {
+  clamp,
+  distance,
+  normalizeAngle,
+  radiansToDegrees,
+} from "../../utils/math";
 
 export class InterpolationError extends Error {
   constructor(message: string, public readonly code: string) {
@@ -349,11 +354,9 @@ export class LineInterpolator {
     if (totalLength === 0) return { ...start };
 
     const t = Math.max(0, Math.min(1, distance / totalLength));
-
-    return {
-      x: linear.interpolate(start.x, end.x, t),
-      y: linear.interpolate(start.y, end.y, t),
-    };
+    const x = linear.interpolate(start.x, end.x, t);
+    const y = linear.interpolate(start.y, end.y, t);
+    return pointCreate(x, y);
   }
 
   /**
@@ -377,7 +380,7 @@ export class LineInterpolator {
    * ```
    */
   public getAngle(start: Point, end: Point): number {
-    return Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI);
+    return radiansToDegrees(Math.atan2(end.y - start.y, end.x - start.x));
   }
 }
 
