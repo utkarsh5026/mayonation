@@ -1,5 +1,4 @@
 import type { RGB, HSL, ColorSpace } from "../core/animation-val";
-import { normalize } from "./math";
 import { normalizeAngle } from "./math";
 
 /**
