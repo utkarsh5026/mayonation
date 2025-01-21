@@ -10,3 +10,14 @@ export const validateNumber = (value: number, name: string) => {
   if (!Number.isFinite(value))
     throw new Error(`${name} must be a finite number, got ${value}`);
 };
+
+/**
+ * Validates all values are numbers.
+ * @param values - The values to validate.
+ * @throws An error if any value is not a number.
+ */
+export const allCorrectNumbers = (...values: number[]) => {
+  values.forEach((value, index) => {
+    validateNumber(value, `value at index ${index}`);
+  });
+};
