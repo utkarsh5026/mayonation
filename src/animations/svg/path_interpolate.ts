@@ -133,57 +133,17 @@ export class LineInterpolator {
     } = opts;
 
     try {
-      validateNumber(progress, "Progress");
-      progress = clampProgress(progress);
-
+      progress = this.validateAndClampProgress(progress);
       if (progress === 0) return [{ ...from }];
 
-      const distanceValidation = this.validateDistance(from, to);
-      if (!distanceValidation.isValid) {
-        if (distanceValidation.error === "Points are too close together") {
-          return [{ ...from }];
-        }
-        throw new InterpolationError(
-          distanceValidation.error!,
-          ErrorCodes.INVALID_END_POINT
-        );
-      }
+      if (!this.handleDistanceValidation(this.validateDistance(from, to)))
+        return [{ ...from }];
 
-      const actualSteps = clamp(
-        steps,
-        INTERPOLATION_CONSTANTS.MIN_STEPS,
-        INTERPOLATION_CONSTANTS.MAX_STEPS
-      );
-      const points: Point[] = [];
-
-      for (let i = 0; i <= actualSteps; i++) {
-        const t = (i / actualSteps) * progress;
-
-        const point: Point = {
-          x: linear.interpolate(from.x, to.x, t),
-          y: linear.interpolate(from.y, to.y, t),
-        };
-
-        if (
-          includePressure &&
-          typeof from.pressure === "number" &&
-          typeof to.pressure === "number"
-        ) {
-          point.pressure = linear.interpolate(from.pressure, to.pressure, t);
-        }
-
-        if (
-          includeAngle &&
-          typeof from.angle === "number" &&
-          typeof to.angle === "number"
-        ) {
-          point.angle = angle.interpolate(from.angle, to.angle, t);
-        }
-
-        points.push(point);
-      }
-
-      return points;
+      const actualSteps = this.calculateSteps(steps);
+      return this.generateInterpolatedPoints(from, to, progress, actualSteps, {
+        includePressure,
+        includeAngle,
+      });
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Unknown error";
       throw new InterpolationError(
@@ -191,6 +151,125 @@ export class LineInterpolator {
         ErrorCodes.UNEXPECTED_ERROR
       );
     }
+  }
+
+  /**
+   * Validates and clamps the progress value to ensure it's a valid number between 0-1.
+   *
+   * @param progress - The progress value to validate and clamp
+   * @returns The validated and clamped progress value
+   * @throws {InterpolationError} If progress is not a valid number
+   * @internal
+   */
+  private validateAndClampProgress(progress: number): number {
+    validateNumber(progress, "Progress");
+    return clampProgress(progress);
+  }
+
+  /**
+   * Calculates the actual number of interpolation steps, clamped between min and max values.
+   *
+   * @param steps - The requested number of steps
+   * @returns The clamped number of steps between MIN_STEPS and MAX_STEPS
+   * @internal
+   */
+  private calculateSteps(steps: number): number {
+    return clamp(
+      steps,
+      INTERPOLATION_CONSTANTS.MIN_STEPS,
+      INTERPOLATION_CONSTANTS.MAX_STEPS
+    );
+  }
+
+  /**
+   * Handles validation of distance between points and determines appropriate response.
+   *
+   * @param validation - The validation result object
+   * @returns false if points are too close, true if validation passes
+   * @throws {InterpolationError} If points are invalid for reasons other than being too close
+   * @internal
+   */
+  private handleDistanceValidation(validation: ValidateNumberResult): boolean {
+    if (!validation.isValid) {
+      if (validation.error === "Points are too close together") {
+        return false;
+      }
+      throw new InterpolationError(
+        validation.error!,
+        ErrorCodes.INVALID_END_POINT
+      );
+    }
+    return true;
+  }
+
+  /**
+   * Generates an array of interpolated points between two positions.
+   *
+   * @param from - Starting point
+   * @param to - Ending point
+   * @param progress - Progress value between 0-1
+   * @param steps - Number of interpolation steps
+   * @param opts - Options for including pressure and angle interpolation
+   * @returns Array of interpolated points
+   * @internal
+   */
+  private generateInterpolatedPoints(
+    from: Point,
+    to: Point,
+    progress: number,
+    steps: number,
+    opts: { includePressure: boolean; includeAngle: boolean }
+  ): Point[] {
+    const points: Point[] = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * progress;
+      const point = this.interpolatePoint(from, to, t, opts);
+      points.push(point);
+    }
+
+    return points;
+  }
+
+  /**
+   * Interpolates a single point along the line between two positions.
+   * Handles interpolation of x,y coordinates as well as optional pressure and angle values.
+   *
+   * @param from - Starting point with optional pressure/angle
+   * @param to - Ending point with optional pressure/angle
+   * @param t - Interpolation parameter between 0-1
+   * @param opts - Options for including pressure and angle interpolation
+   * @returns Interpolated point with optional pressure/angle values
+   * @internal
+   */
+  private interpolatePoint(
+    from: Point,
+    to: Point,
+    t: number,
+    opts: { includePressure: boolean; includeAngle: boolean }
+  ): Point {
+    const point: Point = {
+      x: linear.interpolate(from.x, to.x, t),
+      y: linear.interpolate(from.y, to.y, t),
+    };
+
+    if (
+      opts.includePressure &&
+      typeof from.pressure === "number" &&
+      typeof to.pressure === "number"
+    ) {
+      point.pressure = linear.interpolate(from.pressure, to.pressure, t);
+    }
+
+    if (
+      opts.includeAngle &&
+      typeof from.angle === "number" &&
+      typeof to.angle === "number"
+    ) {
+      point.angle = angle.interpolate(from.angle, to.angle, t);
+    }
+
+    return point;
   }
 
   /**
