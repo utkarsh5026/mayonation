@@ -1142,40 +1142,148 @@ export class CubicBezierInterpolator {
     const lineLength = distance(start, end);
     if (lineLength === 0) return 0;
 
-    // Calculate control point deviations
-    const getControlDeviation = (control: Point) => {
+    const points = { start, control1, control2, end };
+    const controlSpacing = this.calculateControlSpacing(points);
+    const maxAngleChange = this.calculateAngularVariation(points);
+
+    const averageDeviation = this.calculateControlPointDeviation(points);
+    return this.combineCurvatureMetrics(
+      averageDeviation,
+      controlSpacing,
+      maxAngleChange
+    );
+  }
+
+  /**
+   * Calculates the relative spacing between control points.
+   *
+   * This measures how spread out the control points are relative to the curve's baseline length.
+   * A higher value indicates the control points are far apart, suggesting a more complex curve.
+   *
+   * Mathematical calculation:
+   * spacing = |C₁C₂| / |SE|
+   * where:
+   * - |C₁C₂| is the distance between control points 1 and 2
+   * - |SE| is the distance between start and end points
+   *
+   * @param points The curve points containing start, end and control points
+   * @returns A dimensionless ratio >= 0 indicating relative control point spacing
+   */
+  private calculateControlSpacing(
+    points: Required<Omit<CurvePoints, "arcParams">>
+  ): number {
+    const startToEnd = distance(points.start, points.end);
+    const control1ToControl2 = distance(points.control1, points.control2);
+    return control1ToControl2 / startToEnd;
+  }
+
+  /**
+   * Calculates how far the control points deviate from the baseline.
+   *
+   * This measures the average perpendicular distance of control points from the start-end line,
+   * normalized by the curve's baseline length. Higher values indicate more dramatic curves.
+   *
+   * Mathematical steps:
+   * 1. For each control point C:
+   *    a. Calculate projection P onto start-end line SE using vector projection:
+   *       t = ((C-S)·(E-S)) / |E-S|²
+   *       P = S + t(E-S)
+   *    b. Find perpendicular distance: |CP|
+   *
+   * 2. Average the two distances and normalize:
+   *    deviation = (|C₁P₁| + |C₂P₂|) / (2|SE|)
+   *
+   * @param points The curve points containing start, end and control points
+   * @returns A dimensionless ratio >= 0 indicating average control point deviation
+   */
+  private calculateControlPointDeviation(
+    points: Required<Omit<CurvePoints, "arcParams">>
+  ) {
+    const { start, end } = points;
+    const lineLength = distance(start, end);
+    const getPerpendicularDistance = (control: Point) => {
       const dotProduct =
         (control.x - start.x) * (end.x - start.x) +
         (control.y - start.y) * (end.y - start.y);
-      const projection = dotProduct / (lineLength * lineLength);
-      const projX = start.x + projection * (end.x - start.x);
-      const projY = start.y + projection * (end.y - start.y);
-      return distance(control, pointCreate(projX, projY));
+      const t = dotProduct / (lineLength * lineLength);
+
+      const projectedPoint = pointCreate(
+        start.x + t * (end.x - start.x),
+        start.y + t * (end.y - start.y)
+      );
+      return distance(control, projectedPoint);
     };
 
-    // Calculate rate of change between control points
-    const controlPointSpacing = distance(control1, control2) / lineLength;
+    const control1Deviation = getPerpendicularDistance(points.control1);
+    const control2Deviation = getPerpendicularDistance(points.control2);
+    return (control1Deviation + control2Deviation) / (2 * lineLength);
+  }
 
-    // Calculate angles between segments to detect sharp turns
-    const angle1 = Math.atan2(control1.y - start.y, control1.x - start.x);
-    const angle2 = Math.atan2(control2.y - control1.y, control2.x - control1.x);
-    const angle3 = Math.atan2(end.y - control2.y, end.x - control2.x);
+  /**
+   * Calculates the maximum angular variation between curve segments.
+   *
+   * This detects sharp turns in the curve by measuring the largest angle change
+   * between consecutive segments: start→control1, control1→control2, and control2→end.
+   *
+   * Mathematical steps:
+   * 1. Calculate angles θᵢ for each segment using atan2:
+   *    θᵢ = atan2(yᵢ₊₁-yᵢ, xᵢ₊₁-xᵢ)
+   *
+   * 2. Find angle changes between consecutive segments:
+   *    Δθᵢ = |normalize(θᵢ₊₁ - θᵢ)|
+   *    where normalize brings angle to [-π,π]
+   *
+   * 3. Take maximum change and normalize to [0,1]:
+   *    variation = max(Δθ₁, Δθ₂) / π
+   *
+   * @param points The curve points containing start, end and control points
+   * @returns A value in [0,1] indicating maximum angular variation
+   */
+  private calculateAngularVariation(
+    points: Required<Omit<CurvePoints, "arcParams">>
+  ): number {
+    const { start, control1, control2, end } = points;
+    const startToControl1 = Math.atan2(
+      control1.y - start.y,
+      control1.x - start.x
+    );
+    const control1ToControl2 = Math.atan2(
+      control2.y - control1.y,
+      control2.x - control1.x
+    );
+    const control2ToEnd = Math.atan2(end.y - control2.y, end.x - control2.x);
+    const angleChange1 = Math.abs(
+      normalizeAngle(control1ToControl2 - startToControl1)
+    );
+    const angleChange2 = Math.abs(
+      normalizeAngle(control2ToEnd - control1ToControl2)
+    );
 
-    const angleDiff1 = Math.abs(normalizeAngle(angle2 - angle1));
-    const angleDiff2 = Math.abs(normalizeAngle(angle3 - angle2));
+    return Math.max(angleChange1, angleChange2) / Math.PI;
+  }
 
-    const maxAngleDiff = Math.max(angleDiff1, angleDiff2) / Math.PI;
-
-    // Combine metrics with weighted importance
-    const deviation =
-      (getControlDeviation(control1) + getControlDeviation(control2)) /
-      lineLength;
-    const curvatureMetric =
-      deviation * 0.5 + // Weight for point deviation
-      controlPointSpacing * 0.2 + // Weight for control point spacing
-      maxAngleDiff * 0.3; // Weight for maximum angle difference
-
-    return curvatureMetric;
+  /**
+   * Combines individual curvature metrics into a final complexity score.
+   *
+   * The final metric is a weighted sum of:
+   * - Control point deviation (50%): How far control points are from baseline
+   * - Control point spacing (20%): How spread apart the control points are
+   * - Angular variation (30%): How sharply the curve changes direction
+   *
+   * These weights prioritize the visual impact of the curve shape while
+   * accounting for both smooth variations and sharp turns.
+   *
+   * @param deviation The normalized control point deviation [0,∞)
+   * @param spacing The normalized control point spacing [0,∞)
+   * @param angleChange The normalized angular variation [0,1]
+   * @returns A combined complexity metric ≥ 0
+   */
+  private combineCurvatureMetrics(
+    deviation: number,
+    spacing: number,
+    angleChange: number
+  ): number {
+    return deviation * 0.5 + spacing * 0.2 + angleChange * 0.3;
   }
 }
 
