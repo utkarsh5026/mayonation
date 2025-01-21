@@ -2,6 +2,11 @@
  * Core mathematical utilities for animation calculations
  */
 
+type Coordinate = {
+  x: number;
+  y: number;
+};
+
 /**
  * Linearly interpolates between start and end values based on a progress factor
  * The progress factor t should be between 0 and 1
@@ -59,13 +64,8 @@ export function degreesToRadians(degrees: number): number {
  * Calculates the distance between two points
  * Useful for path-based animations and physics calculations
  */
-export function distance(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number
-): number {
-  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+export function distance(a: Coordinate, b: Coordinate): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
 /**
