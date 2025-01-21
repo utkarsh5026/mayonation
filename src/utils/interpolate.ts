@@ -1,4 +1,6 @@
 import type { RGB, HSL, ColorSpace } from "../core/animation-val";
+import { normalize } from "./math";
+import { normalizeAngle } from "./math";
 
 /**
  * Base interface for all interpolators
@@ -53,11 +55,13 @@ export class NumericInterpolator implements Interpolator<number> {
     }
   }
 
+  /**
+   * Interpolates between two angles using angle space
+   * used in path animations
+   */
   private angleInterpolate(from: number, to: number, progress: number): number {
-    const normalize = (angle: number) => ((angle % 360) + 360) % 360;
-
-    let startAngle = normalize(from);
-    let endAngle = normalize(to);
+    const startAngle = normalizeAngle(from);
+    const endAngle = normalizeAngle(to);
     let diff = endAngle - startAngle;
 
     if (Math.abs(diff) > 180) {
@@ -66,7 +70,7 @@ export class NumericInterpolator implements Interpolator<number> {
     }
 
     const result = startAngle + progress * diff;
-    return normalize(result);
+    return normalizeAngle(result);
   }
 
   /**

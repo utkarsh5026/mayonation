@@ -95,23 +95,9 @@ export function smoothstep(edge0: number, edge1: number, x: number): number {
 }
 
 /**
- * Generates a spring physics calculation
- * Useful for elastic animations
+ * Normalizes an angle to be within 0-360 degrees
+ * Useful for angle-based animations and calculations
  */
-export function springCalcuation(
-  current: number,
-  target: number,
-  velocity: number,
-  mass: number = 1,
-  stiffness: number = 100,
-  damping: number = 10
-): {
-  position: number;
-  velocity: number;
-} {
-  const force = -stiffness * (current - target) - damping * velocity;
-  const acceleration = force / mass;
-  const newVelocity = velocity + acceleration;
-  const newPosition = current + newVelocity;
-  return { position: newPosition, velocity: newVelocity };
+export function normalizeAngle(angle: number): number {
+  return ((angle % 360) + 360) % 360;
 }
