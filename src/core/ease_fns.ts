@@ -21,6 +21,11 @@ export type EaseFnName =
   | "easeInOutCubic"; // Cubic acceleration and deceleration
 
 /**
+ * A type that can be either an easing function or a string.
+ */
+export type EaseFunction = EaseFn | EaseFnName;
+
+/**
  * The linear easing moves at a constant speed from start to finish.
  * While this might seem like the most logical choice, it often feels
  * mechanical and unnatural to users because real-world objects rarely move at perfectly constant speeds.
@@ -131,7 +136,8 @@ export const easeFnsList = Object.keys(easeFns) as EaseFnName[];
  * @param fn - The easing function or name to resolve
  * @returns The resolved easing function
  */
-export const resolveEaseFn = (fn: EaseFn | EaseFnName): EaseFn => {
+export const resolveEaseFn = (fn?: EaseFunction): EaseFn => {
+  if (!fn) return linear;
   if (typeof fn === "function") return fn;
 
   if (easeFns[fn]) return easeFns[fn];
