@@ -124,3 +124,16 @@ export const easeFns: Record<EaseFnName, EaseFn> = {
  * List of all available ease functions.
  */
 export const easeFnsList = Object.keys(easeFns) as EaseFnName[];
+
+/**
+ * Resolves an easing function from either a function or a string.
+ * If the function is not found, it defaults to linear.
+ * @param fn - The easing function or name to resolve
+ * @returns The resolved easing function
+ */
+export const resolveEaseFn = (fn: EaseFn | EaseFnName): EaseFn => {
+  if (typeof fn === "function") return fn;
+
+  if (easeFns[fn]) return easeFns[fn];
+  else return linear;
+};
