@@ -229,22 +229,6 @@ export class TimelineSegment {
 /**
  * Timeline class for managing complex animations.
  *
- * This class provides a powerful animation timeline system that allows you to:
- * - Create sequences of animations
- * - Control playback (play, pause, resume, reset)
- * - Seek to specific positions
- * - Handle events
- * - Support looping animations
- *
- * Key features:
- * - Precise timing control with configurable precision
- * - Multiple animation segments support
- * - Event system for animation lifecycle hooks
- * - Flexible positioning system for animation sequencing
- */
-/**
- * Timeline class for managing complex animations.
- *
  * This class provides a powerful and flexible animation timeline system that allows you to create
  * sophisticated animations with precise control. Think of it like a video editing timeline where
  * you can sequence multiple animations, control their playback, and coordinate timing.
