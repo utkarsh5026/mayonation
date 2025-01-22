@@ -1,4 +1,4 @@
-import { Point } from "./unit";
+import { Point } from "../../animations/svg/unit";
 import { validateNumber } from "../../utils/type_validate";
 import { angle, clampProgress, linear } from "../../utils/interpolate";
 import {

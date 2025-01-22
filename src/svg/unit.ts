@@ -34,6 +34,12 @@ export type PathCommand = {
   relative: boolean; // Whether it's a relative command
   endPoint: Point; // End point for the command
   controlPoints?: Point[]; // Control points for curves
+  params?: {
+    radius?: number;
+    rotation?: number;
+    largeArc?: boolean;
+    sweep?: boolean;
+  };
 };
 
 /**
@@ -42,6 +48,8 @@ export type PathCommand = {
 export type Point = {
   x: number;
   y: number;
+  pressure?: number;
+  angle?: number;
 };
 
 /**
@@ -63,6 +71,13 @@ export type PathStyleProperties = Partial<{
   dasharray: number[];
   dashoffset: number;
 }>;
+
+export type BoundingBox = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
 
 export type PathTransformProperties = Partial<{
   translate: {

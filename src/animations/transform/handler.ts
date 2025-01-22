@@ -1,5 +1,5 @@
 import { type NumericValue, createValue } from "../../core/animation-val";
-import { validateProgress } from "../utils";
+import { validateProgress } from "../../svg/utils";
 import {
   type TransformState,
   type TransformAxis,

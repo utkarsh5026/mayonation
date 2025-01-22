@@ -1,5 +1,6 @@
-import type { Point, PathCommandType } from "./unit";
+import type { Point, PathCommandType } from "../unit";
 import { PathInterpolator, InterpolationOptions } from "./path_interpolate";
+import { clampProgress } from "../../utils/interpolate";
 
 /**
  * Core PathCommand interface representing a single SVG path command

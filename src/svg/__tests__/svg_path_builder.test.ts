@@ -1,7 +1,7 @@
 /// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach } from "vitest";
-import PathBuilder from "../svg/path-builder";
+import PathBuilder from "../path/path-builder";
 
 describe("PathBuilder", () => {
   let pathBuilder: PathBuilder;

@@ -1,7 +1,7 @@
 /// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { ShapeAnimationHandler } from "../svg/shape";
+import { ShapeAnimationHandler } from "../shape";
 import { createValue } from "../../core/animation-val";
 
 describe("ShapeAnimationHandler", () => {

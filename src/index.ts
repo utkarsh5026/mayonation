@@ -1,4 +1,4 @@
-import PathBuilder from "./animations/svg/path-builder";
+import PathBuilder from "./animations/svg/path/path-builder";
 
 export * from "./core/mayo";
 export * from "./core/ease_fns";

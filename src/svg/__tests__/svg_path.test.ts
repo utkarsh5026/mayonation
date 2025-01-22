@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import SVGPath from "../svg/path";
+import SVGPath from "../path/path";
 
 describe("SVGPath Command Creation", () => {
   describe("Move Commands (M, m)", () => {

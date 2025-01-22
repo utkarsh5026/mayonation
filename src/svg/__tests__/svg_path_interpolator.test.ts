@@ -7,8 +7,8 @@ import {
   INTERPOLATION_CONSTANTS,
   CubicBezierInterpolator,
   CurvePoints,
-} from "../svg/path_interpolate";
-import type { Point } from "../svg/unit";
+} from "../path/path_interpolate";
+import type { Point } from "../unit";
 import { describe, expect, test, beforeEach, it } from "vitest";
 
 describe("LineInterpolator", () => {
