@@ -1,78 +1,28 @@
-import { PropertiesConfig } from "./config";
-import { Timeline } from "./timeline";
-import type { Keyframe } from "./keyframe";
-import type { EaseFn, EaseFnName } from "./ease_fns";
+import type { AnimationOptions } from "./config";
+import { Timeline, type TimelinePosition } from "../timeline/timeline";
+import {
+  animate as animateCSS,
+  type CSSAnimationOptions,
+} from "../animations/api";
+import { draw as drawSvg, type SvgDrawOptions } from "../svg/api";
+import { DrawingHandler } from "../svg/path/animations";
+import {
+  BaseKeyframeManager,
+  type BaseKeyframe,
+  type ProcessedBaseKeyframe,
+} from "../keyframe/keyframe";
+import { CSSKeyframeManager } from "../animations/keyframe";
 
-/**
- * Creates a simple animation with a fluent API.
- *
- * @example
- * ```ts
- * // Simple animation
- * animate('.box')
- *   .to({
- *     translateX: 100,
- *     opacity: 0.5
- *   })
- *   .duration(1000)
- *   .easing('easeOutQuad')
- *   .play();
- *
- *
- *  * // With keyframes
- * animate('#circle')
- *   .keyframes([
- *     { translateY: 0, offset: 0 },
- *     { translateY: 100, offset: 0.5 },
- *     { translateY: 0, offset: 1 }
- *   ])
- *   .duration(2000)
- *   .play();
- * ```
- */
-export function animate(targets: string | HTMLElement | HTMLElement[]) {
-  const timeline = new Timeline({});
-  let config: Partial<PropertiesConfig> = {};
-  let kframes: Keyframe[] | null = null;
-
-  const api = {
-    to(properties: Record<string, any>) {
-      config = { ...config, ...properties };
-      return api;
-    },
-
-    keyframes(frames: Keyframe[]) {
-      kframes = frames;
-      return api;
-    },
-
-    duration(ms: number) {
-      config.duration = ms;
-      return api;
-    },
-
-    easing(ease: EaseFnName | EaseFn) {
-      config.easing = ease;
-      return api;
-    },
-
-    delay(ms: number) {
-      config.delay = ms;
-      return api;
-    },
-
-    play() {
-      if (kframes) {
-        timeline.add(targets, kframes);
-      } else {
-        timeline.add(targets, config);
-      }
-      return timeline.play();
-    },
-  };
-
-  return api;
-}
+type AnimationAPI<
+  H extends BaseKeyframeManager<B, P, K>,
+  B extends BaseKeyframe,
+  P extends ProcessedBaseKeyframe,
+  K,
+  T extends AnimationOptions
+> = {
+  handlers: H[];
+  options: T;
+};
 
 /**
  * Creates a complex animation timeline with a fluent API.
@@ -110,5 +60,54 @@ export function animate(targets: string | HTMLElement | HTMLElement[]) {
 export function timeline(
   options: Partial<{ loop: boolean; precision: number }>
 ) {
-  return new Timeline(options || {});
+  const timeline = new Timeline(options || {});
+
+  const api = {
+    add<
+      B extends BaseKeyframe,
+      P extends ProcessedBaseKeyframe,
+      K extends Keyframe,
+      T extends AnimationOptions
+    >(
+      entiies: { handlers: BaseKeyframeManager<B, P, K>[]; options: T },
+      position?: TimelinePosition
+    ) {
+      timeline.add(entiies.handlers, entiies.options, position);
+      return api;
+    },
+
+    play() {
+      timeline.play();
+      return api;
+    },
+  };
+
+  return api;
+}
+
+export function draw(
+  config: SvgDrawOptions
+): AnimationAPI<
+  DrawingHandler,
+  BaseKeyframe,
+  ProcessedBaseKeyframe,
+  Keyframe,
+  SvgDrawOptions
+> {
+  const handlers = drawSvg(config);
+  return {
+    handlers,
+    options: config,
+  };
+}
+
+export function animate(config: CSSAnimationOptions): {
+  handlers: CSSKeyframeManager[];
+  options: CSSAnimationOptions;
+} {
+  const handlers = animateCSS(config);
+  return {
+    handlers,
+    options: config,
+  };
 }

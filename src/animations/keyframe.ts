@@ -1,7 +1,7 @@
-import { type EaseFn, resolveEaseFn } from "./ease_fns";
-import type { AnimationValue } from "./animation-val";
-import { type AnimatableProperty, PropertyManager } from "./prop";
-import type { PropertiesConfig } from "./config";
+import { type EaseFn, resolveEaseFn } from "../core/ease_fns";
+import type { AnimationValue } from "../core/animation-val";
+import { type AnimatableProperty, PropertyManager } from "../core/prop";
+import type { PropertiesConfig } from "../core/config";
 import { BaseKeyframeManager } from "../keyframe/keyframe";
 
 /**
@@ -27,14 +27,17 @@ type ProcessedKeyframe = {
   easing: EaseFn; // Easing function for this frame
 };
 
+type AnimateableValues = Map<AnimatableProperty, AnimationValue>;
+
 /**
  * Manages a sequence of keyframes for animating properties on an element.
  * Handles processing raw keyframes into a normalized format, interpolating between
  * keyframes, and applying animated values to the element.
  */
-export class KeyframeManager extends BaseKeyframeManager<
+export class CSSKeyframeManager extends BaseKeyframeManager<
   Keyframe,
-  ProcessedKeyframe
+  ProcessedKeyframe,
+  AnimateableValues
 > {
   /** Array of processed keyframes in chronological order */
   protected readonly keyframes: ProcessedKeyframe[] = [];
@@ -61,22 +64,8 @@ export class KeyframeManager extends BaseKeyframeManager<
   public getValuesAtProgress(
     progress: number
   ): Map<AnimatableProperty, AnimationValue> {
-    if (progress <= 0) {
-      return this.keyframes[0].properties;
-    }
-
-    if (progress >= 1) {
-      return this.keyframes[this.keyframes.length - 1].properties;
-    }
-
-    const surrounding = this.getSurroundingKeyframes(progress);
-    if (!surrounding) return new Map();
-
-    const [curr, next] = surrounding;
-    const localProgress =
-      (progress - curr.offset) / (next.offset - curr.offset);
-    const easedProgress = curr.easing(localProgress);
-    return this.interpolate(curr, next, easedProgress);
+    const props = this.getPropertiesAtProgress(progress);
+    return props ?? new Map();
   }
 
   /**
@@ -89,6 +78,25 @@ export class KeyframeManager extends BaseKeyframeManager<
       this.propManager.updateProperty(property, value);
     });
     this.propManager.applyUpdates();
+  }
+
+  public isCorrectElenmentType(el: object): boolean {
+    return el instanceof HTMLElement;
+  }
+
+  protected updateProps(values: AnimateableValues) {
+    values.forEach((value, property) => {
+      this.propManager.updateProperty(property, value);
+    });
+    this.propManager.applyUpdates();
+  }
+
+  protected processKeyframe(frame: Keyframe): ProcessedKeyframe {
+    return {
+      properties: this.processKeyframeProperties(frame),
+      offset: frame.offset ?? 0,
+      easing: resolveEaseFn(frame.easing),
+    };
   }
 
   /**
@@ -115,11 +123,7 @@ export class KeyframeManager extends BaseKeyframeManager<
       distributed.unshift({ ...startFrame, offset: 0 });
     }
 
-    const processed = distributed.map((frame) => ({
-      properties: this.processKeyframeProperties(frame),
-      offset: frame.offset!,
-      easing: resolveEaseFn(frame.easing),
-    }));
+    const processed = distributed.map((frame) => this.processKeyframe(frame));
 
     this.validatePropertiesConcistency(
       processed.map((frame) => Array.from(frame.properties.keys()))
@@ -254,5 +258,9 @@ export class KeyframeManager extends BaseKeyframeManager<
     });
 
     return startKeyframe as Keyframe;
+  }
+
+  protected handleNoKeyframes(): Keyframe[] {
+    return [{}];
   }
 }
