@@ -4,8 +4,13 @@ import {
   animate as animateCSS,
   type CSSAnimationOptions,
 } from "../animations/api";
-import { draw as drawSvg, type SvgDrawOptions } from "../svg/api";
-import { DrawingHandler } from "../svg/path/animations";
+import {
+  draw as drawSvg,
+  trace as traceSvg,
+  type SvgDrawOptions,
+  type SvgTraceOptions,
+} from "../svg/api";
+import { DrawingHandler, TraceHandler } from "../svg/path/animations";
 import {
   BaseKeyframeManager,
   type BaseKeyframe,
@@ -95,6 +100,22 @@ export function draw(
   SvgDrawOptions
 > {
   const handlers = drawSvg(config);
+  return {
+    handlers,
+    options: config,
+  };
+}
+
+export function trace(
+  config: SvgTraceOptions
+): AnimationAPI<
+  TraceHandler,
+  BaseKeyframe,
+  ProcessedBaseKeyframe,
+  Keyframe,
+  SvgTraceOptions
+> {
+  const handlers = traceSvg(config);
   return {
     handlers,
     options: config,

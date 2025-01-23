@@ -244,3 +244,99 @@ export class DrawingHandler extends BaseKeyframeManager<
     this.el.getBoundingClientRect();
   }
 }
+
+export type TraceKeyframe = BaseKeyframe & {
+  distance?: number; // Distance along the path (0-1)
+};
+
+export type ProcessedTraceKeyframe = ProcessedBaseKeyframe & {
+  distance: number;
+};
+
+/**
+ * Handles the animation of an element tracing along an SVG path.
+ *
+ * @example
+ * ```ts
+ * // Create a trace animation with a circle following a path
+ * const path = document.querySelector('path');
+ * const circle = document.querySelector('circle');
+ * const handler = new TraceHandler(path, circle);
+ *
+ * // Customize the animation
+ * const handler = new TraceHandler(path, circle, {
+ *   reverse: true,
+ *   startPercentage: 0.2,
+ *   endPercentage: 0.8
+ * });
+ * ```
+ */
+export class TraceHandler extends BaseKeyframeManager<
+  TraceKeyframe,
+  ProcessedTraceKeyframe,
+  { distance: number }
+> {
+  private readonly pathElement: SVGPathElement;
+  private readonly tracingElement: SVGElement | HTMLElement;
+  protected keyframes: ProcessedTraceKeyframe[];
+  private readonly options: StaticPathOptions;
+
+  constructor(
+    pathElement: SVGPathElement,
+    tracingElement: SVGElement | HTMLElement,
+    options: StaticPathOptions = {},
+    keyframes: TraceKeyframe[] = []
+  ) {
+    super();
+    this.pathElement = pathElement;
+    this.tracingElement = tracingElement;
+    this.options = options;
+    this.keyframes = this.processKeyframes(keyframes);
+  }
+
+  protected updateProps({ distance }: { distance: number }): void {
+    const point = this.pathElement.getPointAtLength(
+      distance * this.pathElement.getTotalLength()
+    );
+
+    this.tracingElement.setAttribute(
+      "transform",
+      `translate(${point.x}, ${point.y})`
+    );
+  }
+
+  public reset(): void {
+    this.tracingElement.setAttribute("transform", "");
+  }
+
+  public isCorrectElenmentType(el: object): boolean {
+    return el instanceof SVGPathElement;
+  }
+
+  protected interpolate(
+    from: ProcessedTraceKeyframe,
+    to: ProcessedTraceKeyframe,
+    progress: number
+  ) {
+    return {
+      distance: linear.interpolate(from.distance, to.distance, progress),
+    };
+  }
+
+  protected processKeyframe(frame: TraceKeyframe): ProcessedTraceKeyframe {
+    const distance = frame.distance ?? 0;
+    return {
+      offset: frame.offset!,
+      easing: resolveEaseFn(frame.easing),
+      distance: this.options.reverse ? 1 - distance : distance,
+    };
+  }
+
+  protected handleNoKeyframes(): TraceKeyframe[] {
+    const { startPercentage = 0, endPercentage = 1 } = this.options;
+    return [
+      { offset: 0, distance: startPercentage },
+      { offset: 1, distance: endPercentage },
+    ];
+  }
+}

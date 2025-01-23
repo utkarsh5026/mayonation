@@ -1,7 +1,9 @@
 import {
   DrawingHandler,
+  TraceHandler,
   type DrawingKeyframe,
   type StaticPathOptions,
+  type TraceKeyframe,
 } from "./path/animations";
 import type { AnimationOptions } from "../core/config";
 
@@ -45,5 +47,33 @@ export function draw(config: SvgDrawOptions): DrawingHandler[] {
   const elements = resolveElements(config.element);
   return elements.map(
     (el) => new DrawingHandler(el, config.style, config.keyframes)
+  );
+}
+
+/**
+ * Configuration options for tracing along SVG paths.
+ */
+export type SvgTraceOptions = {
+  /** The path element(s) to trace along. Can be a CSS selector string, a single SVGPathElement, or an array of SVGPathElement. */
+  path: SVGPathElement | string;
+  /** The element that will trace along the path */
+  element: SVGElement | HTMLElement;
+  /** The style options for the path */
+  style?: StaticPathOptions;
+  /** The keyframes for the tracing animation */
+  keyframes?: TraceKeyframe[];
+} & AnimationOptions;
+
+/**
+ * Creates animations for elements tracing along SVG paths.
+ *
+ * @param config - The configuration options for tracing along SVG paths.
+ * @returns An array of TraceHandler instances for each resolved SVGPathElement.
+ */
+export function trace(config: SvgTraceOptions): TraceHandler[] {
+  const paths = resolveElements(config.path);
+  return paths.map(
+    (path) =>
+      new TraceHandler(path, config.element, config.style, config.keyframes)
   );
 }
