@@ -1,186 +1,122 @@
+<div align="center">
+
 # 🎨 Mayonation
 
+A lightweight and performant animation library for the web
 
-Welcome to Mayonation, a lightweight and performant animation library for the web. This library is designed to make animating HTML elements simple and efficient, providing a powerful API to enhance your web projects. I developed this project as a learning project for animations.
+[![Tests](https://github.com/utkarsh5026/mayonation/actions/workflows/test.yml/badge.svg)](https://github.com/utkarsh5026/mayonation/actions)
+[![npm version](https://badge.fury.io/js/mayonation.svg)](https://www.npmjs.com/package/mayonation)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**See the [live preview](https://utkarsh5026.github.io/mayosite/). 🚀**
+[Demo](https://utkarsh5026.github.io/mayosite/) • [Documentation](#-api-reference) • [Examples](#-examples)
 
-![Tests](https://github.com/utkarsh5026/mayonation/actions/workflows/test.yml/badge.svg)
+</div>
 
+## ✨ Features
 
-## Why Mayonation?
+- 🪶 **Lightweight** - Tiny footprint (<5kb gzipped)
+- 🎯 **Simple API** - Intuitive chainable methods
+- 🚀 **High Performance** - Optimized for 60fps animations
+- 🎮 **Timeline Control** - Create complex animation sequences
+- 🎨 **Flexible** - Animate CSS & SVG elements
+- 📦 **TypeScript Ready** - Full type support included
 
-- 🪶 **Lightweight AF** - Tiny footprint that won't bloat your bundle
-- 🎯 **Dead Simple API** - Chain methods like a boss
-- 🚀 **Performance First** - Optimized for silky smooth 60fps
-- 🎮 **Timeline Support** - Create complex sequences with ease
-- 🎨 **CSS & Transform** - Animate any property you want
-- 📦 **TypeScript Ready** - Full type support out of the box
-
-## Quick Start
+## 📦 Installation
 
 ```bash
 npm install mayonation
+# or
+yarn add mayonation
+# or
+pnpm add mayonation
 ```
 
-### Basic Animation
+## 🚀 Quick Start
+
+### Timeline Animation
 
 ```typescript
-import { animate } from 'mayonation'
+import { timeline, animate } from 'mayonation'
 
-// Make it move!
-animate('.my-box')
-  .to({
-    translateX: 100,
-    opacity: 0.5
-  })
-  .duration(1000)
-  .easing('easeOutQuad')
-  .play()
-```
-
-### Keyframe Magic
-
-```typescript
-animate('#bouncy-ball')
-  .keyframes([
-    { translateY: 0, offset: 0 },
-    { translateY: 200, offset: 0.5 },
-    { translateY: 0, offset: 1 }
-  ])
-  .duration(2000)
-  .play()
-```
-
-### Timeline Power
-
-```typescript
-import { timeline } from 'mayonation'
-
-timeline()
-  .add('.box1', {
+// Sequential animations
+timeline({ loop: true, precision: 1 })
+  .add(animate({
+    target: '.box1',
     translateX: 100,
     duration: 1000
-  })
-  .add('.box2', {
+  }))
+  .add(animate({
+    target: '.box2',
     scale: 2
-  }, '+=500')  // Starts 500ms after previous
-  .add('.box3', {
+  }), '+=500')  // Starts 500ms after previous
+  .add(animate({
+    target: '.box3',
     opacity: 0
-  }, 2000)     // Starts at specific time
+  }), 2000)     // Starts at 2000ms
   .play()
 ```
 
-## 🛠️ Features
-
-### Transform Animations
-
-- Scale, rotate, translate with GPU acceleration
-- Chain multiple transforms seamlessly
-- Perfect for smooth UI transitions
-
-### CSS Properties
-
-- Animate colors, dimensions, opacity
-- Smart unit handling (px, %, em, rem)
-- Automatic value interpolation
-
-### Easing Functions
+### SVG Drawing Animation
 
 ```typescript
-animate('.element')
-  .to({ scale: 1.5 })
-  .easing('easeInOutQuad')  // Built-in easings
-  .duration(500)
+import { draw, trace } from 'mayonation'
+
+// Draw SVG path
+timeline()
+  .add(draw({
+    target: '#my-path',
+    duration: 1000
+  }))
+  .play()
+
+// Trace SVG path
+timeline()
+  .add(trace({
+    target: '#my-path',
+    duration: 1000
+  }))
   .play()
 ```
 
-Available easings:
+## 🌟 Examples
 
-- `linear`
-- `easeIn`, `easeOut`, `easeInOut`
-- `easeInQuad`, `easeOutQuad`, `easeInOutQuad`
-- `easeInCubic`, `easeOutCubic`, `easeInOutCubic`
-
-### Timeline Control
-
-- Precise timing control
-- Relative or absolute positioning
-- Loop and reverse options
-- Pause, resume, and seek
-
-## 🎮 API Reference
-
-### `animate(target)`
-
-Creates a simple animation instance.
-
-**Target can be:**
-
-- CSS selector string
-- HTML Element
-- Array of elements
-
-**Methods:**
-
-- `.to(properties)` - Set target values
-- `.keyframes(frames)` - Define keyframe sequence
-- `.duration(ms)` - Set animation length
-- `.easing(name)` - Set easing function
-- `.delay(ms)` - Add initial delay
-- `.play()` - Start animation
-
-### `timeline(options?)`
-
-Creates a complex animation sequence.
-
-**Options:**
-
-- `loop: boolean` - Loop the timeline
-- `precision: number` - Animation precision in ms
-
-**Methods:**
-
-- `.add(target, properties, position?)` - Add animation
-- `.play()` - Start timeline
-- `.pause()` - Pause timeline
-- `.resume()` - Resume timeline
-- `.seek(time)` - Jump to position
-
-## 🚀 Examples
-
-### Fade and Move
-
-```typescript
-animate('.card')
-  .to({
-    opacity: 0,
-    translateY: -50
-  })
-  .duration(500)
-  .easing('easeInOutCubic')
-  .play()
-```
-
-### Staggered Animation
+### Basic Timeline
 
 ```typescript
 timeline()
-  .add('.item-1', { scale: 1.2 })
-  .add('.item-2', { scale: 1.2 }, '+=100')
-  .add('.item-3', { scale: 1.2 }, '+=100')
+  .add(animate({
+    target: '.element',
+    translateX: 100,
+    duration: 1000
+  }))
+  .play()
+```
+
+### SVG Animation
+
+```typescript
+timeline()
+  .add(draw({
+    target: '#svg-path',
+    duration: 2000
+  }))
+  .add(trace({
+    target: '#svg-path',
+    duration: 1000
+  }), '+=500')
   .play()
 ```
 
 ## 🤝 Contributing
 
-Found a bug? Want to add a feature? Contributions are welcome! Check out our [GitHub repo](https://github.com/utkarsh5026/mayonation).
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-## 📝 License
+## 📄 License
 
 MIT © [Utkarsh Priyadarshi](https://github.com/utkarsh5026)
 
 ---
 
-Made with ❤️ for smooth animations
-
+<div align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/utkarsh5026">Utkarsh Priyadarshi</a></sub>
+</div>
