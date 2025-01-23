@@ -35,9 +35,14 @@ export interface ProcessedBaseKeyframe {
  */
 export abstract class BaseKeyframeManager<
   K extends BaseKeyframe,
-  P extends ProcessedBaseKeyframe
+  P extends ProcessedBaseKeyframe,
+  T
 > {
   protected readonly keyframes: P[] = [];
+
+  protected abstract updateProps(props: T): void;
+
+  public abstract isCorrectElenmentType(el: object): boolean;
 
   /**
    * Process raw keyframes into a normalized format.
@@ -46,7 +51,14 @@ export abstract class BaseKeyframeManager<
    * @param keyframes - Array of raw keyframes to process
    * @returns Array of processed keyframes
    */
-  protected abstract processKeyframes(keyframes: K[]): P[];
+  protected processKeyframes(keyframes: K[]): P[] {
+    if (keyframes.length < 2) {
+      keyframes = this.handleNoKeyframes();
+    }
+    this.validateKeyframeSequence(keyframes);
+    const distributed = this.distributeOffsets(keyframes);
+    return distributed.map((frame) => this.processKeyframe(frame));
+  }
 
   /**
    * Interpolate between two keyframes at a given progress.
@@ -57,7 +69,11 @@ export abstract class BaseKeyframeManager<
    * @param progress - Current progress between the keyframes (0 to 1)
    * @returns Interpolated value
    */
-  protected abstract interpolate(from: P, to: P, progress: number): any;
+  protected abstract interpolate(from: P, to: P, progress: number): T;
+
+  protected abstract handleNoKeyframes(): K[];
+
+  protected abstract processKeyframe(frame: K): P;
 
   /**
    * Update the animation to a specific progress value.
@@ -65,7 +81,13 @@ export abstract class BaseKeyframeManager<
    *
    * @param progress - Current animation progress (0 to 1)
    */
-  public abstract update(progress: number): void;
+  public update(progress: number) {
+    if (progress < 0 || progress > 1) return;
+    const props = this.getPropertiesAtProgress(progress);
+    if (props) {
+      this.updateProps(props);
+    }
+  }
 
   /**
    * Reset the animation to its initial state.
@@ -145,5 +167,25 @@ export abstract class BaseKeyframeManager<
         offset: this.roundOffset(frame.offset),
       }))
       .sort((a, b) => a.offset - b.offset);
+  }
+
+  /**
+   * Retrieves the properties at a specific progress value in the animation.
+   * This method finds the two keyframes that surround the given progress value,
+   * calculates the local progress between them, applies the easing function,
+   * and interpolates the properties based on the eased progress.
+   *
+   * @param progress - The current animation progress, a value between 0 and 1.
+   * @returns The interpolated properties at the given progress, or null if no surrounding keyframes are found.
+   */
+  protected getPropertiesAtProgress(progress: number): T | null {
+    const surrounding = this.getSurroundingKeyframes(progress);
+
+    if (!surrounding) return null;
+    const [from, to] = surrounding;
+    const localProgress = (progress - from.offset) / (to.offset - from.offset);
+
+    const easedProgress = from.easing(localProgress);
+    return this.interpolate(from, to, easedProgress);
   }
 }
