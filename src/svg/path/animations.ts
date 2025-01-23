@@ -99,8 +99,14 @@ export class DrawingHandler extends BaseKeyframeManager<
    * @internal
    */
   protected updateProps(props: InterpolatedProps): void {
-    this.el.style.strokeDashoffset = `${props.strokeDashoffset}`;
-    this.el.style.strokeOpacity = `${props.strokeOpacity}`;
+    this.el.setAttribute(
+      "stroke-dashoffset",
+      props.strokeDashoffset.toString()
+    );
+    this.el.setAttribute(
+      "stroke-opacity",
+      props.strokeOpacity?.toString() || "1"
+    );
   }
 
   /**
@@ -181,26 +187,15 @@ export class DrawingHandler extends BaseKeyframeManager<
    * @internal
    */
   protected handleNoKeyframes(): DrawingKeyframe[] {
-    const start = this.options.startPercentage ?? 0;
-    const end = this.options.endPercentage ?? 1;
-
-    // For normal direction (non-reverse), we want to start with a larger offset
-    // and animate to a smaller offset to reveal the path from start to end
-    const startOffset = this.options.reverse
-      ? this.pathLength * (1 - start)
-      : this.pathLength;
-    const endOffset = this.options.reverse ? this.pathLength * (1 - end) : 0;
-
     return [
       {
         offset: 0,
-        strokeDashoffset: startOffset,
-        strokeOpacity: 0,
-        easing: resolveEaseFn(this.options.easing),
+        strokeDashoffset: this.pathLength,
+        strokeOpacity: 1,
       },
       {
         offset: 1,
-        strokeDashoffset: endOffset,
+        strokeDashoffset: 0,
         strokeOpacity: 1,
       },
     ];
@@ -213,36 +208,39 @@ export class DrawingHandler extends BaseKeyframeManager<
    */
   private initializeStyles(options: StaticPathOptions): void {
     const defaultStyles: Required<StaticPathOptions> = {
-      strokeWidth: 1,
+      strokeWidth: 2,
       stroke: "black",
       fill: "none",
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
+      strokeLinecap: "butt",
+      strokeLinejoin: "miter",
       strokeMiterlimit: 4,
       easing: "linear",
       reverse: false,
       startPercentage: 0,
       endPercentage: 1,
     };
-
     const styles = { ...defaultStyles, ...options };
 
-    // Calculate visible portion of the path
-    const visibleLength =
-      this.pathLength * (styles.endPercentage - styles.startPercentage);
+    const dashLength = this.pathLength;
+    this.el.setAttribute("stroke-dasharray", `${dashLength}`);
+    this.el.setAttribute("stroke-opacity", "1");
+    this.el.setAttribute(
+      "stroke-dashoffset",
+      this.options.reverse ? `-${dashLength}` : `${dashLength}`
+    );
 
-    this.el.style.strokeWidth = `${styles.strokeWidth}px`;
-    this.el.style.stroke = styles.stroke;
-    this.el.style.fill = styles.fill;
-    this.el.style.strokeDasharray = `${visibleLength} ${this.pathLength}`;
-    this.el.style.strokeOpacity = "0"; // Start invisible
-    this.el.style.strokeDashoffset = `${
-      this.options.reverse
-        ? this.pathLength * (1 - styles.startPercentage)
-        : this.pathLength * styles.startPercentage
-    }`;
-    this.el.style.strokeLinecap = styles.strokeLinecap;
-    this.el.style.strokeLinejoin = styles.strokeLinejoin;
-    this.el.style.strokeMiterlimit = `${styles.strokeMiterlimit}`;
+    this.el.removeAttribute("style");
+
+    this.el.setAttribute("fill", styles.fill);
+    this.el.setAttribute("stroke", styles.stroke);
+    this.el.setAttribute("stroke-width", styles.strokeWidth.toString());
+    this.el.setAttribute("stroke-linecap", styles.strokeLinecap);
+    this.el.setAttribute("stroke-linejoin", styles.strokeLinejoin);
+    this.el.setAttribute(
+      "stroke-miterlimit",
+      styles.strokeMiterlimit.toString()
+    );
+
+    this.el.getBoundingClientRect();
   }
 }
