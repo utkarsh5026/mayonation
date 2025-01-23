@@ -21,8 +21,6 @@ export type AnimationCallbacks = Partial<{
  * Configuration options for animation timing and behavior
  */
 export type AnimationOptions = Partial<{
-  /** Time offset in milliseconds before animation starts */
-  offset: number;
   /** Easing function or name to control animation progression */
   easing: EaseFn | EaseFnName;
   /** Animation duration in milliseconds */
