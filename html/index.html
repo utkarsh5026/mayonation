@@ -49,6 +49,119 @@
             </button>
         </div>
 
+        <!-- SVG Path Animation Section -->
+        <div class="mb-12">
+            <h2 class="text-xl text-green-400 mb-4">SVG Path Animation</h2>
+            <div class="flex flex-wrap justify-center gap-8 mb-4">
+                <!-- MAYO Text -->
+                <svg width="600" height="200" viewBox="0 0 600 200">
+                    <!-- M - curved peaks -->
+                    <path id="letter-m"
+                          d="M 50 150 
+                             C 50 100, 50 70, 50 50 
+                             C 50 70, 85 100, 100 120 
+                             C 115 100, 150 70, 150 50 
+                             C 150 70, 150 100, 150 150"
+                          stroke="#4ade80" 
+                          stroke-width="4"
+                          fill="none"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                    <!-- A - curved legs -->
+                    <path id="letter-a"
+                          d="M 180 150 
+                             C 190 120, 210 70, 230 50 
+                             C 250 70, 270 120, 280 150 
+                             M 195 110 
+                             C 215 110, 245 110, 265 110"
+                          stroke="#ec4899"
+                          stroke-width="4"
+                          fill="none"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                    <!-- Y - flowing curves -->
+                    <path id="letter-y"
+                          d="M 310 50 
+                             C 320 70, 340 90, 360 100 
+                             C 360 110, 360 130, 360 150 
+                             M 410 50 
+                             C 390 70, 370 90, 360 100"
+                          stroke="#8b5cf6"
+                          stroke-width="4"
+                          fill="none"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                    <!-- O - smoother oval -->
+                    <path id="letter-o"
+                          d="M 440 100 
+                             C 440 50, 480 40, 510 40 
+                             C 550 40, 590 60, 590 100 
+                             C 590 140, 550 160, 510 160 
+                             C 480 160, 440 150, 440 100"
+                          stroke="#ef4444"
+                          stroke-width="4"
+                          fill="none"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                </svg>
+
+                <!-- Decorative Wave -->
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                    <path id="wave-path" 
+                          d="M 10 100 C 50 50, 100 150, 150 50, 200 150"
+                          stroke="#4ade80" 
+                          stroke-width="4"
+                          fill="none"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                </svg>
+
+                <!-- Spiral -->
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                    <path id="spiral-path"
+                          d="M 100 100 Q 100 50, 150 50 Q 200 50, 200 100 Q 200 150, 150 150 Q 100 150, 100 100 Q 100 75, 125 75 Q 150 75, 150 100 Q 150 125, 125 125 Q 100 125, 100 100"
+                          stroke="#ec4899"
+                          stroke-width="4"
+                          fill="none"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                </svg>
+
+                <!-- Infinity Symbol -->
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                    <path id="infinity-path"
+                          d="M 50 100 C 50 50, 100 50, 100 100 S 150 150, 150 100 S 100 50, 100 100 S 50 150, 50 100"
+                          stroke="#8b5cf6"
+                          stroke-width="4"
+                          fill="none"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                </svg>
+
+                <!-- Heart -->
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                    <path id="heart-path"
+                          d="M 100 170 C 50 120, 20 80, 20 50 C 20 20, 50 20, 100 60 C 150 20, 180 20, 180 50 C 180 80, 150 120, 100 170"
+                          stroke="#ef4444"
+                          stroke-width="4"
+                          fill="none"
+                          stroke-dasharray="1000"
+                          stroke-dashoffset="1000"/>
+                </svg>
+            </div>
+            <button id="playCurves" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                Draw Curves Animation
+            </button>
+        </div>
+
         <!-- Controls -->
         <div class="space-y-4">
             <div class="flex items-center gap-4">
@@ -70,7 +183,7 @@
     </div>
 
     <script type="module">
-        import { animate, timeline } from '../src/core/mayo.ts';
+        import { animate, timeline, draw } from '../src/core/mayo.ts';
 
         const durationRange = document.getElementById('durationRange');
         const durationValue = document.getElementById('durationValue');
@@ -85,50 +198,107 @@
             const duration = parseInt(durationRange.value);
             const easing = easingSelect.value;
 
-            animate('#box1')
-                .to({ translateX: 200, rotate: 360 })
-                .duration(duration)
-                .easing(easing)
-                .play();
-
-            animate('#box2')
-                .to({ translateY: 100, scale: 1.5 })
-                .duration(duration)
-                .easing(easing)
-                .delay(200)
-                .play();
-
-            animate('#box3')
-                .to({ translateX: 200, translateY: 100 })
-                .duration(duration)
-                .easing(easing)
-                .delay(400)
+            timeline({ loop: false })
+                .add(animate({
+                    element: '#box1',
+                    props: { translateX: 200, rotate: 360 },
+                    duration: duration,
+                    easing: easing
+                }))
+                .add(animate({
+                    element: '#box2',
+                    props: { translateY: 100, scale: 1.5 },
+                    duration: duration,
+                    easing: easing
+                }), '+=200')
+                .add(animate({
+                    element: '#box3',
+                    props: { translateX: 200, translateY: 100 },
+                    duration: duration,
+                    easing: easing
+                }), '+=200')
                 .play();
         });
 
-        // Timeline Animation
+        // Path Animation
+        document.getElementById('playCurves').addEventListener('click', () => {
+            const duration = parseInt(durationRange.value);
+            const easing = easingSelect.value;
+
+            timeline({ loop: false })
+                .add(draw({
+                    element: '#letter-m',
+                    style: {
+                        strokeWidth: 16,
+                        stroke: '#4ade80',
+                    },
+                    duration: duration,
+                    easing: easing
+                }))
+                .add(draw({
+                    element: '#letter-a',
+                    style: {
+                        strokeWidth: 16,
+                        stroke: '#ec4899',
+                    },
+                    duration: duration,
+                    easing: easing
+                }), '-=500')
+                .add(draw({
+                    element: '#letter-y',
+                    style: {
+                        strokeWidth: 16,
+                        stroke: '#8b5cf6',
+                    },
+                    duration: duration,
+                    easing: easing
+                }), '-=500')
+                .add(draw({
+                    element: '#letter-o',
+                    style: {
+                        strokeWidth: 16,
+                        stroke: '#ef4444',
+                    },
+                    duration: duration,
+                    easing: easing
+                }), '-=500')
+                .play();
+        });
+
+
         document.getElementById('playTimeline').addEventListener('click', () => {
             const duration = parseInt(durationRange.value);
             const easing = easingSelect.value;
 
             timeline({ loop: false })
-                .add('#circle1', {
-                    translateY: 100,
-                    scale: 1.5,
+                .add(animate({
+                    element: '#circle1',
+                    props: {
+                        translateY: 100,
+                        scale: 1.5
+                    },
                     duration: duration,
                     easing: easing
-                })
-                .add('#circle2', {
-                    translateY: -100,
-                    scale: 1.5,
+                }))
+                .add(animate({
+                    element: '#circle2',
+                    props: {
+                        translateY: -100,
+                        scale: 1.5
+                    },
                     duration: duration,
                     easing: easing
-                }, '+=200')
-                .add('#circle3', [
-                    { scale: 1, translateX: 0, offset: 0 },
-                    { scale: 2, translateX: 100, offset: 0.5 },
-                    { scale: 1, translateX: 0, offset: 1 }
-                ], '+=200')
+                }), '+=200')
+                .add(animate({
+                    element: '#circle3',
+                    props: [
+                        { scale: 1, translateX: 0, offset: 0 },
+                        { scale: 2, translateX: 100, offset: 0.5 },
+                        { scale: 1, translateX: 0, offset: 1 }
+                    ],
+                    duration: duration,
+                    easing: easing
+                }), '+=200')
                 .play();
         });
     </script>
