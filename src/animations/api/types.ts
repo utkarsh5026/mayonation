@@ -1,4 +1,5 @@
 import { ElementLike } from "@/utils/dom";
+import { EaseFunction } from "@/core/ease_fns";
 
 export interface AnimationProperties {
   x?: number | string;
@@ -35,7 +36,7 @@ export interface AnimationProperties {
 // Keyframe with offset
 export interface AnimationKeyframe extends AnimationProperties {
   offset: number; // 0 to 1
-  ease?: EasingType;
+  ease?: EaseFunction;
 }
 
 // Timeline position types
@@ -49,34 +50,6 @@ export type TimePosition =
   | `<` // Start of timeline
   | `>` // End of timeline
   | string; // Label name
-
-// Comprehensive easing types
-export type EasingType =
-  | "linear"
-  | "ease"
-  | "easeIn"
-  | "easeOut"
-  | "easeInOut"
-  | "easeInQuad"
-  | "easeOutQuad"
-  | "easeInOutQuad"
-  | "easeInCubic"
-  | "easeOutCubic"
-  | "easeInOutCubic"
-  | "easeInQuart"
-  | "easeOutQuart"
-  | "easeInOutQuart"
-  | "easeInBack"
-  | "easeOutBack"
-  | "easeInOutBack"
-  | "easeInBounce"
-  | "easeOutBounce"
-  | "easeInOutBounce"
-  | "easeInElastic"
-  | "easeOutElastic"
-  | "easeInOutElastic"
-  | `cubic-bezier(${number},${number},${number},${number})`
-  | ((t: number) => number);
 
 export interface AnimationCallbacks {
   onStart?: () => void;
@@ -101,9 +74,16 @@ export interface AnimationConfig extends AnimationCallbacks {
   keyframes?: AnimationKeyframe[];
   duration?: number;
   delay?: number;
-  ease?: EasingType;
+  ease?: EaseFunction;
   repeat?: number | "infinite";
   yoyo?: boolean;
   stagger?: number;
   paused?: boolean;
 }
+
+export type AnimationState =
+  | "idle"
+  | "running"
+  | "paused"
+  | "completed"
+  | "cancelled";
