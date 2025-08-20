@@ -12,13 +12,7 @@ import {
 } from "@/core/animation-val";
 import { parseColor, convertColorValueToCssString } from "@/utils/color";
 import { type CSSPropertyName, cssPropertyUnits } from "./units";
-import {
-  parseBorderRadius,
-  parseBorderWidth,
-  parseHeight,
-  parseOpacity,
-  parseWidth,
-} from "./parse";
+import { CssParser } from "./css-parser";
 
 type CSSHandlerOptions = {
   colorSpace?: ColorSpace;
@@ -152,15 +146,15 @@ export class CSSHandler {
 
     switch (cssProperty) {
       case "opacity":
-        return parseOpacity(cssValue);
+        return CssParser.parseOpacity(cssValue);
       case "width":
-        return parseWidth(cssValue);
+        return CssParser.parseWidth(cssValue);
       case "height":
-        return parseHeight(cssValue);
+        return CssParser.parseHeight(cssValue);
       case "borderRadius":
-        return parseBorderRadius(cssValue);
+        return CssParser.parseBorderRadius(cssValue);
       case "borderWidth":
-        return parseBorderWidth(cssValue);
+        return CssParser.parseBorderWidth(cssValue);
       default:
         throw new Error(`Unsupported property: ${cssProperty}`);
     }
