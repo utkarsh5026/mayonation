@@ -1,20 +1,46 @@
-/**
- * Resolves various element input types into an array of HTMLElements.
- *
- * @param element - The element(s) to resolve. Can be:
- *   - A CSS selector string (e.g., ".class", "#id", "div")
- *   - A single HTMLElement
- *   - An array of HTMLElements
- * @returns An array of HTMLElements
- * @throws {Error} Throws an error if the element is not found or invalid
- */
-export const resolveElement = (
-  element: string | HTMLElement | HTMLElement[]
-): HTMLElement[] => {
-  if (typeof element === "string")
-    element = Array.from(document.querySelectorAll(element));
-  else element = Array.isArray(element) ? element : [element];
+export type ElementLike = string | Element | Element[] | NodeListOf<Element>;
 
-  if (element.every((el) => el instanceof HTMLElement)) return element;
-  throw new Error("Element not found");
-};
+export class ElementResolver {
+  static resolve(target: ElementLike): Element[] {
+    if (typeof target === "string") {
+      const elements = Array.from(document.querySelectorAll(target));
+      if (elements.length === 0) {
+        throw new Error(`No elements found for selector: "${target}"`);
+      }
+      return elements;
+    }
+
+    if (target instanceof Element) {
+      return [target];
+    }
+
+    if (target instanceof NodeList) {
+      return Array.from(target);
+    }
+
+    if (Array.isArray(target)) {
+      const elements = target.filter((el) => el instanceof Element);
+      if (elements.length === 0) {
+        throw new Error("No valid elements found in array");
+      }
+      return elements;
+    }
+
+    throw new Error(
+      "Invalid target type. Expected string, Element, Element[], or NodeList"
+    );
+  }
+
+  static validateElements(elements: Element[]): void {
+    if (elements.length === 0) {
+      throw new Error("No elements to animate");
+    }
+
+    const detachedElements = elements.filter((el) => !document.contains(el));
+    if (detachedElements.length > 0) {
+      console.warn(
+        `${detachedElements.length} elements are not attached to the document`
+      );
+    }
+  }
+}
