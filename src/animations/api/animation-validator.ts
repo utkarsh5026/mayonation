@@ -41,22 +41,21 @@ export class AnimationValidator {
       throw new Error("Keyframes must be an array with at least 2 items");
     }
 
-    for (let i = 0; i < keyframes.length; i++) {
-      const frame = keyframes[i];
+    keyframes.forEach((frame, index) => {
       if (
         typeof frame.offset !== "number" ||
         frame.offset < 0 ||
         frame.offset > 1
       ) {
-        throw new Error(`Keyframe ${i} offset must be between 0 and 1`);
+        throw new Error(`Keyframe ${index} offset must be between 0 and 1`);
       }
-    }
+    });
 
-    // Check if offsets are in ascending order
-    for (let i = 1; i < keyframes.length; i++) {
-      if (keyframes[i].offset <= keyframes[i - 1].offset) {
+    keyframes.forEach((_, index) => {
+      if (index == 0) return;
+      if (keyframes[index].offset <= keyframes[index - 1].offset) {
         throw new Error("Keyframe offsets must be in ascending order");
       }
-    }
+    });
   }
 }
