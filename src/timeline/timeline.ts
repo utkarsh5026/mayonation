@@ -1,98 +1,17 @@
 import { TimelineSegment, type TimelineSegmentConfig } from "./segment";
-import { AnimationOptions } from "../core/config";
-import { resolveEaseFn } from "../core/ease_fns";
+import { AnimationOptions } from "@/core/config";
+import { resolveEaseFn } from "@/core/ease_fns";
 import {
   type BaseKeyframe,
   type ProcessedBaseKeyframe,
   BaseKeyframeManager,
-} from "../keyframe/keyframe";
-
-export type TimelineState = "idle" | "playing" | "paused" | "completed";
-
-export type TimelineEventType =
-  | "start"
-  | "pause"
-  | "resume"
-  | "complete"
-  | "loop"
-  | "update";
-
-export type TimelinePosition =
-  | number // Absolute time in ms
-  | "<" // At start of timeline
-  | ">" // At end of timeline
-  | `+=${number}` // Relative to previous animation end
-  | `-=${number}`; // Relative to previous animation start
+} from "@/keyframe";
+import { TimelineState, TimelinePosition, TimelineEventType } from "./types";
 
 /**
- * Timeline class for managing complex animations.
- *
- * This class provides a powerful and flexible animation timeline system that allows you to create
- * sophisticated animations with precise control. Think of it like a video editing timeline where
- * you can sequence multiple animations, control their playback, and coordinate timing.
- *
- * Core capabilities:
- * - Create sequences of animations that play in order or overlap
- * - Control playback with play(), pause(), resume(), reset()
- * - Seek to any position in the timeline
- * - Handle animation lifecycle events (start, update, complete, etc)
- * - Support looping animations
- * - Animate multiple elements in sync
- *
- * Key features:
- * - Precise timing control with configurable precision
- * - Multiple animation segments that can be positioned absolutely or relatively
- * - Rich event system for animation lifecycle hooks
- * - Flexible positioning system using absolute times or relative offsets
- * - Support for both keyframe and property-based animations
- * - Chainable API for fluent usage
- *
- * Basic usage:
- * ```ts
- * const timeline = new Timeline();
- *
- * // Add animations
- * timeline
- *   .add('.box1', { translateX: 100, duration: 1000 })
- *   .add('.box2', { scale: 2 }, '+=500') // Starts 500ms after previous
- *   .add('.box3', { opacity: 0 }, 2000);  // Starts at 2000ms
- *
- * // Control playback
- * timeline.play();
- * timeline.pause();
- * timeline.resume();
- * timeline.seek(1500); // Jump to 1.5s
- * ```
- *
- * Advanced features:
- * - Keyframe animations with multiple steps
- * - Custom easing functions
- * - Event handling for animation lifecycle
- * - Precise timing control
- * - Element selection via CSS selectors
- *
- * @example
- * ```ts
- * // Create a timeline with looping enabled
- * const timeline = new Timeline({ loop: true });
- *
- * // Add a keyframe animation
- * timeline.add('.element', [
- *   { offset: 0, translateX: 0 },
- *   { offset: 0.5, translateX: 100 },
- *   { offset: 1, translateX: 0 }
- * ]);
- *
- * // Listen for events
- * timeline.on('update', ({ time, progress }) => {
- *   console.log(`Progress: ${progress}`);
- * });
- *
- * timeline.play();
- * ```
+ * Timeline class for managing complex animations
  */
 export class Timeline {
-  // Store animation segments and event listeners
   private readonly segments: TimelineSegment<
     BaseKeyframe,
     ProcessedBaseKeyframe,
@@ -115,22 +34,6 @@ export class Timeline {
 
   /**
    * Creates a new Timeline instance for managing complex animations.
-   *
-   * @param options Configuration options for the timeline
-   * @param options.loop Whether the animation should loop after completion
-   * @param options.precision Minimum time difference (in ms) to trigger updates (default: 0.001)
-   *
-   * @example
-   * ```ts
-   * // Create a basic timeline
-   * const timeline = new Timeline();
-   *
-   * // Create a looping timeline with custom precision
-   * const preciseLoop = new Timeline({
-   *   loop: true,
-   *   precision: 0.0001
-   * });
-   * ```
    */
   constructor(
     private readonly options: Partial<{
@@ -149,45 +52,6 @@ export class Timeline {
   /**
    * Adds a new animation segment to the timeline. This is the main method for building
    * your animation sequence.
-   *
-   * @param targets Elements to animate - can be:
-   *   - CSS selector string (e.g., '.my-class')
-   *   - DOM element
-   *   - Array of DOM elements
-   *   - NodeList from querySelectorAll
-   * @param props Animation properties configuration or keyframes array:
-   *   - For basic animations: { duration, easing, ...properties }
-   *   - For keyframes: Array of { offset, ...properties }
-   * @param pos Position in timeline - can be:
-   *   - Number (absolute time in ms)
-   *   - "+=n" (n ms after previous animation)
-   *   - "-=n" (n ms before previous animation)
-   *   - ">" (at the end of timeline)
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * timeline
-   *   // Basic animation
-   *   .add('.box', {
-   *     duration: 1000,
-   *     translateX: 100,
-   *     opacity: 0.5
-   *   })
-   *
-   *   // Keyframe animation
-   *   .add('#circle', [
-   *     { offset: 0, scale: 1 },
-   *     { offset: 0.5, scale: 1.5 },
-   *     { offset: 1, scale: 1 }
-   *   ], '+=500')
-   *
-   *   // Multiple elements
-   *   .add([el1, el2], {
-   *     duration: 2000,
-   *     rotate: 360
-   *   }, 1000);
-   * ```
    */
   public add<K extends BaseKeyframe, P extends ProcessedBaseKeyframe, T>(
     targetManagers: BaseKeyframeManager<K, P, T>[],
@@ -220,19 +84,6 @@ export class Timeline {
   /**
    * Pauses the timeline at its current position. The animation can be resumed
    * from this point using resume().
-   *
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * // Play animation
-   * timeline.play();
-   *
-   * // Later, pause it
-   * setTimeout(() => {
-   *   timeline.pause();
-   * }, 1000);
-   * ```
    */
   public pause(): this {
     if (this.state !== "playing") return this;
@@ -252,15 +103,6 @@ export class Timeline {
   /**
    * Resumes playback from the paused state. If the timeline isn't paused,
    * this method has no effect.
-   *
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * timeline.play()
-   *   .pause()  // Pause after some time
-   *   .resume(); // Resume playback
-   * ```
    */
   public resume(): this {
     if (this.state !== "paused") return this;
@@ -273,17 +115,6 @@ export class Timeline {
    * - Clears all timing data
    * - Resets all segments
    * - Cancels any pending animation frames
-   *
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * // Reset and replay
-   * timeline.reset().play();
-   *
-   * // Reset and seek to middle
-   * timeline.reset().seek(timeline.duration / 2);
-   * ```
    */
   public reset() {
     this.currentTime = 0;
@@ -306,20 +137,6 @@ export class Timeline {
    * - New: Starts playback from the beginning
    * - Paused: Resumes from pause point
    * - Playing: Has no effect
-   *
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * // Basic playback
-   * timeline.play();
-   *
-   * // Chain multiple operations
-   * timeline
-   *   .add('.element', { opacity: 0 })
-   *   .seek(500)
-   *   .play();
-   * ```
    */
   public play(): this {
     if (this.state === "playing") return this;
@@ -345,24 +162,6 @@ export class Timeline {
   /**
    * Seeks to a specific position in the timeline. This allows you to jump
    * to any point in the animation instantly.
-   *
-   * @param position Target position - can be:
-   *   - Number (time in ms)
-   *   - ">" (end of timeline)
-   *   - "<" (start of timeline)
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * // Seek to specific time
-   * timeline.seek(1500); // 1.5 seconds
-   *
-   * // Seek to end
-   * timeline.seek(">");
-   *
-   * // Seek to start
-   * timeline.seek("<");
-   * ```
    */
   public seek(position: TimelinePosition): this {
     const time = this.resolveTimePosition(position);
@@ -373,15 +172,6 @@ export class Timeline {
 
   /**
    * Gets the current progress of the timeline as a value between 0 and 1.
-   *
-   * @returns Progress value (0 = start, 1 = end)
-   *
-   * @example
-   * ```ts
-   * timeline.on('update', () => {
-   *   console.log(`Progress: ${timeline.progress * 100}%`);
-   * });
-   * ```
    */
   public get progress(): number {
     return this.currentTime / this.duration;
@@ -389,14 +179,6 @@ export class Timeline {
 
   /**
    * Gets the total duration of the timeline in milliseconds.
-   *
-   * @returns Duration in milliseconds
-   *
-   * @example
-   * ```ts
-   * // Seek to halfway point
-   * timeline.seek(timeline.totalDuration / 2);
-   * ```
    */
   public get totalDuration(): number {
     return this.duration;
@@ -410,20 +192,6 @@ export class Timeline {
    * - 'resume': Timeline resumes from pause
    * - 'complete': Timeline finishes
    * - 'loop': Timeline completes a loop
-   *
-   * @param event Event type to listen for
-   * @param callback Function to call when event occurs
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * timeline
-   *   .on('start', () => console.log('Animation started'))
-   *   .on('update', ({ progress }) => {
-   *     console.log(`Progress: ${progress * 100}%`);
-   *   })
-   *   .on('complete', () => console.log('Done!'));
-   * ```
    */
   public on(event: TimelineEventType, callback: Function): this {
     if (!this.eventListeners.has(event)) {
@@ -435,21 +203,6 @@ export class Timeline {
 
   /**
    * Removes an event listener for the specified event type.
-   *
-   * @param event Event type to remove listener from
-   * @param callback The callback function to remove
-   * @returns this for method chaining
-   *
-   * @example
-   * ```ts
-   * const updateFn = ({ progress }) => console.log(progress);
-   *
-   * // Add listener
-   * timeline.on('update', updateFn);
-   *
-   * // Later, remove it
-   * timeline.off('update', updateFn);
-   * ```
    */
   public off(event: TimelineEventType, callback: Function): this {
     this.eventListeners.get(event)?.delete(callback);
@@ -461,14 +214,6 @@ export class Timeline {
    * - Resets the timeline
    * - Clears all segments
    * - Removes all event listeners
-   *
-   * Call this when you're done with the timeline to prevent memory leaks.
-   *
-   * @example
-   * ```ts
-   * // Clean up when done
-   * timeline.destroy();
-   * ```
    */
   public destroy(): void {
     this.reset();
