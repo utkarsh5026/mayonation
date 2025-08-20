@@ -9,24 +9,11 @@ import {
 /**
  * Parses a color string into either RGB or HSL format and optionally converts between spaces.
  * Supports hex colors (#RGB or #RRGGBB), rgb(r,g,b), and hsl(h,s,l) formats.
- *
- * @param {string} color - The color string to parse
- * @param {ColorSpace} space - The desired output color space ("rgb" or "hsl")
- * @returns {RGB | HSL} The parsed and potentially converted color
- * @throws {Error} If the color string format is not supported
- *
- * @example
- * // Parse hex color to RGB
- * const rgb = parseColor("#ff0000", "rgb"); // {r: 255, g: 0, b: 0}
- *
- * @example
- * // Parse RGB string to HSL
- * const hsl = parseColor("rgb(255,0,0)", "hsl"); // {h: 0, s: 100, l: 50}
  */
-export function parseColor<T extends ColorSpace>(
+export const parseColor = <T extends ColorSpace>(
   color: string,
   space: T
-): T extends "rgb" ? RGB : HSL {
+): T extends "rgb" ? RGB : HSL => {
   let colorResult: RGB | HSL;
   switch (true) {
     case color.startsWith("#"):
@@ -43,25 +30,20 @@ export function parseColor<T extends ColorSpace>(
   }
 
   if (space === "rgb" && isHSLColor(colorResult)) {
-    return hslToRgb(colorResult) as any;
-  } else if (space === "hsl" && isRGBColor(colorResult)) {
+    return hslToRgb(colorResult) as T extends "rgb" ? RGB : HSL;
+  }
+
+  if (space === "hsl" && isRGBColor(colorResult)) {
     return rgbToHsl(colorResult) as any as T extends "rgb" ? RGB : HSL;
   }
   return colorResult as T extends "rgb" ? RGB : HSL;
-}
+};
 
 /**
  * Converts RGB color values to HSL color space.
  * Uses standard RGB to HSL conversion algorithm.
- *
- * @param {RGB} rgb - RGB color object with values 0-255
- * @returns {HSL} HSL color object with h: 0-360, s: 0-100, l: 0-100
- *
- * @example
- * const hsl = rgbToHsl({r: 255, g: 0, b: 0}); // {h: 0, s: 100, l: 50}
  */
-export function rgbToHsl({ r, g, b }: RGB): HSL {
-  // Convert RGB values to 0-1 range
+export const rgbToHsl = ({ r, g, b }: RGB): HSL => {
   const normalR = r / 255;
   const normalG = g / 255;
   const normalB = b / 255;
@@ -95,20 +77,13 @@ export function rgbToHsl({ r, g, b }: RGB): HSL {
     s: Math.round(s * 100),
     l: Math.round(l * 100),
   };
-}
+};
 
 /**
  * Converts HSL color values to RGB color space.
  * Uses standard HSL to RGB conversion algorithm.
- *
- * @param {HSL} hsl - HSL color object with h: 0-360, s: 0-100, l: 0-100
- * @returns {RGB} RGB color object with values 0-255
- *
- * @example
- * const rgb = hslToRgb({h: 0, s: 100, l: 50}); // {r: 255, g: 0, b: 0}
  */
-export function hslToRgb({ h, s, l }: HSL): RGB {
-  // Convert HSL values to 0-1 range
+export const hslToRgb = ({ h, s, l }: HSL): RGB => {
   const normalH = h / 360;
   const normalS = s / 100;
   const normalL = l / 100;
@@ -143,12 +118,12 @@ export function hslToRgb({ h, s, l }: HSL): RGB {
     g: Math.round(g * 255),
     b: Math.round(b * 255),
   };
-}
+};
 
 /**
  * Converts an RGB or HSL color object to a CSS string.
  */
-export function convertColorValueToCsstring(color: RGB | HSL): string {
+export const convertColorValueToCssString = (color: RGB | HSL): string => {
   if (isRGBColor(color)) {
     const { r, g, b, a } = color;
     return a !== undefined
@@ -164,43 +139,28 @@ export function convertColorValueToCsstring(color: RGB | HSL): string {
   }
 
   return "";
-}
+};
 
 /**
  * Parses an RGB color string into an RGB object.
  * Accepts format: rgb(r,g,b) where r,g,b are integers 0-255.
- *
- * @param {string} color - The RGB color string to parse
- * @returns {RGB} The parsed RGB color object
- * @throws {Error} If the RGB string format is invalid
- *
- * @example
- * const rgb = parseRGBString("rgb(255,0,0)"); // {r: 255, g: 0, b: 0}
  */
-function parseRGBString(color: string): RGB {
+const parseRGBString = (color: string): RGB => {
   const values = color.match(/\d+/g)?.map(Number);
   if (!values || values.length < 3) {
     throw new Error(`Invalid RGB color format: ${color}`);
   }
   return { r: values[0], g: values[1], b: values[2] };
-}
+};
 
 /**
  * Parses a hex color string into an RGB object.
  * Supports both 3-digit (#RGB) and 6-digit (#RRGGBB) hex formats.
- *
- * @param {string} hex - The hex color string to parse
- * @returns {RGB} The parsed RGB color object
- * @throws {Error} If the hex string format is invalid
- *
- * @example
- * const rgb = parseHexColor("#ff0000"); // {r: 255, g: 0, b: 0}
- * const rgb2 = parseHexColor("#f00"); // {r: 255, g: 0, b: 0}
  */
-function parseHexColor(hex: string): RGB {
+const parseHexColor = (hex: string): RGB => {
   hex = hex.replace("#", "");
 
-  // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+  // shorthand
   if (hex.length === 3) {
     hex = hex
       .split("")
@@ -208,7 +168,8 @@ function parseHexColor(hex: string): RGB {
       .join("");
   }
 
-  const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  const hexPattern = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i;
+  const result = hexPattern.exec(hex);
   if (!result) {
     throw new Error(`Invalid hex color format: #${hex}`);
   }
@@ -218,23 +179,15 @@ function parseHexColor(hex: string): RGB {
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16),
   };
-}
+};
 
 /**
  * Parses an HSL color string into an HSL object.
- * Accepts format: hsl(h,s,l) where h is 0-360, s and l are 0-100.
- *
- * @param {string} color - The HSL color string to parse
- * @returns {HSL} The parsed HSL color object
- * @throws {Error} If the HSL string format is invalid
- *
- * @example
- * const hsl = parseHSLString("hsl(0,100,50)"); // {h: 0, s: 100, l: 50}
  */
-function parseHSLString(color: string): HSL {
+const parseHSLString = (color: string): HSL => {
   const values = color.match(/\d+/g)?.map(Number);
   if (!values || values.length < 3) {
     throw new Error(`Invalid HSL color format: ${color}`);
   }
   return { h: values[0], s: values[1], l: values[2] };
-}
+};
