@@ -1,5 +1,5 @@
 import type { AnimationOptions } from "./config";
-import { Timeline, type TimelinePosition } from "../timeline/timeline";
+import { Timeline, type TimelinePosition } from "@/timeline";
 import {
   animate as animateCSS,
   type CSSAnimationOptions,
@@ -11,12 +11,9 @@ import {
   type SvgTraceOptions,
 } from "../svg/api";
 import { DrawingHandler, TraceHandler } from "../svg/path/animations";
-import {
-  BaseKeyframeManager,
-  type BaseKeyframe,
-  type ProcessedBaseKeyframe,
-} from "../keyframe/keyframe";
+import { BaseKeyframeManager } from "../keyframe/keyframe";
 import { CSSKeyframeManager } from "../animations/keyframe";
+import { BaseKeyframe, ProcessedBaseKeyframe } from "@/keyframe";
 
 type AnimationAPI<
   H extends BaseKeyframeManager<B, P, K>,
