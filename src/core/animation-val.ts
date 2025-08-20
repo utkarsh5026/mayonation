@@ -73,16 +73,25 @@ export const createValue = {
 };
 
 /**
- * Type guards for value type checking
+ * Checks if an animation value is a numeric value
  */
 export const isNumericValue = (value: AnimationValue): value is NumericValue =>
   value.type === "numeric";
 
+/**
+ * Checks if an animation value is a color value
+ */
 export const isColorValue = (value: AnimationValue): value is ColorValue =>
   value.type === "color";
 
+/**
+ * Checks if a color value is in RGB format
+ */
 export const isRGBColor = (color: RGB | HSL): color is RGB =>
   "r" in color && "g" in color && "b" in color;
 
+/**
+ * Checks if a color value is in HSL format
+ */
 export const isHSLColor = (color: RGB | HSL): color is HSL =>
   "h" in color && "s" in color && "l" in color;
