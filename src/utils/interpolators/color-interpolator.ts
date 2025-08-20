@@ -1,4 +1,5 @@
 import type { RGB, HSL, ColorSpace } from "@/core/animation-val";
+import { clamp, normalizeAngle } from "@/utils/math";
 
 /**
  * Interpolates between colors in either RGB or HSL color space.
@@ -19,7 +20,6 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
    */
   public interpolate(from: RGB, to: RGB, progress: number): RGB;
   public interpolate(from: HSL, to: HSL, progress: number): HSL;
-
   public interpolate(
     from: RGB | HSL,
     to: RGB | HSL,
@@ -34,39 +34,51 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
   }
 
   /**
-   * Interpolates between two RGB colors
-   *  helps with color transitions
+   * RGB interpolation with proper boundary enforcement
+   * Critical: RGB values must stay within [0, 255] regardless of easing overshoot
    */
   private interpolateRGB(from: RGB, to: RGB, progress: number): RGB {
     const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 
+    const rgb = (start: number, end: number) =>
+      Math.round(clamp(lerp(start, end, progress), 0, 255));
+
     return {
-      r: Math.round(lerp(from.r, to.r, progress)),
-      g: Math.round(lerp(from.g, to.g, progress)),
-      b: Math.round(lerp(from.b, to.b, progress)),
+      r: rgb(from.r, to.r),
+      g: rgb(from.g, to.g),
+      b: rgb(from.b, to.b),
+      a:
+        from.a !== undefined && to.a !== undefined
+          ? clamp(lerp(from.a, to.a, progress), 0, 1)
+          : from.a || to.a,
     };
   }
 
+  /**
+   * HSL interpolation with proper hue wrapping and value clamping
+   */
   private interpolateHSL(from: HSL, to: HSL, progress: number): HSL {
-    let h1 = from.h;
-    let h2 = to.h;
+    let h1 = normalizeAngle(from.h);
+    let h2 = normalizeAngle(to.h);
 
-    h1 = ((h1 % 360) + 360) % 360;
-    h2 = ((h2 % 360) + 360) % 360;
-
-    let diff = h2 - h1;
-    if (diff > 180) {
-      diff -= 360;
-    } else if (diff < -180) {
-      diff += 360;
+    let hueDiff = h2 - h1;
+    if (hueDiff > 180) {
+      hueDiff -= 360;
+    } else if (hueDiff < -180) {
+      hueDiff += 360;
     }
 
-    const interpolatedHue = (h1 + diff * progress + 360) % 360;
+    const interpolatedHue = normalizeAngle(h1 + hueDiff * progress);
+    const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 
     return {
       h: Math.round(interpolatedHue),
-      s: Math.round(from.s + (to.s - from.s) * progress),
-      l: Math.round(from.l + (to.l - from.l) * progress),
+      s: Math.round(clamp(lerp(from.s, to.s, progress), 0, 100)),
+      l: Math.round(clamp(lerp(from.l, to.l, progress), 0, 100)),
+      a:
+        from.a !== undefined && to.a !== undefined
+          ? clamp(lerp(from.a, to.a, progress), 0, 1)
+          : from.a || to.a,
     };
   }
 }
