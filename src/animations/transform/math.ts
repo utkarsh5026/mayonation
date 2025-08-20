@@ -1,7 +1,6 @@
-import type { NumericValue } from "../../core/animation-val";
 import type { TransformState } from "./units";
-import { createValue } from "../../core/animation-val";
-import { linear, logarithmic } from "../../utils/interpolate";
+import { createValue, NumericValue } from "@/core/animation-val";
+import { linear, logarithmic } from "@/utils/interpolators";
 
 /**
  * Decomposes a DOMMatrix into individual transform components.
