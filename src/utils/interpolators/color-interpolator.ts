@@ -9,9 +9,6 @@ import { clamp, normalizeAngle } from "@/utils/math";
 export class ColorInterpolator implements Interpolator<RGB | HSL> {
   /**
    * Creates a new color interpolator
-   * @param space - The color space to use for interpolation:
-   *   - "rgb": Red-Green-Blue color space (default)
-   *   - "hsl": Hue-Saturation-Lightness color space
    */
   constructor(private readonly space: ColorSpace = "rgb") {}
 

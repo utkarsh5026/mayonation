@@ -1,6 +1,6 @@
 // property-manager.test.ts
 /// @vitest-environment jsdom
-import { PropertyManager } from "../prop";
+import { PropertyManager } from "../property-manager";
 import { createValue } from "../animation-val";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 

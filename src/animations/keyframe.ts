@@ -1,6 +1,9 @@
 import { type EaseFn, resolveEaseFn } from "../core/ease_fns";
 import type { AnimationValue } from "../core/animation-val";
-import { type AnimatableProperty, PropertyManager } from "../core/prop";
+import {
+  type AnimatableProperty,
+  PropertyManager,
+} from "../core/property-manager";
 import type { PropertiesConfig } from "../core/config";
 import { BaseKeyframeManager } from "../keyframe/keyframe";
 
