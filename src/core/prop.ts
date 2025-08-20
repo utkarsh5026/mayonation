@@ -7,7 +7,7 @@ import {
   type ColorSpace,
 } from "./animation-val";
 import { type CSSPropertyName } from "../animations/css/units";
-import { toCSSString } from "../utils/color";
+import { convertColorValueToCsstring } from "../utils/color";
 
 /**
  * A property that can be animated like a transform or a CSS property.
@@ -18,12 +18,6 @@ export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
  * PropManager serves as a unified interface for handling both transform and CSS properties
  * during animations. It coordinates between TransformHandler and CSSHandler while providing
  * a simpler API for the animation system.
- *
- * Key responsibilities:
- * - Property validation and routing
- * - State management for all animated properties
- * - Value interpolation coordination
- * - Efficient updates and batching
  */
 export class PropertyManager {
   private readonly transformHandler: TransformHandler;
@@ -37,23 +31,18 @@ export class PropertyManager {
 
   /**
    * Gets the current value of any animatable property
-   * @param property - The property name (transform or CSS)
-   * @returns Current value of the property
    */
   public getCurrentValue(property: AnimatableProperty): AnimationValue {
     if (isTransProp(property))
       return this.transformHandler.getCurrentTransform(property);
-    else if (isCSSProp(property))
-      return this.cssHandler.getCurrentValue(property);
+
+    if (isCSSProp(property))
+      return this.cssHandler.getCurrentAnimatedValue(property);
     else throw new Error(`Unsupported property: ${property}`);
   }
 
   /**
    * Interpolates between two values for any property type
-   * @param property - The property being animated
-   * @param from - Starting value
-   * @param to - Ending value
-   * @param progress - Animation progress (0-1)
    */
   public interpolate(
     property: AnimatableProperty,
@@ -93,7 +82,7 @@ export class PropertyManager {
           `Invalid numeric value for transform property update: property: ${property}`
         );
     } else if (isCSSProp(property))
-      this.cssHandler.updateProperty(property, value);
+      this.cssHandler.applyAnimatedPropertyValue(property, value);
   }
 
   /**
@@ -101,7 +90,7 @@ export class PropertyManager {
    */
   public reset(): void {
     this.transformHandler.reset();
-    this.cssHandler.reset();
+    this.cssHandler.restoreOriginalPropertyValues();
     this.activeProperties.clear();
   }
 
@@ -142,8 +131,12 @@ export class PropertyManager {
     value: string | number
   ): AnimationValue | null {
     if (isCSSProp(property))
-      return this.cssHandler.parseValue(property, value.toString());
-    else if (isTransProp(property))
+      return this.cssHandler.parseCSSValueToAnimationValue(
+        property,
+        value.toString()
+      );
+
+    if (isTransProp(property))
       return this.transformHandler.parse(property, value);
 
     return null;
@@ -159,7 +152,7 @@ export class PropertyManager {
    */
   public static stringifyValue(val: AnimationValue) {
     if (isNumericValue(val)) return `${val.value}${val.unit}`;
-    else return toCSSString(val.value);
+    else return convertColorValueToCsstring(val.value);
   }
 }
 

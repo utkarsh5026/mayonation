@@ -1,5 +1,5 @@
-import { camelToDash } from "../../utils/string";
-import { hsl, linear, rgb } from "../../utils/interpolate";
+import { camelToDash } from "@/utils/string";
+import { hsl, linear, rgb } from "@/utils/interpolate";
 import {
   type AnimationValue,
   type ColorSpace,
@@ -9,8 +9,8 @@ import {
   isColorValue,
   isNumericValue,
   type RGB,
-} from "../../core/animation-val";
-import { parseColor, toCSSString } from "../../utils/color";
+} from "@/core/animation-val";
+import { parseColor, convertColorValueToCsstring } from "@/utils/color";
 import { type CSSPropertyName, cssPropertyUnits } from "./units";
 import {
   parseBorderRadius,
@@ -20,130 +20,78 @@ import {
   parseWidth,
 } from "./parse";
 
-type CssHandlerOptions = {
+type CSSHandlerOptions = {
   colorSpace?: ColorSpace;
 };
 
 /**
  * Handles CSS property animations for HTML elements.
- *
- * This class manages the animation of CSS properties by:
- * - Tracking current and initial property values
- * - Parsing CSS values into a normalized format
- * - Interpolating between values during animation
- * - Applying updated values back to the element
- *
- * It supports:
- * - Numeric properties (width, height, opacity etc.)
- * - Color properties in RGB or HSL space
- * - Different units (px, %, em, rem etc.)
- *
- * @example
- * ```ts
- * const handler = new CSSHandler(element, { colorSpace: 'hsl' });
- *
- * // Animate opacity from current value to 0.5
- * const from = handler.getCurrentValue('opacity');
- * const to = createValue.numeric(0.5, '');
- * const interpolated = handler.interpolate('opacity', from, to, 0.5);
- * handler.updateProperty('opacity', interpolated);
- * ```
  */
 export class CSSHandler {
-  private readonly el: HTMLElement;
-  private readonly computedStyles: CSSStyleDeclaration;
-  private readonly currentValues: Map<CSSPropertyName, AnimationValue>;
-  private readonly initialValues: Map<string, string>;
-  private readonly options: CssHandlerOptions;
+  private readonly targetElement: HTMLElement;
+  private readonly elementComputedStyles: CSSStyleDeclaration;
+  private readonly animatedPropertyValues: Map<CSSPropertyName, AnimationValue>;
+  private readonly originalPropertyValues: Map<string, string>;
+  private readonly animationConfiguration: CSSHandlerOptions;
 
-  /**
-   * CSS properties that support color values and color interpolation
-   */
-  private static readonly colorProperties = new Set<CSSPropertyName>([
-    "backgroundColor",
-    "color",
-    "borderColor",
-    "outlineColor",
-    "textDecorationColor",
-    "textEmphasisColor",
-  ]);
+  private static readonly ANIMATABLE_COLOR_PROPERTIES =
+    new Set<CSSPropertyName>([
+      "backgroundColor",
+      "color",
+      "borderColor",
+      "outlineColor",
+      "textDecorationColor",
+      "textEmphasisColor",
+    ]);
 
   /**
    * Creates a new CSS animation handler
-   * @param el - The HTML element to animate
-   * @param options - Configuration options
-   * @param options.colorSpace - Color space to use for interpolation ('rgb' or 'hsl')
    */
-  constructor(el: HTMLElement, options: CssHandlerOptions = {}) {
-    this.el = el;
-    this.computedStyles = window.getComputedStyle(el);
-    this.currentValues = new Map();
-    this.initialValues = new Map();
-    this.options = {
+  constructor(targetElement: HTMLElement, options: CSSHandlerOptions = {}) {
+    this.targetElement = targetElement;
+    this.elementComputedStyles = window.getComputedStyle(targetElement);
+    this.animatedPropertyValues = new Map();
+    this.originalPropertyValues = new Map();
+    this.animationConfiguration = {
       colorSpace: options.colorSpace ?? "hsl",
     };
   }
 
   /**
    * Parses a CSS color value string into a normalized ColorValue
-   * Handles various color formats and converts to RGB
-   * @param value - CSS color string (hex, rgb, rgba, etc)
-   * @returns Normalized ColorValue object
    */
-  private parseColorValue(value: string): ColorValue {
-    switch (this.options.colorSpace) {
+  private parseCSSColorToAnimationValue(cssColorValue: string): ColorValue {
+    switch (this.animationConfiguration.colorSpace) {
       case "rgb": {
-        const { r, g, b, a } = parseColor(value, "rgb");
+        const { r, g, b, a } = parseColor(cssColorValue, "rgb");
         return createValue.rgb(r, g, b, a);
       }
       case "hsl": {
-        const { h, s, l, a } = parseColor(value, "hsl");
+        const { h, s, l, a } = parseColor(cssColorValue, "hsl");
         return createValue.hsl(h, s, l, a);
       }
       default:
-        throw new Error(`Unsupported color space: ${this.options.colorSpace}`);
+        throw new Error(
+          `Unsupported color space: ${this.animationConfiguration.colorSpace}`
+        );
     }
   }
 
   /**
-   * Converts an AnimationValue back to a CSS string
-   * @param property - The CSS property being converted
-   * @param value - The AnimationValue to convert
-   * @returns CSS-formatted string value
-   */
-  private convertToCSS(
-    property: CSSPropertyName,
-    value: AnimationValue
-  ): string {
-    if (isColorValue(value)) return toCSSString(value.value);
-    if (isNumericValue(value)) return `${value.value}${value.unit}`;
-    throw new Error(`Unsupported value type: ${value}`);
-  }
-
-  /**
    * Checks if a CSS property can be animated by this handler
-   * @param property - CSS property name
-   * @returns true if the property can be animated
    */
   public static isAnimatableProperty(
     property: string
   ): property is CSSPropertyName {
     return (
       cssPropertyUnits.has(property as CSSPropertyName) ||
-      CSSHandler.colorProperties.has(property as CSSPropertyName)
+      CSSHandler.ANIMATABLE_COLOR_PROPERTIES.has(property as CSSPropertyName)
     );
   }
 
   /**
    * Interpolates between two CSS values based on progress
    * Handles both color and numeric interpolation
-   *
-   * @param property - The CSS property being interpolated
-   * @param from - Starting value
-   * @param to - Ending value
-   * @param progress - Animation progress (0 to 1)
-   * @returns Interpolated value
-   * @throws If values are of different types or interpolation is not supported
    */
   public interpolate(
     property: CSSPropertyName,
@@ -155,30 +103,7 @@ export class CSSHandler {
       throw new Error("Cannot interpolate between different value types");
 
     if (isColorValue(from) && isColorValue(to)) {
-      switch (this.options.colorSpace) {
-        case "rgb": {
-          const { r, g, b, a } = rgb.interpolate(
-            from.value as RGB,
-            to.value as RGB,
-            progress
-          );
-          return createValue.rgb(r, g, b, a);
-        }
-
-        case "hsl": {
-          const { h, s, l, a } = hsl.interpolate(
-            from.value as HSL,
-            to.value as HSL,
-            progress
-          );
-          return createValue.hsl(h, s, l, a);
-        }
-
-        default:
-          throw new Error(
-            `Unsupported color space: ${this.options.colorSpace}`
-          );
-      }
+      return this.handleColorInterpolation(from, to, progress);
     }
 
     if (isNumericValue(from) && isNumericValue(to)) {
@@ -186,89 +111,125 @@ export class CSSHandler {
       return createValue.numeric(value, from.unit);
     }
 
-    throw new Error("Cannot interpolate between different value types");
+    throw new Error(
+      `Cannot interpolate between different value types for the property: ${property}`
+    );
   }
 
   /**
-   * Updates a CSS property on the element with a new value
-   * Also tracks the current value for future animations
-   *
-   * @param property - CSS property to update
-   * @param value - New value to apply
+   * Updates a CSS property on the element with a new animated value
    */
-  public updateProperty(
-    property: CSSPropertyName,
-    value: AnimationValue
+  public applyAnimatedPropertyValue(
+    cssProperty: CSSPropertyName,
+    animatedValue: AnimationValue
   ): void {
-    this.el.style[property as any] = this.convertToCSS(property, value);
-    this.currentValues.set(property, value);
+    this.targetElement.style[cssProperty as any] =
+      this.convertAnimationValueToCssString(cssProperty, animatedValue);
+    this.animatedPropertyValues.set(cssProperty, animatedValue);
   }
 
   /**
-   * Resets all animated properties to their initial values
-   * Clears the current value tracking
+   * Resets all animated properties to their original values
    */
-  public reset() {
-    this.initialValues.forEach((value, property) => {
-      this.el.style[property as any] = value;
+  public restoreOriginalPropertyValues() {
+    this.originalPropertyValues.forEach((originalValue, propertyName) => {
+      this.targetElement.style[propertyName as any] = originalValue;
     });
-    this.currentValues.clear();
+    this.animatedPropertyValues.clear();
   }
 
   /**
    * Parses a CSS value string into a normalized AnimationValue
-   * Handles both color and numeric values
-   *
-   * @param property - CSS property being parsed
-   * @param value - CSS value string
-   * @returns Normalized AnimationValue
-   * @throws If the value type is not supported
    */
-  public parseValue(property: CSSPropertyName, value: string): AnimationValue {
-    if (CSSHandler.colorProperties.has(property)) {
-      return this.parseColorValue(value);
+  public parseCSSValueToAnimationValue(
+    cssProperty: CSSPropertyName,
+    cssValue: string
+  ): AnimationValue {
+    if (CSSHandler.ANIMATABLE_COLOR_PROPERTIES.has(cssProperty)) {
+      return this.parseCSSColorToAnimationValue(cssValue);
     }
 
-    switch (property) {
+    switch (cssProperty) {
       case "opacity":
-        return parseOpacity(value);
+        return parseOpacity(cssValue);
       case "width":
-        return parseWidth(value);
+        return parseWidth(cssValue);
       case "height":
-        return parseHeight(value);
+        return parseHeight(cssValue);
       case "borderRadius":
-        return parseBorderRadius(value);
+        return parseBorderRadius(cssValue);
       case "borderWidth":
-        return parseBorderWidth(value);
+        return parseBorderWidth(cssValue);
       default:
-        throw new Error(`Unsupported property: ${property}`);
+        throw new Error(`Unsupported property: ${cssProperty}`);
     }
   }
 
   /**
-   * Gets the current value of a CSS property
-   * Returns cached value if available, otherwise computes from the element
-   *
-   * @param property - CSS property to get
-   * @returns Current value as normalized AnimationValue
+   * Gets the current animated value of a CSS property
    */
-  public getCurrentValue(property: CSSPropertyName): AnimationValue {
-    if (this.currentValues.has(property))
-      return this.currentValues.get(property)!;
+  public getCurrentAnimatedValue(cssProperty: CSSPropertyName): AnimationValue {
+    if (this.animatedPropertyValues.has(cssProperty))
+      return this.animatedPropertyValues.get(cssProperty)!;
 
-    const cssValue = this.computedStyles.getPropertyValue(
-      camelToDash(property)
+    const computedCSSValue = this.elementComputedStyles.getPropertyValue(
+      camelToDash(cssProperty)
     );
 
-    console.log("getCurrentValue", property, cssValue, camelToDash(property));
-
-    // Store initial value for reset functionality
-    if (!this.initialValues.has(property)) {
-      this.initialValues.set(property, cssValue);
+    if (!this.originalPropertyValues.has(cssProperty)) {
+      this.originalPropertyValues.set(cssProperty, computedCSSValue);
     }
 
-    const value = this.parseValue(property, cssValue);
-    this.currentValues.set(property, value);
-    return value;
+    const parsedAnimationValue = this.parseCSSValueToAnimationValue(
+      cssProperty,
+      computedCSSValue
+    );
+    this.animatedPropertyValues.set(cssProperty, parsedAnimationValue);
+    return parsedAnimationValue;
+  }
+
+  /**
+   * Converts an AnimationValue back to a CSS string
+   */
+  private convertAnimationValueToCssString(
+    cssProperty: CSSPropertyName,
+    animationValue: AnimationValue
+  ): string {
+    if (isColorValue(animationValue))
+      return convertColorValueToCsstring(animationValue.value);
+    if (isNumericValue(animationValue))
+      return `${animationValue.value}${animationValue.unit}`;
+    throw new Error(`Unsupported value type: ${animationValue}`);
+  }
+
+  private handleColorInterpolation(
+    from: AnimationValue,
+    to: AnimationValue,
+    progress: number
+  ): AnimationValue {
+    switch (this.animationConfiguration.colorSpace) {
+      case "rgb": {
+        const { r, g, b, a } = rgb.interpolate(
+          from.value as RGB,
+          to.value as RGB,
+          progress
+        );
+        return createValue.rgb(r, g, b, a);
+      }
+
+      case "hsl": {
+        const { h, s, l, a } = hsl.interpolate(
+          from.value as HSL,
+          to.value as HSL,
+          progress
+        );
+        return createValue.hsl(h, s, l, a);
+      }
+
+      default:
+        throw new Error(
+          `Unsupported color space: ${this.animationConfiguration.colorSpace}`
+        );
+    }
   }
 }
