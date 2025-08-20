@@ -1,13 +1,12 @@
-import { TransformHandler } from "../animations/transform/handler";
 import type { TransformPropertyName } from "../animations/transform/units";
-import { CSSHandler } from "../animations/css/handler";
+import { CSSHandler, TransformHandler } from "@/animations";
 import {
   isNumericValue,
   type AnimationValue,
   type ColorSpace,
 } from "./animation-val";
 import { type CSSPropertyName } from "../animations/css/units";
-import { convertColorValueToCsstring } from "../utils/color";
+import { convertColorValueToCssString } from "@/utils/color";
 
 /**
  * A property that can be animated like a transform or a CSS property.
@@ -33,10 +32,10 @@ export class PropertyManager {
    * Gets the current value of any animatable property
    */
   public getCurrentValue(property: AnimatableProperty): AnimationValue {
-    if (isTransProp(property))
+    if (this.isTransProp(property))
       return this.transformHandler.getCurrentTransform(property);
 
-    if (isCSSProp(property))
+    if (this.isCSSProp(property))
       return this.cssHandler.getCurrentAnimatedValue(property);
     else throw new Error(`Unsupported property: ${property}`);
   }
@@ -50,23 +49,24 @@ export class PropertyManager {
     to: AnimationValue,
     progress: number
   ): AnimationValue {
-    if (isTransProp(property)) {
+    if (this.isTransProp(property)) {
       if (isNumericValue(from) && isNumericValue(to))
         return this.transformHandler.interpolate(property, from, to, progress);
       else
         throw new Error(
           `Invalid numeric value for transform property: property: ${property}`
         );
-    } else if (isCSSProp(property))
+    }
+
+    if (this.isCSSProp(property)) {
       return this.cssHandler.interpolate(property, from, to, progress);
+    }
 
     throw new Error(`Unsupported property: ${property}`);
   }
 
   /**
    * Updates a property with a new value during animation
-   * @param property - Property to update
-   * @param value - New property value
    */
   public updateProperty(
     property: AnimatableProperty,
@@ -74,14 +74,16 @@ export class PropertyManager {
   ): void {
     this.activeProperties.add(property);
 
-    if (isTransProp(property)) {
+    if (this.isTransProp(property)) {
       if (isNumericValue(value))
         this.transformHandler.updateTransform(property, value);
       else
         throw new Error(
           `Invalid numeric value for transform property update: property: ${property}`
         );
-    } else if (isCSSProp(property))
+    }
+
+    if (this.isCSSProp(property))
       this.cssHandler.applyAnimatedPropertyValue(property, value);
   }
 
@@ -96,8 +98,6 @@ export class PropertyManager {
 
   /**
    * Validates if a property can be animated
-   * @param property - Property name to check
-   * @returns true if property can be animated
    */
   public static isAnimatable(property: string): property is AnimatableProperty {
     return (
@@ -112,7 +112,7 @@ export class PropertyManager {
    */
   public applyUpdates(): void {
     const hasTransforms = Array.from(this.activeProperties).some((prop) =>
-      isTransProp(prop)
+      this.isTransProp(prop)
     );
 
     if (hasTransforms) {
@@ -122,21 +122,18 @@ export class PropertyManager {
 
   /**
    * Parses a raw value into an AnimationValue for the given property
-   * @param property - The animatable property to parse the value for
-   * @param value - The raw value to parse, can be a string for CSS properties or number for transforms
-   * @returns The parsed AnimationValue, or null if parsing fails
    */
   public parse(
     property: AnimatableProperty,
     value: string | number
   ): AnimationValue | null {
-    if (isCSSProp(property))
+    if (this.isCSSProp(property))
       return this.cssHandler.parseCSSValueToAnimationValue(
         property,
         value.toString()
       );
 
-    if (isTransProp(property))
+    if (this.isTransProp(property))
       return this.transformHandler.parse(property, value);
 
     return null;
@@ -144,32 +141,22 @@ export class PropertyManager {
 
   /**
    * Converts an AnimationValue into a string representation.
-   *
-   * For numeric values, it concatenates the value with its unit. For non-numeric values, it uses a utility function to convert the value to a CSS string.
-   *
-   * @param val - The AnimationValue to be stringified.
-   * @returns A string representation of the AnimationValue.
    */
   public static stringifyValue(val: AnimationValue) {
     if (isNumericValue(val)) return `${val.value}${val.unit}`;
-    else return convertColorValueToCsstring(val.value);
+    else return convertColorValueToCssString(val.value);
+  }
+
+  /**
+   * Checks if a property is a transform property
+   */
+  private isTransProp(
+    property: AnimatableProperty
+  ): property is TransformPropertyName {
+    return TransformHandler.isTransformProperty(property);
+  }
+
+  private isCSSProp(property: AnimatableProperty): property is CSSPropertyName {
+    return CSSHandler.isAnimatableProperty(property);
   }
 }
-
-/**
- * Checks if a property is a transform property
- * @param property - The property to check
- * @returns true if the property is a transform property
- */
-const isTransProp = (
-  property: AnimatableProperty
-): property is TransformPropertyName =>
-  TransformHandler.isTransformProperty(property);
-
-/**
- * Checks if a property is a CSS property
- * @param property - The property to check
- * @returns true if the property is a CSS property
- */
-const isCSSProp = (property: AnimatableProperty): property is CSSPropertyName =>
-  CSSHandler.isAnimatableProperty(property);

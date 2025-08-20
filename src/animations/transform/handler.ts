@@ -66,7 +66,6 @@ export class TransformHandler {
 
   /**
    * Parses and sets initial transform values from an element's computed style.
-   * @param element - The element to parse transforms from
    */
   private parseInitialTransforms(element: HTMLElement) {
     const { transform } = window.getComputedStyle(element);
@@ -78,7 +77,6 @@ export class TransformHandler {
 
   /**
    * Generates a CSS transform string from the current transform state.
-   * @returns CSS transform string
    */
   private generateTransformString(): string {
     const { translate, rotate, scale, skew } = this.transformState;
@@ -122,11 +120,6 @@ export class TransformHandler {
 
   /**
    * Interpolates between two transform values based on progress.
-   * @param property - The transform property being interpolated
-   * @param from - Starting transform value
-   * @param to - Ending transform value
-   * @param progress - Animation progress from 0 to 1
-   * @returns Interpolated transform value
    */
   public interpolate(
     property: TransformPropertyName,
@@ -147,8 +140,6 @@ export class TransformHandler {
 
   /**
    * Parses a transform property into its state key and axis.
-   * @param property - Transform property name
-   * @returns Tuple of [state key, axis]
    */
   private parseTransformProperty(
     property: string
@@ -188,8 +179,6 @@ export class TransformHandler {
 
   /**
    * Checks if a property is a shorthand that affects multiple axes.
-   * @param property - Transform property name
-   * @returns True if property is shorthand
    */
   private isShorthandProperty(property: string): boolean {
     return property === "translate" || property === "scale";
@@ -197,8 +186,6 @@ export class TransformHandler {
 
   /**
    * Updates the internal transform state for a property.
-   * @param property - Transform property to update
-   * @param value - New transform value
    */
   private updateTransformState(
     property: TransformPropertyName,
@@ -222,8 +209,6 @@ export class TransformHandler {
 
   /**
    * Computes and returns the current CSS transform string.
-   * Only recomputes if state has changed.
-   * @returns CSS transform string
    */
   public computeTransform(): string {
     if (!this.hasStateChanges) return this.currentTransform;
@@ -235,8 +220,6 @@ export class TransformHandler {
 
   /**
    * Updates a single transform property.
-   * @param property - Transform property to update
-   * @param value - New transform value
    */
   public updateTransform(
     property: TransformPropertyName,
@@ -248,7 +231,6 @@ export class TransformHandler {
 
   /**
    * Updates multiple transform properties at once.
-   * @param updates - Map of properties and values to update
    */
   public updateTransforms(
     updates: Map<TransformPropertyName, NumericValue>
@@ -261,8 +243,6 @@ export class TransformHandler {
 
   /**
    * Gets the current value of a transform property.
-   * @param property - Transform property name
-   * @returns Current value and unit
    */
   public getCurrentTransform(property: TransformPropertyName): NumericValue {
     const [stateKey, axis] = this.parseTransformProperty(property);
@@ -297,9 +277,6 @@ export class TransformHandler {
 
   /**
    * Creates an animation value with the correct unit for a property.
-   * @param property - Transform property name
-   * @param value - Numeric value
-   * @returns Animation value with unit
    */
   public parseTransformValue(
     property: TransformPropertyName,
@@ -341,8 +318,6 @@ export class TransformHandler {
 
   /**
    * Checks if a property is a valid transform property.
-   * @param property - Property name to check
-   * @returns True if valid transform property
    */
   public static isTransformProperty(
     property: string
