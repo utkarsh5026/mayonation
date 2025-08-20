@@ -519,7 +519,7 @@ export class Timeline {
   private get latestEndTime(): number {
     if (this.segments.length === 0) return 0;
     const endTimes = this.segments.map((segment) => {
-      return segment.endTime;
+      return segment.segmentEndTime;
     });
     return Math.max(...endTimes);
   }
@@ -602,7 +602,7 @@ export class Timeline {
    * Updates all animation segments
    */
   private updateSegments(time: number) {
-    this.segments.forEach((segment) => segment.update(time));
+    this.segments.forEach((segment) => segment.updateAnimation(time));
   }
 
   /**
