@@ -52,38 +52,6 @@ export class CSSHandler {
   }
 
   /**
-   * Parses a CSS color value string into a normalized ColorValue
-   */
-  private parseCSSColorToAnimationValue(cssColorValue: string): ColorValue {
-    switch (this.animationConfiguration.colorSpace) {
-      case "rgb": {
-        const { r, g, b, a } = parseColor(cssColorValue, "rgb");
-        return createValue.rgb(r, g, b, a);
-      }
-      case "hsl": {
-        const { h, s, l, a } = parseColor(cssColorValue, "hsl");
-        return createValue.hsl(h, s, l, a);
-      }
-      default:
-        throw new Error(
-          `Unsupported color space: ${this.animationConfiguration.colorSpace}`
-        );
-    }
-  }
-
-  /**
-   * Checks if a CSS property can be animated by this handler
-   */
-  public static isAnimatableProperty(
-    property: string
-  ): property is CSSPropertyName {
-    return (
-      cssPropertyUnits.has(property as CSSPropertyName) ||
-      CSSHandler.ANIMATABLE_COLOR_PROPERTIES.has(property as CSSPropertyName)
-    );
-  }
-
-  /**
    * Interpolates between two CSS values based on progress
    * Handles both color and numeric interpolation
    */
@@ -109,6 +77,29 @@ export class CSSHandler {
     throw new Error(
       `Cannot interpolate between different value types for the property: ${property}`
     );
+  }
+
+  /**
+   * Gets the current animated value of a CSS property
+   */
+  public getCurrentAnimatedValue(cssProperty: CSSPropertyName): AnimationValue {
+    if (this.animatedPropertyValues.has(cssProperty))
+      return this.animatedPropertyValues.get(cssProperty)!;
+
+    const computedCSSValue = this.elementComputedStyles.getPropertyValue(
+      camelToDash(cssProperty)
+    );
+
+    if (!this.originalPropertyValues.has(cssProperty)) {
+      this.originalPropertyValues.set(cssProperty, computedCSSValue);
+    }
+
+    const parsedAnimationValue = this.parseCSSValueToAnimationValue(
+      cssProperty,
+      computedCSSValue
+    );
+    this.animatedPropertyValues.set(cssProperty, parsedAnimationValue);
+    return parsedAnimationValue;
   }
 
   /**
@@ -161,26 +152,15 @@ export class CSSHandler {
   }
 
   /**
-   * Gets the current animated value of a CSS property
+   * Checks if a CSS property can be animated by this handler
    */
-  public getCurrentAnimatedValue(cssProperty: CSSPropertyName): AnimationValue {
-    if (this.animatedPropertyValues.has(cssProperty))
-      return this.animatedPropertyValues.get(cssProperty)!;
-
-    const computedCSSValue = this.elementComputedStyles.getPropertyValue(
-      camelToDash(cssProperty)
+  public static isAnimatableProperty(
+    property: string
+  ): property is CSSPropertyName {
+    return (
+      cssPropertyUnits.has(property as CSSPropertyName) ||
+      CSSHandler.ANIMATABLE_COLOR_PROPERTIES.has(property as CSSPropertyName)
     );
-
-    if (!this.originalPropertyValues.has(cssProperty)) {
-      this.originalPropertyValues.set(cssProperty, computedCSSValue);
-    }
-
-    const parsedAnimationValue = this.parseCSSValueToAnimationValue(
-      cssProperty,
-      computedCSSValue
-    );
-    this.animatedPropertyValues.set(cssProperty, parsedAnimationValue);
-    return parsedAnimationValue;
   }
 
   /**
@@ -221,6 +201,26 @@ export class CSSHandler {
         return createValue.hsl(h, s, l, a);
       }
 
+      default:
+        throw new Error(
+          `Unsupported color space: ${this.animationConfiguration.colorSpace}`
+        );
+    }
+  }
+
+  /**
+   * Parses a CSS color value string into a normalized ColorValue
+   */
+  private parseCSSColorToAnimationValue(cssColorValue: string): ColorValue {
+    switch (this.animationConfiguration.colorSpace) {
+      case "rgb": {
+        const { r, g, b, a } = parseColor(cssColorValue, "rgb");
+        return createValue.rgb(r, g, b, a);
+      }
+      case "hsl": {
+        const { h, s, l, a } = parseColor(cssColorValue, "hsl");
+        return createValue.hsl(h, s, l, a);
+      }
       default:
         throw new Error(
           `Unsupported color space: ${this.animationConfiguration.colorSpace}`
