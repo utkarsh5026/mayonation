@@ -10,7 +10,7 @@ import {
   isNumericValue,
   type RGB,
 } from "@/core/animation-val";
-import { parseColor, convertColorValueToCsstring } from "@/utils/color";
+import { parseColor, convertColorValueToCssString } from "@/utils/color";
 import { type CSSPropertyName, cssPropertyUnits } from "./units";
 import {
   parseBorderRadius,
@@ -99,8 +99,9 @@ export class CSSHandler {
     to: AnimationValue,
     progress: number
   ) {
-    if (from.type !== to.type)
+    if (from.type !== to.type) {
       throw new Error("Cannot interpolate between different value types");
+    }
 
     if (isColorValue(from) && isColorValue(to)) {
       return this.handleColorInterpolation(from, to, progress);
@@ -196,7 +197,7 @@ export class CSSHandler {
     animationValue: AnimationValue
   ): string {
     if (isColorValue(animationValue))
-      return convertColorValueToCsstring(animationValue.value);
+      return convertColorValueToCssString(animationValue.value);
     if (isNumericValue(animationValue))
       return `${animationValue.value}${animationValue.unit}`;
     throw new Error(`Unsupported value type: ${animationValue}`);
