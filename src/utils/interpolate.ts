@@ -11,9 +11,6 @@ interface Interpolator<T> {
 
 /**
  * Interpolates between numeric values using different mathematical spaces.
- * @example
- * const interpolator = new NumericInterpolator("logarithmic");
- * const result = interpolator.interpolate(1, 100, 0.5); // Interpolate halfway between 1 and 100
  */
 export class NumericInterpolator implements Interpolator<number> {
   /**
@@ -34,10 +31,6 @@ export class NumericInterpolator implements Interpolator<number> {
 
   /**
    * Interpolates between two numbers
-   * @param from - Starting value
-   * @param to - Ending value
-   * @param progress - A number between 0 and 1 representing interpolation progress
-   * @returns The interpolated value
    */
   public interpolate(from: number, to: number, progress: number): number {
     switch (this.space) {
@@ -112,13 +105,6 @@ export class NumericInterpolator implements Interpolator<number> {
  * Interpolates between colors in either RGB or HSL color space.
  * RGB interpolation is simpler but can produce muddy colors.
  * HSL interpolation often produces more visually pleasing transitions.
- * @example
- * const interpolator = new ColorInterpolator("hsl");
- * const result = interpolator.interpolate(
- *   { h: 0, s: 100, l: 50 },   // Red
- *   { h: 240, s: 100, l: 50 }, // Blue
- *   0.5                        // Halfway point (purple)
- * );
  */
 export class ColorInterpolator implements Interpolator<RGB | HSL> {
   /**
@@ -130,12 +116,7 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
   constructor(private readonly space: ColorSpace = "rgb") {}
 
   /**
-   * Interpolates between two colors
-   * @param from - Starting color in either RGB or HSL format
-   * @param to - Ending color in either RGB or HSL format
-   * @param progress - A number between 0 and 1 representing interpolation progress
-   * @returns The interpolated color in the same format as the input
-   * @throws Will throw if mixing RGB and HSL color formats
+   * Interpolates between two color
    */
   public interpolate(from: RGB, to: RGB, progress: number): RGB;
   public interpolate(from: HSL, to: HSL, progress: number): HSL;
@@ -193,8 +174,6 @@ export class ColorInterpolator implements Interpolator<RGB | HSL> {
 
 /**
  * Clamps a progress value between 0 and 1.
- * @param progress - The progress value to clamp.
- * @returns The clamped progress value.
  */
 export const clampProgress = (progress: number): number => {
   return Math.max(0, Math.min(1, progress));

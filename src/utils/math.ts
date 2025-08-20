@@ -10,17 +10,6 @@ type Coordinate = {
 /**
  * Linearly interpolates between start and end values based on a progress factor
  * The progress factor t should be between 0 and 1
- *
- * This is one of the most fundamental functions in animation - it calculates
- * intermediate values during an animation's progress
- *
- * Parameters:
- * - start: The starting value
- * - end: The ending value
- * - t: The progress factor, typically between 0 and 1
- *
- * Returns:
- * - The interpolated value between start and end based on the progress factor t
  */
 export function lerp(start: number, end: number, t: number) {
   return start + (end - start) * t;
@@ -29,16 +18,6 @@ export function lerp(start: number, end: number, t: number) {
 /**
  * Normalizes a value from one range to another
  * Useful when converting between different units or coordinate systems
- *
- * For example: converting mouse position (in pixels) to animation progress (0-1)
- *
- * Parameters:
- * - value: The value to normalize
- * - min: The minimum value of the source range
- * - max: The maximum value of the source range
- *
- * Returns:
- * - The normalized value between 0 and 1
  */
 export function normalize(value: number, min: number, max: number) {
   return (value - min) / (max - min);
@@ -71,14 +50,6 @@ export function distance(a: Coordinate, b: Coordinate): number {
 /**
  * Clamps a value between a minimum and maximum
  * Essential for keeping animations within bounds
- *
- * Parameters:
- * - value: The value to clamp
- * - min: The minimum value
- * - max: The maximum value
- *
- * Returns:
- * - The clamped value
  */
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
