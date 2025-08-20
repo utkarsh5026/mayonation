@@ -1,5 +1,5 @@
 import { camelToDash } from "@/utils/string";
-import { hsl, linear, rgb } from "@/utils/interpolate";
+import { hsl, linear, rgb } from "@/utils/interpolators";
 import {
   type AnimationValue,
   type ColorSpace,
