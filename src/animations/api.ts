@@ -1,21 +1,11 @@
 import { CSSKeyframeManager, type Keyframe } from "./keyframe";
 import type { PropertiesConfig, AnimationOptions } from "../core/config";
+import { resolveElement } from "@/utils/dom";
 
 export type CSSAnimationOptions = {
   element: string | HTMLElement | HTMLElement[];
   props: PropertiesConfig | Keyframe[];
 } & AnimationOptions;
-
-const resolveElement = (
-  element: string | HTMLElement | HTMLElement[]
-): HTMLElement[] => {
-  if (typeof element === "string")
-    element = Array.from(document.querySelectorAll(element));
-  else element = Array.isArray(element) ? element : [element];
-
-  if (element.every((el) => el instanceof HTMLElement)) return element;
-  throw new Error("Element not found");
-};
 
 export const animate = (config: CSSAnimationOptions): CSSKeyframeManager[] => {
   const { element, props } = config;
