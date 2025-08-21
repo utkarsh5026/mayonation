@@ -87,3 +87,9 @@ export type AnimationState =
   | "paused"
   | "completed"
   | "cancelled";
+
+export interface ProcessedKeyframe {
+  offset: number;
+  properties: AnimationProperties;
+  easing: EaseFunction;
+}
