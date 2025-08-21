@@ -5,171 +5,198 @@ import { clamp } from "@/utils/math";
  * Responsibility: Time management, progress calculation, repeat logic
  */
 export class AnimationTimer {
-  private startTime: number = 0;
-  private pausedTime: number = 0;
-  private duration: number;
-  private direction: 1 | -1 = 1;
-  private timeScale: number = 1;
-  private iteration: number = 0;
+  private animationStartTimestamp: number = 0;
+  private timeWhenPaused: number = 0;
+  private animationDuration: number;
+  private playbackDirection: 1 | -1 = 1;
+  private playbackSpeed: number = 1;
+  private currentIterationCount: number = 0;
 
   constructor(duration: number) {
-    this.duration = duration;
+    this.animationDuration = duration;
   }
 
   /**
    * Start the timer
    */
   start(): void {
-    this.startTime = performance.now() - this.pausedTime;
+    this.animationStartTimestamp = performance.now() - this.timeWhenPaused;
   }
 
   /**
    * Pause and store current elapsed time
    */
   pause(): number {
-    this.pausedTime = performance.now() - this.startTime;
-    return this.pausedTime;
+    this.timeWhenPaused = performance.now() - this.animationStartTimestamp;
+    return this.timeWhenPaused;
   }
 
   /**
    * Resume from paused state
    */
   resume(): void {
-    this.startTime = performance.now() - this.pausedTime;
+    this.animationStartTimestamp = performance.now() - this.timeWhenPaused;
   }
 
   /**
    * Reset timer to initial state
    */
   reset(): void {
-    this.startTime = 0;
-    this.pausedTime = 0;
-    this.iteration = 0;
-    this.direction = 1;
+    this.animationStartTimestamp = 0;
+    this.timeWhenPaused = 0;
+    this.currentIterationCount = 0;
+    this.playbackDirection = 1;
   }
 
   /**
    * Reverse animation direction
    */
-  reverse(): void {
-    this.direction *= -1;
-    const elapsed = this.getElapsed();
-    this.startTime = performance.now() - (this.duration - elapsed);
+  reversePlaybackDirection(): void {
+    this.playbackDirection *= -1;
+    const currentElapsedTime = this.getCurrentElapsedTime();
+    this.animationStartTimestamp =
+      performance.now() - (this.animationDuration - currentElapsedTime);
   }
 
   /**
    * Get current elapsed time
    */
-  getElapsed(): number {
+  getCurrentElapsedTime(): number {
     return (
-      (performance.now() - this.startTime) * this.timeScale * this.direction
+      (performance.now() - this.animationStartTimestamp) *
+      this.playbackSpeed *
+      this.playbackDirection
     );
   }
 
   /**
    * Seek to specific time position
    */
-  seekTo(progress: number): void {
-    const targetTime = progress * this.duration;
-    this.startTime = performance.now() - targetTime;
+  seekToProgress(progressRatio: number): void {
+    const targetTimePosition = progressRatio * this.animationDuration;
+    this.animationStartTimestamp = performance.now() - targetTimePosition;
   }
 
-  get currentDuration(): number {
-    return this.duration;
+  get totalDuration(): number {
+    return this.animationDuration;
   }
 
-  get currentIteration(): number {
-    return this.iteration;
+  get iterationNumber(): number {
+    return this.currentIterationCount;
   }
 
   /**
    * Calculate progress with repeat logic
    */
-  calculateProgress(
-    repeat?: number | "infinite",
-    yoyo?: boolean
+  calculateAnimationProgress(
+    repeatCount?: number | "infinite",
+    enableYoyoEffect?: boolean
   ): {
     progress: number;
     iteration: number;
     shouldComplete: boolean;
   } {
-    const elapsed = this.getElapsed();
-    const rawProgress = elapsed / this.duration;
+    const elapsedTime = this.getCurrentElapsedTime();
+    const totalProgressRatio = elapsedTime / this.animationDuration;
 
-    if (repeat === undefined) {
-      return this.handleSingleIteration(rawProgress);
+    if (repeatCount === undefined) {
+      return this.handleSinglePlaythrough(totalProgressRatio);
     }
 
-    if (repeat === "infinite") {
-      return this.handleInfiniteRepeat(rawProgress, yoyo);
+    if (repeatCount === "infinite") {
+      return this.handleInfiniteLoop(totalProgressRatio, enableYoyoEffect);
     }
 
-    return this.handleFiniteRepeat(rawProgress, repeat, yoyo);
+    return this.handleLimitedRepeats(
+      totalProgressRatio,
+      repeatCount,
+      enableYoyoEffect
+    );
   }
 
   /**
    * Handle single iteration (no repeat)
    */
-  private handleSingleIteration(rawProgress: number) {
-    const progress = clamp(rawProgress, 0, 1);
+  private handleSinglePlaythrough(totalProgressRatio: number) {
+    const clampedProgress = clamp(totalProgressRatio, 0, 1);
     return {
-      progress,
+      progress: clampedProgress,
       iteration: 0,
-      shouldComplete: progress >= 1,
+      shouldComplete: clampedProgress >= 1,
     };
   }
 
   /**
    * Handle infinite repeat iterations
    */
-  private handleInfiniteRepeat(rawProgress: number, yoyo?: boolean) {
-    const iteration = Math.floor(Math.abs(rawProgress));
-    const progress = this.calculateIterationProgress(
-      rawProgress,
-      iteration,
-      yoyo
+  private handleInfiniteLoop(
+    totalProgressRatio: number,
+    enableYoyoEffect?: boolean
+  ) {
+    const completedIterations = Math.floor(Math.abs(totalProgressRatio));
+    const currentIterationProgress = this.calculateProgressWithinIteration(
+      totalProgressRatio,
+      completedIterations,
+      enableYoyoEffect
     );
 
-    this.iteration = iteration;
-    return { progress, iteration, shouldComplete: false };
+    this.currentIterationCount = completedIterations;
+    return {
+      progress: currentIterationProgress,
+      iteration: completedIterations,
+      shouldComplete: false,
+    };
   }
 
   /**
    * Handle finite repeat iterations
    */
-  private handleFiniteRepeat(
-    rawProgress: number,
-    repeat: number,
-    yoyo?: boolean
+  private handleLimitedRepeats(
+    totalProgressRatio: number,
+    maxRepeats: number,
+    enableYoyoEffect?: boolean
   ) {
-    if (Math.abs(rawProgress) >= repeat) {
-      return { progress: 1, iteration: repeat, shouldComplete: true };
+    if (Math.abs(totalProgressRatio) >= maxRepeats) {
+      return { progress: 1, iteration: maxRepeats, shouldComplete: true };
     }
 
-    const iteration = Math.floor(Math.abs(rawProgress));
-    const progress = this.calculateIterationProgress(
-      rawProgress,
-      iteration,
-      yoyo
+    const completedIterations = Math.floor(Math.abs(totalProgressRatio));
+    const currentIterationProgress = this.calculateProgressWithinIteration(
+      totalProgressRatio,
+      completedIterations,
+      enableYoyoEffect
     );
 
-    return { progress, iteration, shouldComplete: false };
+    return {
+      progress: currentIterationProgress,
+      iteration: completedIterations,
+      shouldComplete: false,
+    };
   }
 
   /**
    * Calculate progress for a specific iteration, handling yoyo effect
    */
-  private calculateIterationProgress(
-    rawProgress: number,
-    iteration: number,
-    yoyo?: boolean
+  private calculateProgressWithinIteration(
+    totalProgressRatio: number,
+    iterationNumber: number,
+    enableYoyoEffect?: boolean
   ): number {
-    let progress = Math.abs(rawProgress) % 1;
+    let progressInCurrentIteration = Math.abs(totalProgressRatio) % 1;
 
-    if (yoyo && iteration % 2 == 1) {
-      progress = 1 - progress;
+    const isReverseIteration =
+      enableYoyoEffect && this.isOddIteration(iterationNumber);
+    if (isReverseIteration) {
+      progressInCurrentIteration = 1 - progressInCurrentIteration;
     }
 
-    return progress;
+    return progressInCurrentIteration;
+  }
+
+  /**
+   * Check if iteration number is odd (for yoyo effect)
+   */
+  private isOddIteration(iterationNumber: number): boolean {
+    return iterationNumber % 2 === 1;
   }
 }
