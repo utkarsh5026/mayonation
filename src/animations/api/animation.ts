@@ -9,10 +9,21 @@ import { ElementResolver, type ElementLike } from "@/utils/dom";
 import { resolveEaseFn } from "@/core/ease_fns";
 
 /**
- * Core animation class that handles the execution and control of animations.
- * Manages timing, property interpolation, easing, and animation lifecycle.
+ * Represents an individual element's animation state and manager
  */
-export class Mayonation {
+interface ElementAnimationState {
+  element: HTMLElement;
+  propertyManager: PropertyManager;
+  startTime: number;
+  currentProgress: number;
+  isActive: boolean;
+  isComplete: boolean;
+}
+
+/**
+ * Enhanced animation class that handles multiple elements with stagger support
+ */
+export class MayoAnimation {
   readonly id: string;
   readonly config: Readonly<AnimationConfig>;
   readonly elements: HTMLElement[];
@@ -33,23 +44,29 @@ export class Mayonation {
   private _frameCount: number = 0;
   private _fps: number = 60;
 
-  // Use your existing property management system
-  private propertyManager: PropertyManager;
+  // Multi-element state management
+  private elementStates: ElementAnimationState[] = [];
+  private staggerDelay: number = 0;
+  private totalAnimationDuration: number = 0;
 
   // Processed keyframes for animation
   private processedKeyframes: ProcessedKeyframe[] = [];
 
   /**
-   * Creates a new Mayonation instance.
-   * Initializes the animation configuration, resolves target elements,
-   * and sets up the property manager for animation execution.
+   * Creates a new MayoAnimation instance that can handle multiple elements
    */
   constructor(config: AnimationConfig, id: string) {
     this.id = id;
     this.config = Object.freeze({ ...config });
     this.elements = this.resolveElements(config.target!);
     this._duration = config.duration || 1000;
-    this.propertyManager = new PropertyManager(this.elements[0]);
+    this.staggerDelay = config.stagger || 0;
+
+    // Initialize element states for each target element
+    this.initializeElementStates();
+
+    // Calculate total animation duration including stagger
+    this.calculateTotalDuration();
 
     this.processAnimationKeyframes();
 
@@ -59,11 +76,35 @@ export class Mayonation {
   }
 
   /**
-   * Interpolates between two sets of animation properties and applies them to elements.
+   * Initialize animation state for each element
+   * Each element gets its own PropertyManager and timing
+   */
+  private initializeElementStates(): void {
+    this.elementStates = this.elements.map((element, index) => ({
+      element,
+      propertyManager: new PropertyManager(element),
+      startTime: index * this.staggerDelay, // Stagger the start times
+      currentProgress: 0,
+      isActive: false,
+      isComplete: false,
+    }));
+  }
+
+  /**
+   * Calculate the total duration including stagger delays
+   */
+  private calculateTotalDuration(): void {
+    const lastElementStartTime = (this.elements.length - 1) * this.staggerDelay;
+    this.totalAnimationDuration = lastElementStartTime + this._duration;
+  }
+
+  /**
+   * Start animation for all elements with stagger support
    */
   public async play(): Promise<void> {
     if (this._state === "running") return this._finishedPromise;
 
+    // Handle initial delay for the entire animation
     if (this.config.delay && this._progress === 0) {
       await this.delay(this.config.delay);
     }
@@ -79,8 +120,105 @@ export class Mayonation {
   }
 
   /**
-   * Starts the animation playback with optional delay handling.
-   * Initializes timing, triggers onStart callback, and begins the animation loop.
+   * Pause all element animations
+   */
+  public pause(): void {
+    if (this._state !== "running") return;
+
+    this._state = "paused";
+    this._pausedTime = performance.now() - this._startTime;
+
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+
+    this.config.onPause?.();
+  }
+
+  /**
+   * Resume all element animations
+   */
+  public resume(): void {
+    if (this._state !== "paused") return;
+    this.play();
+    this.config.onResume?.();
+  }
+
+  /**
+   * Reverse animation direction
+   */
+  public reverse(): void {
+    this._direction *= -1;
+    this._startTime =
+      performance.now() -
+      (this.totalAnimationDuration - (performance.now() - this._startTime));
+    this.config.onReverse?.();
+  }
+
+  /**
+   * Seek to a specific progress (0-1) across all elements
+   */
+  public seek(progress: number): void {
+    progress = Math.max(0, Math.min(1, progress));
+    const targetTime = progress * this.totalAnimationDuration;
+
+    this.elementStates.forEach((elementState, index) => {
+      const elementStartTime = index * this.staggerDelay;
+      const elementEndTime = elementStartTime + this._duration;
+
+      if (targetTime >= elementStartTime && targetTime <= elementEndTime) {
+        const elementProgress =
+          (targetTime - elementStartTime) / this._duration;
+        elementState.currentProgress = elementProgress;
+        this.updateElementAnimation(elementState, elementProgress);
+      } else if (targetTime > elementEndTime) {
+        elementState.currentProgress = 1;
+        elementState.isComplete = true;
+        this.updateElementAnimation(elementState, 1);
+      } else {
+        elementState.currentProgress = 0;
+        this.updateElementAnimation(elementState, 0);
+      }
+    });
+  }
+
+  /**
+   * Reset all elements to their initial state
+   */
+  public reset(): void {
+    this._state = "idle";
+    this._progress = 0;
+    this._startTime = 0;
+    this._pausedTime = 0;
+    this._iteration = 0;
+
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+
+    // Reset each element's state
+    this.elementStates.forEach((elementState) => {
+      elementState.currentProgress = 0;
+      elementState.isActive = false;
+      elementState.isComplete = false;
+      elementState.propertyManager.reset();
+    });
+  }
+
+  /**
+   * Get current progress for a specific element
+   */
+  public getElementProgress(elementIndex: number): number {
+    if (elementIndex < 0 || elementIndex >= this.elementStates.length) {
+      throw new Error(`Element index ${elementIndex} out of bounds`);
+    }
+    return this.elementStates[elementIndex].currentProgress;
+  }
+
+  /**
+   * Main animation loop that handles all elements
    */
   private startAnimationLoop(): void {
     const animate = (currentTime: number) => {
@@ -90,8 +228,9 @@ export class Mayonation {
 
       const elapsed =
         (currentTime - this._startTime) * this._timeScale * this._direction;
-      let rawProgress = elapsed / this._duration;
+      const rawProgress = elapsed / this.totalAnimationDuration;
 
+      // Handle repeat logic
       if (this.config.repeat !== undefined) {
         const { progress, iteration, shouldComplete } =
           this.handleRepeat(rawProgress);
@@ -110,10 +249,13 @@ export class Mayonation {
         }
       }
 
-      this.updateAnimation(this._progress);
+      // Update all elements based on their individual timing
+      this.updateAllElements(elapsed);
+
+      // Call global update callback
       this.config.onUpdate?.(this._progress, {
         elapsed: Math.abs(elapsed),
-        remaining: this._duration - Math.abs(elapsed),
+        remaining: this.totalAnimationDuration - Math.abs(elapsed),
         fps: this._fps,
         iteration: this._iteration,
       });
@@ -125,27 +267,77 @@ export class Mayonation {
   }
 
   /**
-   * Updates the animation properties for the current frame.
-   * Applies easing and determines whether to use keyframes or from/to properties.
+   * Update all elements based on their individual stagger timing
    */
-  private updateAnimation(progress: number): void {
+  private updateAllElements(elapsed: number): void {
+    let activeElementCount = 0;
+    let completedElementCount = 0;
+
+    this.elementStates.forEach((elementState, index) => {
+      const elementStartTime = elementState.startTime;
+      const elementEndTime = elementStartTime + this._duration;
+
+      // Check if this element should be animating now
+      if (elapsed >= elementStartTime && elapsed <= elementEndTime) {
+        // Element is active
+        elementState.isActive = true;
+        elementState.isComplete = false;
+        activeElementCount++;
+
+        // Calculate element-specific progress
+        const elementProgress = (elapsed - elementStartTime) / this._duration;
+        elementState.currentProgress = Math.max(
+          0,
+          Math.min(1, elementProgress)
+        );
+
+        // Update this element's animation
+        this.updateElementAnimation(elementState, elementState.currentProgress);
+      } else if (elapsed > elementEndTime) {
+        // Element has completed
+        if (!elementState.isComplete) {
+          elementState.isComplete = true;
+          elementState.isActive = false;
+          elementState.currentProgress = 1;
+          this.updateElementAnimation(elementState, 1);
+        }
+        completedElementCount++;
+      } else {
+        // Element hasn't started yet
+        elementState.isActive = false;
+        elementState.isComplete = false;
+        elementState.currentProgress = 0;
+      }
+    });
+  }
+
+  /**
+   * Update animation for a single element
+   */
+  private updateElementAnimation(
+    elementState: ElementAnimationState,
+    progress: number
+  ): void {
     const easedProgress = this.applyEasing(progress);
+
     if (this.processedKeyframes.length > 0) {
-      this.updateFromKeyframes(easedProgress);
+      this.updateElementFromKeyframes(elementState, easedProgress);
     } else {
-      this.updateFromToProperties(easedProgress);
+      this.updateElementFromToProperties(elementState, easedProgress);
     }
   }
 
   /**
-   * Updates animation properties using keyframe-based animation.
-   * Finds the appropriate keyframe segment and interpolates between keyframes.
-   * Supports per-keyframe easing functions.
+   * Update a single element using keyframe-based animation
    */
-  private updateFromKeyframes(progress: number): void {
+  private updateElementFromKeyframes(
+    elementState: ElementAnimationState,
+    progress: number
+  ): void {
     let fromFrame = this.processedKeyframes[0];
     let toFrame = this.processedKeyframes[this.processedKeyframes.length - 1];
 
+    // Find appropriate keyframe segment
     for (let i = 0; i < this.processedKeyframes.length - 1; i++) {
       if (
         progress >= this.processedKeyframes[i].offset &&
@@ -166,20 +358,104 @@ export class Mayonation {
     // Apply keyframe-specific easing
     const easedLocalProgress = resolveEaseFn(fromFrame.easing)(localProgress);
 
-    this.interpolateAndApplyProperties(
+    this.interpolateAndApplyElementProperties(
+      elementState,
       fromFrame.properties,
       toFrame.properties,
       easedLocalProgress
     );
   }
 
-  private updateFromToProperties(progress: number): void {
+  /**
+   * Update a single element using from/to properties
+   */
+  private updateElementFromToProperties(
+    elementState: ElementAnimationState,
+    progress: number
+  ): void {
     const fromProps = this.config.from || {};
     const toProps = this.config.to || {};
 
-    this.interpolateAndApplyProperties(fromProps, toProps, progress);
+    this.interpolateAndApplyElementProperties(
+      elementState,
+      fromProps,
+      toProps,
+      progress
+    );
   }
 
+  /**
+   * Interpolate and apply properties to a specific element
+   */
+  private interpolateAndApplyElementProperties(
+    elementState: ElementAnimationState,
+    fromProps: AnimationProperties,
+    toProps: AnimationProperties,
+    progress: number
+  ): void {
+    const { propertyManager } = elementState;
+
+    // Get all properties to animate
+    const allProps = new Set([
+      ...Object.keys(fromProps),
+      ...Object.keys(toProps),
+    ]);
+
+    for (const prop of allProps) {
+      if (!PropertyManager.isAnimatable(prop)) {
+        console.warn(`Property "${prop}" is not animatable`);
+        continue;
+      }
+
+      const fromValue = fromProps[prop];
+      const toValue = toProps[prop];
+
+      try {
+        // Get current value if fromValue is undefined
+        const actualFromValue =
+          fromValue !== undefined
+            ? fromValue
+            : propertyManager.getCurrentValue(prop as AnimatableProperty);
+
+        if (toValue !== undefined) {
+          // Parse values
+          const fromParsed = propertyManager.parse(
+            prop as AnimatableProperty,
+            actualFromValue
+          );
+          const toParsed = propertyManager.parse(
+            prop as AnimatableProperty,
+            toValue
+          );
+
+          if (fromParsed && toParsed) {
+            // Interpolate
+            const interpolated = propertyManager.interpolate(
+              prop as AnimatableProperty,
+              fromParsed,
+              toParsed,
+              progress
+            );
+
+            // Update property
+            propertyManager.updateProperty(
+              prop as AnimatableProperty,
+              interpolated
+            );
+          }
+        }
+      } catch (error) {
+        console.error(`Error animating property "${prop}" on element:`, error);
+      }
+    }
+
+    // Apply all changes to this element
+    propertyManager.applyUpdates();
+  }
+
+  /**
+   * Complete the animation for all elements
+   */
   private completeAnimation(): void {
     this._state = "completed";
     this._progress = 1;
@@ -189,17 +465,20 @@ export class Mayonation {
       this._rafId = null;
     }
 
+    this.elementStates.forEach((elementState) => {
+      elementState.currentProgress = 1;
+      elementState.isComplete = true;
+      elementState.isActive = false;
+      this.updateElementAnimation(elementState, 1);
+    });
+
     this.config.onComplete?.();
     this._finishedResolve?.();
   }
 
+  // ... (keeping the existing helper methods)
   private applyEasing(progress: number): number {
     const easing = this.config.ease || "easeOut";
-
-    if (typeof easing === "function") {
-      return easing(progress);
-    }
-
     const easingFn = resolveEaseFn(easing);
     return easingFn(progress);
   }
@@ -226,69 +505,6 @@ export class Mayonation {
     }
   }
 
-  private interpolateAndApplyProperties(
-    fromProps: AnimationProperties,
-    toProps: AnimationProperties,
-    progress: number
-  ): void {
-    // Get all properties to animate
-    const allProps = new Set([
-      ...Object.keys(fromProps),
-      ...Object.keys(toProps),
-    ]);
-
-    for (const prop of allProps) {
-      if (!PropertyManager.isAnimatable(prop)) {
-        console.warn(`Property "${prop}" is not animatable`);
-        continue;
-      }
-
-      const fromValue = fromProps[prop];
-      const toValue = toProps[prop];
-
-      try {
-        // Get current value if fromValue is undefined (from current state)
-        const actualFromValue =
-          fromValue !== undefined
-            ? fromValue
-            : this.propertyManager.getCurrentValue(prop as AnimatableProperty);
-
-        if (toValue !== undefined) {
-          // Parse values using your existing system
-          const fromParsed = this.propertyManager.parse(
-            prop as AnimatableProperty,
-            actualFromValue
-          );
-          const toParsed = this.propertyManager.parse(
-            prop as AnimatableProperty,
-            toValue
-          );
-
-          if (fromParsed && toParsed) {
-            // Interpolate using your existing system
-            const interpolated = this.propertyManager.interpolate(
-              prop as AnimatableProperty,
-              fromParsed,
-              toParsed,
-              progress
-            );
-
-            // Update property using your existing system
-            this.propertyManager.updateProperty(
-              prop as AnimatableProperty,
-              interpolated
-            );
-          }
-        }
-      } catch (error) {
-        console.error(`Error animating property "${prop}":`, error);
-      }
-    }
-
-    // Apply all changes using your existing system
-    this.propertyManager.applyUpdates();
-  }
-
   private handleRepeat(rawProgress: number): {
     progress: number;
     iteration: number;
@@ -300,7 +516,6 @@ export class Mayonation {
       const iteration = Math.floor(Math.abs(rawProgress));
       let progress = Math.abs(rawProgress) % 1;
 
-      // Handle yoyo
       if (this.config.yoyo && iteration % 2 === 1) {
         progress = 1 - progress;
       }
@@ -315,7 +530,6 @@ export class Mayonation {
     const iteration = Math.floor(Math.abs(rawProgress));
     let progress = Math.abs(rawProgress) % 1;
 
-    // Handle yoyo
     if (this.config.yoyo && iteration % 2 === 1) {
       progress = 1 - progress;
     }
@@ -336,5 +550,56 @@ export class Mayonation {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
+  }
+
+  // Additional utility methods for multi-element support
+
+  /**
+   * Get the PropertyManager for a specific element
+   */
+  public getElementPropertyManager(elementIndex: number): PropertyManager {
+    if (elementIndex < 0 || elementIndex >= this.elementStates.length) {
+      throw new Error(`Element index ${elementIndex} out of bounds`);
+    }
+    return this.elementStates[elementIndex].propertyManager;
+  }
+
+  /**
+   * Check if a specific element is currently animating
+   */
+  public isElementActive(elementIndex: number): boolean {
+    if (elementIndex < 0 || elementIndex >= this.elementStates.length) {
+      return false;
+    }
+    return this.elementStates[elementIndex].isActive;
+  }
+
+  /**
+   * Check if a specific element has completed its animation
+   */
+  public isElementComplete(elementIndex: number): boolean {
+    if (elementIndex < 0 || elementIndex >= this.elementStates.length) {
+      return false;
+    }
+    return this.elementStates[elementIndex].isComplete;
+  }
+
+  /**
+   * Get info about all elements' current state
+   */
+  public getElementsInfo(): Array<{
+    index: number;
+    element: HTMLElement;
+    progress: number;
+    isActive: boolean;
+    isComplete: boolean;
+  }> {
+    return this.elementStates.map((state, index) => ({
+      index,
+      element: state.element,
+      progress: state.currentProgress,
+      isActive: state.isActive,
+      isComplete: state.isComplete,
+    }));
   }
 }
