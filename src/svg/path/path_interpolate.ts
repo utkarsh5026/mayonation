@@ -1,6 +1,6 @@
 import { Point } from "../unit";
 import { validateNumber } from "../../utils/type_validate";
-import { angle, clampProgress, linear } from "../../utils/interpolate";
+import { angle, clampProgress, linear } from "@/utils/interpolators";
 import {
   clamp,
   distance,
