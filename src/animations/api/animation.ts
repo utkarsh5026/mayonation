@@ -10,9 +10,9 @@ import { resolveEaseFn } from "@/core/ease_fns";
 
 /**
  * Core animation class that handles the execution and control of animations.
- * Manages timing, property interpolation, easing, and animation lifecycle.``
+ * Manages timing, property interpolation, easing, and animation lifecycle.
  */
-export class MayoAnimation {
+export class Mayonation {
   readonly id: string;
   readonly config: Readonly<AnimationConfig>;
   readonly elements: HTMLElement[];
@@ -40,7 +40,7 @@ export class MayoAnimation {
   private processedKeyframes: ProcessedKeyframe[] = [];
 
   /**
-   * Creates a new MayoAnimation instance.
+   * Creates a new Mayonation instance.
    * Initializes the animation configuration, resolves target elements,
    * and sets up the property manager for animation execution.
    */

@@ -1,7 +1,7 @@
 import type { AnimationConfig, AnimationProperties } from "./types";
 import { AnimationValidator } from "./animation-validator";
 import { type ElementLike, ElementResolver } from "@/utils/dom";
-import { MayoAnimation } from "./animation";
+import { Mayonation } from "./animation";
 import type { EaseFunction } from "@/core/ease_fns";
 
 /**
@@ -154,9 +154,9 @@ export class AnimationBuilder {
    * Creates and starts the animation with the current configuration.
    * This method validates the configuration and returns a MayoAnimation instance.
    */
-  public play(): MayoAnimation {
+  public play(): Mayonation {
     this.validateConfiguration();
-    return new MayoAnimation(this.config, this._id);
+    return new Mayonation(this.config, this._id);
   }
 
   /**
