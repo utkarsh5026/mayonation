@@ -110,7 +110,7 @@ describe("StyleAnimator", () => {
 
       const result = rgbAnimator.interpolate("color", from, to, 0.5);
       expect(result.type).toBe("color");
-      expect(result.space).toBe("rgb");
+      expect((result as any).space).toBe("rgb");
     });
 
     it("interpolates between color values in HSL space", () => {
@@ -120,7 +120,7 @@ describe("StyleAnimator", () => {
 
       const result = hslAnimator.interpolate("color", from, to, 0.5);
       expect(result.type).toBe("color");
-      expect(result.space).toBe("hsl");
+      expect((result as any).space).toBe("hsl");
     });
 
     it("handles progress boundaries correctly", () => {
@@ -178,7 +178,7 @@ describe("StyleAnimator", () => {
       const from = createValue.numeric(10, "em");
       const to = createValue.numeric(20, "em");
 
-      const result = animator.interpolate("fontSize", from, to, 0.5);
+      const result = animator.interpolate("fontSize" as any, from, to, 0.5);
       expect(result).toEqual(createValue.numeric(15, "em"));
     });
 
@@ -201,23 +201,23 @@ describe("StyleAnimator", () => {
     });
   });
 
-  describe("getCurrentAnimatedValue method", () => {
+  describe("currentValue method", () => {
     it("gets current value and caches it", () => {
-      const value = animator.getCurrentAnimatedValue("opacity");
+      const value = animator.currentValue("opacity");
       expect(value).toEqual(createValue.numeric(1, ""));
 
       // Second call should use cache
-      const cachedValue = animator.getCurrentAnimatedValue("opacity");
+      const cachedValue = animator.currentValue("opacity");
       expect(cachedValue).toEqual(value);
     });
 
     it("gets current width value correctly", () => {
-      const value = animator.getCurrentAnimatedValue("width");
+      const value = animator.currentValue("width");
       expect(value).toEqual(createValue.numeric(100, "px"));
     });
 
     it("gets current color value correctly", () => {
-      const value = animator.getCurrentAnimatedValue("backgroundColor");
+      const value = animator.currentValue("backgroundColor");
       expect(value.type).toBe("color");
     });
 
@@ -230,18 +230,18 @@ describe("StyleAnimator", () => {
       });
 
       const newAnimator = new StyleAnimator(element);
-      const value = newAnimator.getCurrentAnimatedValue("width");
+      const value = newAnimator.currentValue("width");
       expect(value).toEqual(createValue.numeric(0, "px")); // Should use default
     });
 
     it("invalidates cache when property is marked dirty", () => {
-      const value1 = animator.getCurrentAnimatedValue("opacity");
+      const value1 = animator.currentValue("opacity");
 
       // Modify cache to be dirty
       const cache = (animator as any).propertyCache.get("opacity");
       cache.isDirty = true;
 
-      const value2 = animator.getCurrentAnimatedValue("opacity");
+      const value2 = animator.currentValue("opacity");
       expect(value2).toEqual(value1); // Should re-parse but get same result
     });
   });
@@ -274,7 +274,7 @@ describe("StyleAnimator", () => {
     });
 
     it("handles em values correctly", () => {
-      const result = animator.parse("fontSize", "1.5em");
+      const result = animator.parse("fontSize" as any, "1.5em");
       expect(result).toEqual(createValue.numeric(1.5, "em"));
     });
   });
@@ -319,7 +319,7 @@ describe("StyleAnimator", () => {
 
     it("updates cache when applying value", () => {
       // First get the value to create cache entry
-      animator.getCurrentAnimatedValue("width");
+      animator.currentValue("width");
 
       const value = createValue.numeric(200, "px");
       animator.applyAnimatedPropertyValue("width", value);
@@ -386,8 +386,8 @@ describe("StyleAnimator", () => {
   describe("reset method", () => {
     it("restores all cached original values", () => {
       // First get values to create cache with original values
-      animator.getCurrentAnimatedValue("width");
-      animator.getCurrentAnimatedValue("opacity");
+      animator.currentValue("width");
+      animator.currentValue("opacity");
 
       // Apply some values
       const value1 = createValue.numeric(200, "px");
@@ -413,7 +413,7 @@ describe("StyleAnimator", () => {
     });
 
     it("clears property cache after restore", () => {
-      animator.getCurrentAnimatedValue("width"); // Create cache
+      animator.currentValue("width"); // Create cache
       expect((animator as any).propertyCache.size).toBeGreaterThan(0);
 
       animator.reset();
@@ -463,7 +463,7 @@ describe("StyleAnimator", () => {
       });
 
       const newAnimator = new StyleAnimator(element);
-      const value = newAnimator.getCurrentAnimatedValue("width");
+      const value = newAnimator.currentValue("width");
       expect(value).toEqual(createValue.numeric(0, "px")); // Should use default
     });
 
@@ -593,14 +593,14 @@ describe("StyleAnimator", () => {
   describe("color space handling", () => {
     it("works with RGB color space", () => {
       const rgbAnimator = new StyleAnimator(element, { colorSpace: "rgb" });
-      const value = rgbAnimator.getCurrentAnimatedValue("backgroundColor");
+      const value = rgbAnimator.currentValue("backgroundColor");
       expect(value.type).toBe("color");
       expect((value as any).space).toBe("rgb");
     });
 
     it("works with HSL color space", () => {
       const hslAnimator = new StyleAnimator(element, { colorSpace: "hsl" });
-      const value = hslAnimator.getCurrentAnimatedValue("backgroundColor");
+      const value = hslAnimator.currentValue("backgroundColor");
       expect(value.type).toBe("color");
       expect((value as any).space).toBe("hsl");
     });
@@ -749,8 +749,8 @@ describe("StyleAnimator", () => {
     });
 
     it("correctly parses computed styles through parser", () => {
-      // Test that getCurrentAnimatedValue uses parser correctly
-      const value = animator.getCurrentAnimatedValue("backgroundColor");
+      // Test that currentValue uses parser correctly
+      const value = animator.currentValue("backgroundColor");
       expect(value.type).toBe("color");
       expect((value as any).space).toBe("hsl"); // Default color space
     });
@@ -759,8 +759,8 @@ describe("StyleAnimator", () => {
       const rgbAnimator = new StyleAnimator(element, { colorSpace: "rgb" });
       const hslAnimator = new StyleAnimator(element, { colorSpace: "hsl" });
 
-      const rgbValue = rgbAnimator.getCurrentAnimatedValue("backgroundColor");
-      const hslValue = hslAnimator.getCurrentAnimatedValue("backgroundColor");
+      const rgbValue = rgbAnimator.currentValue("backgroundColor");
+      const hslValue = hslAnimator.currentValue("backgroundColor");
 
       expect((rgbValue as any).space).toBe("rgb");
       expect((hslValue as any).space).toBe("hsl");
@@ -870,7 +870,7 @@ describe("StyleAnimator", () => {
         "borderWidth",
       ];
       properties.forEach((prop) => {
-        animator.getCurrentAnimatedValue(prop as any);
+        animator.currentValue(prop as any);
       });
 
       expect((animator as any).propertyCache.size).toBe(properties.length);
@@ -892,8 +892,8 @@ describe("StyleAnimator", () => {
 
     it("handles memory cleanup for removed elements", () => {
       // Create cache entries
-      animator.getCurrentAnimatedValue("width");
-      animator.getCurrentAnimatedValue("height");
+      animator.currentValue("width");
+      animator.currentValue("height");
 
       // Simulate element removal
       element.remove();
@@ -934,7 +934,7 @@ describe("StyleAnimator", () => {
 
     it("handles computed style changes", () => {
       // First get a cached value
-      const initialValue = animator.getCurrentAnimatedValue("width");
+      const initialValue = animator.currentValue("width");
       expect(initialValue).toEqual(createValue.numeric(100, "px"));
 
       // Create new animator with different computed styles
@@ -947,7 +947,7 @@ describe("StyleAnimator", () => {
       });
 
       const newAnimator = new StyleAnimator(element);
-      const newValue = newAnimator.getCurrentAnimatedValue("width");
+      const newValue = newAnimator.currentValue("width");
       expect(newValue).toEqual(createValue.numeric(150, "px"));
     });
 
@@ -975,7 +975,7 @@ describe("StyleAnimator", () => {
       element.className = "test-class";
 
       // Should not affect cached values until marked dirty
-      const cachedValue = animator.getCurrentAnimatedValue("width");
+      const cachedValue = animator.currentValue("width");
       expect(cachedValue).toEqual(createValue.numeric(100, "px"));
     });
   });
@@ -1047,12 +1047,12 @@ describe("StyleAnimator", () => {
 
     it("handles interleaved gets and sets", () => {
       // Interleave getting and setting values
-      const value1 = animator.getCurrentAnimatedValue("width");
+      const value1 = animator.currentValue("width");
       animator.applyAnimatedPropertyValue(
         "height",
         createValue.numeric(200, "px")
       );
-      const value2 = animator.getCurrentAnimatedValue("opacity");
+      const value2 = animator.currentValue("opacity");
       animator.applyAnimatedPropertyValue(
         "width",
         createValue.numeric(300, "px")
@@ -1109,8 +1109,8 @@ describe("StyleAnimator", () => {
       });
 
       const newAnimator = new StyleAnimator(element);
-      const bgColor = newAnimator.getCurrentAnimatedValue("backgroundColor");
-      const textColor = newAnimator.getCurrentAnimatedValue("color");
+      const bgColor = newAnimator.currentValue("backgroundColor");
+      const textColor = newAnimator.currentValue("color");
 
       expect(bgColor.type).toBe("color");
       expect(textColor.type).toBe("color");
@@ -1135,7 +1135,7 @@ describe("StyleAnimator", () => {
   describe("integration scenarios", () => {
     it("handles complete animation cycle", () => {
       // Simulate a complete animation cycle
-      const startValue = animator.getCurrentAnimatedValue("width");
+      const startValue = animator.currentValue("width");
       const endValue = createValue.numeric(300, "px");
 
       // Interpolate through animation

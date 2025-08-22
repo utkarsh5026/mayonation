@@ -82,7 +82,7 @@ export class StyleAnimator {
   /**
    * Enhanced property value getter with caching
    */
-  getCurrentAnimatedValue(cssProperty: CSSPropertyName): AnimationValue {
+  currentValue(cssProperty: CSSPropertyName): AnimationValue {
     const cacheKey = cssProperty;
     const cached = this.propertyCache.get(cacheKey);
 
