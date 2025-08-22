@@ -11,12 +11,29 @@ interface ElementState {
 export class ElementManager {
   private elementStates: ElementState[] = [];
 
+  /**
+   * Creates a new ElementManager for the specified HTML elements.
+   *
+   * Initializes each element with its own PropertyManager and default state values.
+   * All elements start in an inactive, incomplete state with zero progress.
+   *
+   * @param elements - Array of HTML elements to manage
+   */
   constructor(elements: HTMLElement[]) {
     this.initializeElements(elements);
   }
 
   /**
-   * Update specific element's animation state
+   * Updates the animation state for a specific element.
+   *
+   * Modifies the progress, active status, and completion status for the element
+   * at the specified index. This method is typically called during animation
+   * updates to reflect the current state of each element's animation timeline.
+   *
+   * @param index - Zero-based index of the element to update
+   * @param progress - Animation progress from 0 (start) to 1 (complete)
+   * @param isActive - Whether the element is currently being animated
+   * @param isComplete - Whether the element has finished its animation
    */
   updateElement(
     index: number,
@@ -54,7 +71,12 @@ export class ElementManager {
   }
 
   /**
-   * Reset all elements to initial state
+   * Resets all elements to their initial animation state.
+   *
+   * Sets all elements back to zero progress, inactive, and incomplete status.
+   * Also calls reset on each element's PropertyManager to restore original
+   * CSS property values. This effectively returns all elements to their
+   * pre-animation state.
    */
   reset(): void {
     this.elementStates.forEach((state) => {
@@ -66,7 +88,15 @@ export class ElementManager {
   }
 
   /**
-   * Initialize all elements with their property managers
+   * Initializes element states with PropertyManagers for each provided element.
+   *
+   * Creates an ElementState object for each HTML element, setting up the
+   * PropertyManager and initializing state values to their defaults.
+   * This method is called during construction to prepare all elements for animation.
+   *
+   * @param elements - Array of HTML elements to initialize
+   *
+   * @private
    */
   private initializeElements(elements: HTMLElement[]): void {
     this.elementStates = elements.map((element) => ({
