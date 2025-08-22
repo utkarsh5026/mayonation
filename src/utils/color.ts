@@ -143,14 +143,19 @@ export const convertColorValueToCssString = (color: RGB | HSL): string => {
 
 /**
  * Parses an RGB color string into an RGB object.
- * Accepts format: rgb(r,g,b) where r,g,b are integers 0-255.
+ * Accepts format: rgb(r,g,b) or rgba(r,g,b,a) where r,g,b are integers 0-255 and a is 0-1.
  */
 const parseRGBString = (color: string): RGB => {
-  const values = color.match(/\d+/g)?.map(Number);
+  const values = color.match(/[\d.]+/g)?.map(Number);
   if (!values || values.length < 3) {
     throw new Error(`Invalid RGB color format: ${color}`);
   }
-  return { r: values[0], g: values[1], b: values[2] };
+  return { 
+    r: values[0], 
+    g: values[1], 
+    b: values[2],
+    a: values.length > 3 ? values[3] : undefined
+  };
 };
 
 /**
