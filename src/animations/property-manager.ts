@@ -1,12 +1,25 @@
-import type { TransformPropertyName } from "../animations/transform/units";
-import { CSSHandler, TransformHandler } from "@/animations";
 import {
   isNumericValue,
+  NumericValue,
   type AnimationValue,
   type ColorSpace,
 } from "@/core/animation-val";
-import { convertColorValueToCssString } from "@/utils/color";
 import { StyleAnimator, CSSPropertyName } from "./styles";
+import { TransformHandler, TransformPropertyName } from "./transform";
+import { safeOperation, throwIf } from "@/utils/error";
+
+interface PropertyState {
+  isDirty: boolean;
+  lastValue: AnimationValue;
+  hasTransformChanges: boolean;
+}
+
+interface PropertyManagerOptions {
+  colorSpace?: ColorSpace;
+  batchUpdates?: boolean;
+  precision?: number;
+  useGPUAcceleration?: boolean;
+}
 
 /**
  * A property that can be animated like a transform or a CSS property.
@@ -20,145 +33,361 @@ export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
  */
 export class PropertyManager {
   private readonly transformHandler: TransformHandler;
-  private readonly cssHandler: StyleAnimator;
-  private readonly activeProperties: Set<AnimatableProperty> = new Set();
+  private readonly styleAnimator: StyleAnimator;
+  private readonly propertyStates: Map<AnimatableProperty, PropertyState> =
+    new Map();
+  private readonly pendingTransformUpdates: Map<
+    TransformPropertyName,
+    NumericValue
+  > = new Map();
+  private readonly pendingCSSUpdates: Map<CSSPropertyName, AnimationValue> =
+    new Map();
 
-  constructor(private readonly element: HTMLElement, space?: ColorSpace) {
+  private readonly options: Required<PropertyManagerOptions>;
+  private updateScheduled: boolean = false;
+  private isDisposed: boolean = false;
+
+  constructor(
+    private readonly element: HTMLElement,
+    options: PropertyManagerOptions = {}
+  ) {
+    this.options = {
+      colorSpace: options.colorSpace ?? "hsl",
+      batchUpdates: options.batchUpdates ?? true,
+      precision: options.precision ?? 3,
+      useGPUAcceleration: options.useGPUAcceleration ?? true,
+    };
+
     this.transformHandler = new TransformHandler(element);
-    this.cssHandler = new StyleAnimator(element, {
-      colorSpace: space,
+    this.styleAnimator = new StyleAnimator(element, {
+      ...this.options,
     });
   }
 
   /**
-   * Gets the current value of any animatable property
+   * Enhanced value parsing with better error handling
    */
-  public getCurrentValue(property: AnimatableProperty): AnimationValue {
-    if (this.isTransProp(property))
-      return this.transformHandler.getCurrentTransform(property);
+  parse(
+    property: AnimatableProperty,
+    value: string | number
+  ): AnimationValue | null {
+    this.validateProperty(property);
 
-    if (this.isCSSProp(property))
-      return this.cssHandler.getCurrentAnimatedValue(property);
-    else throw new Error(`Unsupported property: ${property}`);
+    return safeOperation(
+      () => {
+        if (this.isCSSProperty(property)) {
+          return this.styleAnimator.parse(property, value.toString());
+        }
+
+        if (this.isTransformProperty(property)) {
+          return this.transformHandler.parse(property, value);
+        }
+
+        return null;
+      },
+      `Failed to parse value for ${property}:`,
+      null
+    );
   }
 
   /**
-   * Interpolates between two values for any property type
+   * Enhanced reset with proper cleanup
    */
-  public interpolate(
+  reset(): void {
+    safeOperation(() => {
+      this.pendingTransformUpdates.clear();
+      this.pendingCSSUpdates.clear();
+      this.updateScheduled = false;
+      this.transformHandler.reset();
+      this.styleAnimator.reset();
+      this.propertyStates.clear();
+    }, "Error during reset");
+  }
+
+  /**
+   * Enhanced interpolation with better error handling and validation
+   */
+  interpolate(
     property: AnimatableProperty,
     from: AnimationValue,
     to: AnimationValue,
     progress: number
   ): AnimationValue {
-    if (this.isTransProp(property)) {
-      if (isNumericValue(from) && isNumericValue(to))
-        return this.transformHandler.interpolate(property, from, to, progress);
-      else
-        throw new Error(
-          `Invalid numeric value for transform property: property: ${property}`
-        );
-    }
+    this.validateProperty(property);
+    this.validateProgress(progress);
+    this.validateValueTypes(from, to, property);
 
-    if (this.isCSSProp(property)) {
-      return this.cssHandler.interpolate(property, from, to, progress);
-    }
+    return safeOperation(
+      () => {
+        if (this.isTransformProperty(property)) {
+          throwIf(
+            !isNumericValue(from) || !isNumericValue(to),
+            `Transform properties require numeric values: ${property}`
+          );
 
-    throw new Error(`Unsupported property: ${property}`);
+          return this.transformHandler.interpolate(
+            property,
+            from as NumericValue,
+            to as NumericValue,
+            progress
+          );
+        }
+
+        if (this.isCSSProperty(property)) {
+          return this.styleAnimator.interpolate(property, from, to, progress);
+        }
+
+        throw new Error(`Unsupported property type: ${property}`);
+      },
+      `Interpolation failed for ${property}:`,
+      progress < 0.5 ? from : to
+    );
   }
 
   /**
-   * Updates a property with a new value during animation
+   * Enhanced property value getter with validation and caching
    */
-  public updateProperty(
-    property: AnimatableProperty,
+  getCurrentValue(prop: AnimatableProperty): AnimationValue {
+    this.validateProperty(prop);
+    const state = this.propertyStates.get(prop);
+    if (state && !state.isDirty) {
+      return state.lastValue;
+    }
+
+    try {
+      const value = this.getValFromHandlers(prop);
+      this.propertyStates.set(prop, {
+        isDirty: false,
+        lastValue: value,
+        hasTransformChanges: this.isTransformProperty(prop),
+      });
+
+      return value;
+    } catch (error) {
+      console.error(`Failed to get current value for ${prop}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enhanced property update with intelligent batching
+   */
+  updateProperty(prop: AnimatableProperty, val: AnimationValue): void {
+    this.validateProperty(prop);
+    this.validateValue(val, prop);
+
+    if (this.isDisposed) {
+      console.warn("PropertyManager is disposed, ignoring update");
+      return;
+    }
+
+    try {
+      this.update(prop, val);
+      this.updatePropertyState(prop, val);
+
+      if (this.options.batchUpdates) {
+        this.scheduleBatchUpdate();
+      } else {
+        this.applyUpdates();
+      }
+    } catch (error) {
+      console.error(`Failed to update property ${prop}:`, error);
+    }
+  }
+
+  /**
+   * Enhanced apply updates method
+   */
+  applyUpdates(): void {
+    if (this.options.batchUpdates) {
+      this.flushPendingUpdates();
+      return;
+    }
+    this.applyTransformToDom();
+  }
+
+  /**
+   * Apply transform changes to DOM
+   */
+  private applyTransformToDom(): void {
+    const hasTransformChanges = Array.from(this.propertyStates.values()).some(
+      (state) => state.hasTransformChanges
+    );
+
+    if (hasTransformChanges) {
+      const transformString = this.transformHandler.computeTransform();
+      this.element.style.transform = transformString;
+    }
+  }
+
+  private update(prop: AnimatableProperty, val: AnimationValue): void {
+    if (this.isTransformProperty(prop)) {
+      this.handleTransformUpdate(prop, val);
+      return;
+    }
+
+    if (this.isCSSProperty(prop)) {
+      this.handleCSSUpdate(prop, val);
+      return;
+    }
+
+    throw new Error(`Unsupported prop type: ${prop}`);
+  }
+
+  /**
+   * Enhanced batch update scheduling
+   */
+  private scheduleBatchUpdate(): void {
+    if (this.updateScheduled) return;
+
+    this.updateScheduled = true;
+
+    requestAnimationFrame(() => {
+      this.flushPendingUpdates();
+      this.updateScheduled = false;
+    });
+  }
+
+  /**
+   * Update property state tracking
+   */
+  private updatePropertyState(
+    prop: AnimatableProperty,
     value: AnimationValue
   ): void {
-    this.activeProperties.add(property);
+    const isTransform = this.isTransformProperty(prop);
 
-    if (this.isTransProp(property)) {
-      if (isNumericValue(value))
-        this.transformHandler.updateTransform(property, value);
-      else
-        throw new Error(
-          `Invalid numeric value for transform property update: property: ${property}`
-        );
+    this.propertyStates.set(prop, {
+      isDirty: false,
+      lastValue: value,
+      hasTransformChanges: isTransform,
+    });
+  }
+
+  /**
+   * Handle transform property updates
+   */
+  private handleTransformUpdate(
+    property: TransformPropertyName,
+    value: AnimationValue
+  ): void {
+    throwIf(
+      !isNumericValue(value),
+      `Transform property ${property} requires numeric value`
+    );
+
+    if (this.options.batchUpdates) {
+      this.pendingTransformUpdates.set(property, value as NumericValue);
+      return;
     }
 
-    if (this.isCSSProp(property))
-      this.cssHandler.applyAnimatedPropertyValue(property, value);
+    this.transformHandler.updateTransform(property, value as NumericValue);
+  }
+
+  private getValFromHandlers(prop: AnimatableProperty) {
+    if (this.isTransformProperty(prop)) {
+      return this.transformHandler.getCurrentTransform(prop);
+    }
+
+    if (this.isCSSProperty(prop)) {
+      return this.styleAnimator.currentValue(prop);
+    }
+
+    throw new Error(`Unsupported prop type: ${prop}`);
   }
 
   /**
-   * Resets all animation state
+   * Handle CSS property updates
    */
-  public reset(): void {
-    this.transformHandler.reset();
-    this.cssHandler.restoreOriginalPropertyValues();
-    this.activeProperties.clear();
+  private handleCSSUpdate(
+    property: CSSPropertyName,
+    value: AnimationValue
+  ): void {
+    if (this.options.batchUpdates) {
+      this.pendingCSSUpdates.set(property, value);
+      return;
+    }
+    this.styleAnimator.applyAnimatedPropertyValue(property, value);
   }
 
-  /**
-   * Validates if a property can be animated
-   */
-  public static isAnimatable(property: string): property is AnimatableProperty {
-    return (
-      TransformHandler.isTransformProperty(property) ||
-      CSSHandler.isAnimatableProperty(property)
+  private validateProperty(prop: string): void {
+    throwIf(
+      !PropertyManager.isAnimatable(prop),
+      `Property "${prop}" is not animatable`
     );
   }
 
-  /**
-   * Applies all pending transform updates to the element
-   * Called after all properties have been updated for a frame
-   */
-  public applyUpdates(): void {
-    const hasTransforms = Array.from(this.activeProperties).some((prop) =>
-      this.isTransProp(prop)
-    );
-
-    if (hasTransforms) {
-      this.element.style.transform = this.transformHandler.computeTransform();
-    }
-  }
-
-  /**
-   * Parses a raw value into an AnimationValue for the given property
-   */
-  public parse(
-    property: AnimatableProperty,
-    value: string | number
-  ): AnimationValue | null {
-    if (this.isCSSProp(property))
-      return this.cssHandler.parseCSSValueToAnimationValue(
-        property,
-        value.toString()
-      );
-
-    if (this.isTransProp(property))
-      return this.transformHandler.parse(property, value);
-
-    return null;
-  }
-
-  /**
-   * Converts an AnimationValue into a string representation.
-   */
-  public static stringifyValue(val: AnimationValue) {
-    if (isNumericValue(val)) return `${val.value}${val.unit}`;
-    else return convertColorValueToCssString(val.value);
-  }
-
-  /**
-   * Checks if a property is a transform property
-   */
-  private isTransProp(
-    property: AnimatableProperty
+  private isTransformProperty(
+    property: string | AnimatableProperty
   ): property is TransformPropertyName {
     return TransformHandler.isTransformProperty(property);
   }
 
-  private isCSSProp(property: AnimatableProperty): property is CSSPropertyName {
-    return CSSHandler.isAnimatableProperty(property);
+  private isCSSProperty(
+    property: string | AnimatableProperty
+  ): property is CSSPropertyName {
+    return StyleAnimator.isAnimatableProperty(property);
+  }
+
+  private validateProgress(progress: number): void {
+    throwIf(
+      typeof progress !== "number" || progress < 0 || progress > 1,
+      `Invalid progress value: ${progress}. Must be between 0 and 1.`
+    );
+  }
+
+  private validateValueTypes(
+    from: AnimationValue,
+    to: AnimationValue,
+    property: string
+  ): void {
+    throwIf(
+      from.type !== to.type,
+      `Value type mismatch for ${property}: ${from.type} vs ${to.type}`
+    );
+  }
+
+  /**
+   * Flush all pending updates efficiently
+   */
+  private flushPendingUpdates(): void {
+    try {
+      // Apply transform updates as a batch
+      if (this.pendingTransformUpdates.size > 0) {
+        const transformUpdates = new Map(this.pendingTransformUpdates);
+        this.transformHandler.updateTransforms(transformUpdates);
+        this.pendingTransformUpdates.clear();
+      }
+
+      // Apply CSS updates
+      this.pendingCSSUpdates.forEach((value, property) => {
+        this.styleAnimator.applyAnimatedPropertyValue(property, value);
+      });
+      this.pendingCSSUpdates.clear();
+
+      this.applyTransformToDom();
+    } catch (error) {
+      console.error("Error flushing pending updates:", error);
+    }
+  }
+
+  /**
+   * Enhanced property validation
+   */
+  public static isAnimatable(property: string): property is AnimatableProperty {
+    return (
+      TransformHandler.isTransformProperty(property) ||
+      StyleAnimator.isAnimatableProperty(property)
+    );
+  }
+
+  private validateValue(value: AnimationValue, property: string): void {
+    if (!value || typeof value !== "object") {
+      throw new Error(`Invalid value for property ${property}`);
+    }
+
+    if (this.isTransformProperty(property) && !isNumericValue(value)) {
+      throw new Error(`Transform property ${property} requires numeric value`);
+    }
   }
 }
