@@ -14,4 +14,14 @@ export default defineConfig({
   server: {
     open: "/html/index.html",
   },
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "src"),
+      "@/core": resolve(__dirname, "src/core"),
+      "@/utils": resolve(__dirname, "src/utils"),
+    },
+  },
+  test: {
+    environment: "jsdom",
+  },
 });
