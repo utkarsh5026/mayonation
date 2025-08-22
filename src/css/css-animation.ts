@@ -88,9 +88,11 @@ export class CSSAnimator {
   public get baseDuration(): number {
     return this.config.duration;
   }
+
   public get delay(): number {
     return this.config.delay;
   }
+
   public get elementCount(): number {
     return this.elements.length;
   }
