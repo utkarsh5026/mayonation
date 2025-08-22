@@ -46,7 +46,7 @@ describe("StyleAnimator", () => {
   afterEach(() => {
     vi.clearAllMocks();
     document.body.innerHTML = "";
-    
+
     // Restore original getComputedStyle if it was modified
     Object.defineProperty(window, "getComputedStyle", {
       value: (el: HTMLElement) => ({
@@ -246,38 +246,35 @@ describe("StyleAnimator", () => {
     });
   });
 
-  describe("parseCSSValueToAnimationValue method", () => {
+  describe("parse method", () => {
     it("parses valid CSS numeric value", () => {
-      const result = animator.parseCSSValueToAnimationValue("width", "150px");
+      const result = animator.parse("width", "150px");
       expect(result).toEqual(createValue.numeric(150, "px"));
     });
 
     it("parses valid CSS color value", () => {
-      const result = animator.parseCSSValueToAnimationValue("color", "#ff0000");
+      const result = animator.parse("color", "#ff0000");
       expect(result.type).toBe("color");
     });
 
     it("throws error for unsupported property", () => {
-      expect(() =>
-        animator.parseCSSValueToAnimationValue("unsupported" as any, "10px")
-      ).toThrow("Unsupported CSS property");
+      expect(() => animator.parse("unsupported" as any, "10px")).toThrow(
+        "Unsupported CSS property"
+      );
     });
 
     it("handles opacity values correctly", () => {
-      const result = animator.parseCSSValueToAnimationValue("opacity", "0.75");
+      const result = animator.parse("opacity", "0.75");
       expect(result).toEqual(createValue.numeric(0.75, ""));
     });
 
     it("handles percentage values correctly", () => {
-      const result = animator.parseCSSValueToAnimationValue("width", "50%");
+      const result = animator.parse("width", "50%");
       expect(result).toEqual(createValue.numeric(50, "%"));
     });
 
     it("handles em values correctly", () => {
-      const result = animator.parseCSSValueToAnimationValue(
-        "fontSize",
-        "1.5em"
-      );
+      const result = animator.parse("fontSize", "1.5em");
       expect(result).toEqual(createValue.numeric(1.5, "em"));
     });
   });
@@ -386,7 +383,7 @@ describe("StyleAnimator", () => {
     });
   });
 
-  describe("restoreOriginalPropertyValues method", () => {
+  describe("reset method", () => {
     it("restores all cached original values", () => {
       // First get values to create cache with original values
       animator.getCurrentAnimatedValue("width");
@@ -406,7 +403,7 @@ describe("StyleAnimator", () => {
           expect(element.style.opacity).toBe("0.5");
 
           // Now restore
-          animator.restoreOriginalPropertyValues();
+          animator.reset();
 
           // Cache should be cleared
           expect((animator as any).propertyCache.size).toBe(0);
@@ -419,7 +416,7 @@ describe("StyleAnimator", () => {
       animator.getCurrentAnimatedValue("width"); // Create cache
       expect((animator as any).propertyCache.size).toBeGreaterThan(0);
 
-      animator.restoreOriginalPropertyValues();
+      animator.reset();
       expect((animator as any).propertyCache.size).toBe(0);
     });
 
@@ -428,7 +425,7 @@ describe("StyleAnimator", () => {
       animator.applyAnimatedPropertyValue("width", value);
 
       expect((animator as any).batchedUpdates.size).toBeGreaterThan(0);
-      animator.restoreOriginalPropertyValues();
+      animator.reset();
       expect((animator as any).batchedUpdates.size).toBe(0);
     });
 
@@ -440,7 +437,7 @@ describe("StyleAnimator", () => {
       element.style.setProperty = mockSetProperty;
 
       // This should not throw
-      expect(() => animator.restoreOriginalPropertyValues()).not.toThrow();
+      expect(() => animator.reset()).not.toThrow();
     });
   });
 
@@ -741,13 +738,13 @@ describe("StyleAnimator", () => {
   describe("StyleParser integration", () => {
     it("handles complex CSS values through parser", () => {
       const complexColor = "hsla(240, 100%, 50%, 0.8)";
-      const result = animator.parseCSSValueToAnimationValue("backgroundColor", complexColor);
+      const result = animator.parse("backgroundColor", complexColor);
       expect(result.type).toBe("color");
     });
 
     it("handles parser fallbacks for invalid values", () => {
       const invalidValue = "invalid-css-value";
-      const result = animator.parseCSSValueToAnimationValue("width", invalidValue);
+      const result = animator.parse("width", invalidValue);
       expect(result).toEqual(createValue.numeric(0, "px"));
     });
 
@@ -771,11 +768,11 @@ describe("StyleAnimator", () => {
 
     it("handles property-specific parsing rules", () => {
       // Test opacity range validation
-      const validOpacity = animator.parseCSSValueToAnimationValue("opacity", "0.5");
+      const validOpacity = animator.parse("opacity", "0.5");
       expect(validOpacity).toEqual(createValue.numeric(0.5, ""));
 
       // Test border-radius unit restrictions
-      const validRadius = animator.parseCSSValueToAnimationValue("borderRadius", "10px");
+      const validRadius = animator.parse("borderRadius", "10px");
       expect(validRadius).toEqual(createValue.numeric(10, "px"));
     });
   });
@@ -787,7 +784,7 @@ describe("StyleAnimator", () => {
         createValue.numeric(200, "px"),
         createValue.numeric(300, "px"),
         createValue.numeric(0.8, ""),
-        createValue.rgb(255, 128, 0, 1)
+        createValue.rgb(255, 128, 0, 1),
       ];
 
       properties.forEach((prop, i) => {
@@ -807,25 +804,34 @@ describe("StyleAnimator", () => {
 
     it("handles transform properties correctly", () => {
       // Note: transform isn't in EXTENDED_ANIMATABLE_PROPERTIES but test the pattern
-      expect(() => 
-        animator.parseCSSValueToAnimationValue("transform" as any, "translateX(10px)")
+      expect(() =>
+        animator.parse("transform" as any, "translateX(10px)")
       ).toThrow("Unsupported CSS property");
     });
 
     it("handles shorthand vs longhand properties", () => {
-      const borderWidth = animator.parseCSSValueToAnimationValue("borderWidth", "2px");
+      const borderWidth = animator.parse("borderWidth", "2px");
       expect(borderWidth).toEqual(createValue.numeric(2, "px"));
 
       // Test that we handle camelCase correctly
-      const borderRadius = animator.parseCSSValueToAnimationValue("borderRadius", "5px");
+      const borderRadius = animator.parse("borderRadius", "5px");
       expect(borderRadius).toEqual(createValue.numeric(5, "px"));
     });
 
     it("handles property interdependencies", () => {
       // Apply multiple related properties
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(100, "px"));
-      animator.applyAnimatedPropertyValue("height", createValue.numeric(100, "px"));
-      animator.applyAnimatedPropertyValue("borderRadius", createValue.numeric(50, "%"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(100, "px")
+      );
+      animator.applyAnimatedPropertyValue(
+        "height",
+        createValue.numeric(100, "px")
+      );
+      animator.applyAnimatedPropertyValue(
+        "borderRadius",
+        createValue.numeric(50, "%")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
@@ -841,10 +847,13 @@ describe("StyleAnimator", () => {
   describe("performance and memory", () => {
     it("handles large numbers of property updates efficiently", () => {
       const startTime = performance.now();
-      
+
       // Apply many property updates
       for (let i = 0; i < 100; i++) {
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(i, "px"));
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(i, "px")
+        );
       }
 
       const endTime = performance.now();
@@ -853,14 +862,20 @@ describe("StyleAnimator", () => {
 
     it("properly cleans up cache on restore", () => {
       // Create many cache entries
-      const properties = ["width", "height", "opacity", "fontSize", "borderWidth"];
-      properties.forEach(prop => {
+      const properties = [
+        "width",
+        "height",
+        "opacity",
+        "fontSize",
+        "borderWidth",
+      ];
+      properties.forEach((prop) => {
         animator.getCurrentAnimatedValue(prop as any);
       });
 
       expect((animator as any).propertyCache.size).toBe(properties.length);
 
-      animator.restoreOriginalPropertyValues();
+      animator.reset();
       expect((animator as any).propertyCache.size).toBe(0);
     });
 
@@ -885,7 +900,7 @@ describe("StyleAnimator", () => {
 
       // Operations should still work but might use defaults
       expect(() => {
-        animator.restoreOriginalPropertyValues();
+        animator.reset();
       }).not.toThrow();
     });
   });
@@ -893,7 +908,10 @@ describe("StyleAnimator", () => {
   describe("DOM manipulation edge cases", () => {
     it("handles element style changes during animation", () => {
       // Apply animated value
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
@@ -901,7 +919,10 @@ describe("StyleAnimator", () => {
           element.style.width = "300px";
 
           // Apply another animated value
-          animator.applyAnimatedPropertyValue("width", createValue.numeric(400, "px"));
+          animator.applyAnimatedPropertyValue(
+            "width",
+            createValue.numeric(400, "px")
+          );
 
           requestAnimationFrame(() => {
             expect(element.style.width).toBe("400px");
@@ -932,10 +953,11 @@ describe("StyleAnimator", () => {
 
     it("handles parent element changes", () => {
       // Create new parent with different dimensions
-      document.body.innerHTML = '<div id="new-parent"><div id="new-target"></div></div>';
+      document.body.innerHTML =
+        '<div id="new-parent"><div id="new-target"></div></div>';
       const newParent = document.getElementById("new-parent") as HTMLElement;
       const newElement = document.getElementById("new-target") as HTMLElement;
-      
+
       Object.defineProperty(newParent, "getBoundingClientRect", {
         value: () => ({ width: 800, height: 600 }),
       });
@@ -963,8 +985,14 @@ describe("StyleAnimator", () => {
       const animator2 = new StyleAnimator(element, { colorSpace: "rgb" });
 
       // Apply different properties with different animators
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
-      animator2.applyAnimatedPropertyValue("height", createValue.numeric(300, "px"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
+      animator2.applyAnimatedPropertyValue(
+        "height",
+        createValue.numeric(300, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
@@ -979,8 +1007,14 @@ describe("StyleAnimator", () => {
       const animator2 = new StyleAnimator(element);
 
       // Both animators update same property
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
-      animator2.applyAnimatedPropertyValue("width", createValue.numeric(300, "px"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
+      animator2.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(300, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
@@ -993,10 +1027,13 @@ describe("StyleAnimator", () => {
 
     it("handles rapid property changes", () => {
       const values = [100, 150, 200, 250, 300];
-      
+
       // Apply values rapidly
-      values.forEach(val => {
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(val, "px"));
+      values.forEach((val) => {
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(val, "px")
+        );
       });
 
       return new Promise<void>((resolve) => {
@@ -1011,9 +1048,15 @@ describe("StyleAnimator", () => {
     it("handles interleaved gets and sets", () => {
       // Interleave getting and setting values
       const value1 = animator.getCurrentAnimatedValue("width");
-      animator.applyAnimatedPropertyValue("height", createValue.numeric(200, "px"));
+      animator.applyAnimatedPropertyValue(
+        "height",
+        createValue.numeric(200, "px")
+      );
       const value2 = animator.getCurrentAnimatedValue("opacity");
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(300, "px"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(300, "px")
+      );
 
       expect(value1).toEqual(createValue.numeric(100, "px"));
       expect(value2).toEqual(createValue.numeric(1, ""));
@@ -1031,16 +1074,21 @@ describe("StyleAnimator", () => {
   describe("browser compatibility scenarios", () => {
     it("handles missing requestAnimationFrame", () => {
       const originalRAF = window.requestAnimationFrame;
-      
+
       // Mock missing requestAnimationFrame with a fallback
-      (window as any).requestAnimationFrame = (callback: FrameRequestCallback) => {
+      (window as any).requestAnimationFrame = (
+        callback: FrameRequestCallback
+      ) => {
         setTimeout(callback, 16); // Fallback to setTimeout
         return 1;
       };
 
       // Should handle gracefully
       expect(() => {
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(200, "px")
+        );
       }).not.toThrow();
 
       // Restore
@@ -1071,12 +1119,16 @@ describe("StyleAnimator", () => {
     it("handles vendor prefixed properties", () => {
       // Test that we handle standard properties (vendor prefixes would be in prop-names)
       expect((animator as any).isValidProperty("borderRadius")).toBe(true);
-      expect((animator as any).isValidProperty("-webkit-border-radius")).toBe(false);
+      expect((animator as any).isValidProperty("-webkit-border-radius")).toBe(
+        false
+      );
     });
 
     it("handles CSS custom properties (variables)", () => {
       // CSS custom properties aren't in our animatable list
-      expect((animator as any).isValidProperty("--custom-property")).toBe(false);
+      expect((animator as any).isValidProperty("--custom-property")).toBe(
+        false
+      );
     });
   });
 
@@ -1090,7 +1142,12 @@ describe("StyleAnimator", () => {
       const frames = [];
       for (let i = 0; i <= 10; i++) {
         const progress = i / 10;
-        const interpolated = animator.interpolate("width", startValue, endValue, progress);
+        const interpolated = animator.interpolate(
+          "width",
+          startValue,
+          endValue,
+          progress
+        );
         frames.push(interpolated);
         animator.applyAnimatedPropertyValue("width", interpolated);
       }
@@ -1098,9 +1155,9 @@ describe("StyleAnimator", () => {
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           expect(element.style.width).toBe("300px");
-          
+
           // Restore to original
-          animator.restoreOriginalPropertyValues();
+          animator.reset();
           resolve();
         });
       });
@@ -1108,7 +1165,10 @@ describe("StyleAnimator", () => {
 
     it("handles error recovery during animation", () => {
       // Start with valid operation
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
 
       // Cause an error in setProperty
       const originalSetProperty = element.style.setProperty;
@@ -1120,13 +1180,16 @@ describe("StyleAnimator", () => {
       });
 
       // Should handle error and continue
-      animator.applyAnimatedPropertyValue("height", createValue.numeric(300, "px"));
+      animator.applyAnimatedPropertyValue(
+        "height",
+        createValue.numeric(300, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           // First property should have failed, second should succeed
           expect(element.style.height).toBe("300px");
-          
+
           // Restore
           element.style.setProperty = originalSetProperty;
           resolve();
@@ -1136,12 +1199,17 @@ describe("StyleAnimator", () => {
 
     it("handles precision edge cases in real animations", () => {
       const preciseAnimator = new StyleAnimator(element, { precision: 4 });
-      
+
       // Test very small incremental changes
       const start = createValue.numeric(0, "px");
       const end = createValue.numeric(1, "px");
-      
-      const smallIncrement = preciseAnimator.interpolate("width", start, end, 0.00001);
+
+      const smallIncrement = preciseAnimator.interpolate(
+        "width",
+        start,
+        end,
+        0.00001
+      );
       expect((smallIncrement as any).value).toBeCloseTo(0.00001, 4);
     });
   });

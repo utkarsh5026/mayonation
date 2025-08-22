@@ -112,10 +112,7 @@ export class StyleAnimator {
   /**
    * Enhanced property value parsing with better error handling
    */
-  parseCSSValueToAnimationValue(
-    cssProperty: CSSPropertyName,
-    cssValue: string
-  ): AnimationValue {
+  parse(cssProperty: CSSPropertyName, cssValue: string): AnimationValue {
     if (!this.isValidProperty(cssProperty)) {
       throw new Error(`Unsupported CSS property: ${cssProperty}`);
     }
@@ -166,7 +163,7 @@ export class StyleAnimator {
   /**
    * Enhanced reset with proper cleanup
    */
-  restoreOriginalPropertyValues(): void {
+  reset(): void {
     this.batchedUpdates.clear();
 
     this.propertyCache.forEach((cache, prop) => {
