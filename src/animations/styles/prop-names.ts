@@ -7,8 +7,6 @@ export const COLOR_PROPERTIES = new Set<string>([
   "textEmphasisColor",
   "caretColor",
   "columnRuleColor",
-  "textShadow",
-  "boxShadow",
 ]);
 
 export const MULTI_VALUE_PROPERTIES = new Set<string>([
