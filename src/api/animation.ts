@@ -33,8 +33,8 @@ export class Mayonation {
   /**
    * Creates a new MayoAnimation instance that can handle multiple elements
    */
-  constructor(config: MayonationConfig, id: string) {
-    this.id = id;
+  constructor(config: MayonationConfig) {
+    this.id = `${Date.now()}`;
     this.config = Object.freeze({ ...config });
 
     this.cssAnimator = new CSSAnimator({
