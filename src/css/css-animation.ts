@@ -15,7 +15,6 @@ export class CSSAnimator {
   private readonly config: Required<CSSAnimationConfig>;
 
   private readonly elementManager: ElementManager;
-  private readonly propertyAnimator: PropertyAnimator;
   private readonly staggerManager: StaggerManager;
 
   private readonly elements: HTMLElement[];
@@ -45,8 +44,6 @@ export class CSSAnimator {
     );
 
     this.resolveAllPropertiesAndKeyframes();
-
-    this.propertyAnimator = new PropertyAnimator();
   }
 
   public update(globalProgress: number): void {
@@ -197,15 +194,11 @@ export class CSSAnimator {
     element: HTMLElement
   ): ProcessedKeyframe[] {
     const allProperties = { ...this.config.from, ...this.config.to };
-
-    let maxLength = 2; // Minimum from/to
-    Object.values(allProperties).forEach((value) => {
-      const resolved = this.resolveAnimationValue(value, index, element);
-      if (Array.isArray(resolved)) {
-        maxLength = Math.max(maxLength, resolved.length);
-      }
-    });
-
+    const maxLength = this.getMaxKeyFrameLengthGiven(
+      Object.values(allProperties),
+      index,
+      element
+    );
     const keyframes: ProcessedKeyframe[] = [];
 
     for (let i = 0; i < maxLength; i++) {
@@ -240,6 +233,23 @@ export class CSSAnimator {
     return keyframes;
   }
 
+  private getMaxKeyFrameLengthGiven(
+    propValues: (AnimationValue | undefined)[],
+    index: number,
+    element: HTMLElement
+  ): number {
+    let maxLength = 2; // Minimum from/to
+
+    propValues.forEach((value) => {
+      const resolved = this.resolveAnimationValue(value, index, element);
+      if (Array.isArray(resolved)) {
+        maxLength = Math.max(maxLength, resolved.length);
+      }
+    });
+
+    return maxLength;
+  }
+
   /**
    * Check if properties contain arrays (keyframes)
    */
@@ -260,16 +270,16 @@ export class CSSAnimator {
     index: number,
     element: HTMLElement
   ): Record<string, number | string> {
-    const resolved: Record<string, number | string> = {};
-    Object.entries(properties).forEach(([property, value]) => {
-      if (property === "offset" || property === "easing") return;
+    const resolvedProperties: Record<string, number | string> = {};
+    Object.entries(properties).forEach(([prop, val]) => {
+      if (prop === "offset" || prop === "easing") return;
 
-      const resolvedValue = this.resolveAnimationValue(value, index, element);
-      resolved[property] = Array.isArray(resolvedValue)
-        ? resolvedValue[0]
-        : resolvedValue;
+      const resolved = this.resolveAnimationValue(val, index, element);
+      resolvedProperties[prop] = Array.isArray(resolved)
+        ? resolved[0]
+        : resolved;
     });
-    return resolved;
+    return resolvedProperties;
   }
 
   /**
@@ -301,19 +311,14 @@ export class CSSAnimator {
    * Update element with resolved keyframes
    */
   private updateElement(elementIndex: number, progress: number): void {
-    const propertyManager =
-      this.elementManager.getPropertyManager(elementIndex);
-    if (!propertyManager) return;
+    const propMgr = this.elementManager.getPropertyManager(elementIndex);
+    if (!propMgr) return;
 
     const keyframes = this.resolvedKeyframes.get(elementIndex);
     if (!keyframes) return;
 
-    const elementPropertyAnimator = new PropertyAnimator(keyframes);
-    elementPropertyAnimator.updateElement(
-      propertyManager,
-      progress,
-      this.config.ease
-    );
+    const animator = new PropertyAnimator(keyframes);
+    animator.updateElement(propMgr, progress, this.config.ease);
   }
 
   private getActiveElementCount(): number {
