@@ -1,4 +1,4 @@
-import type { TransformState } from "./units";
+import type { TransformState } from "./types";
 import { createValue, NumericValue } from "@/core/animation-val";
 import { linear, logarithmic } from "@/utils/interpolators";
 
