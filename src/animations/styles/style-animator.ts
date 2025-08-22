@@ -179,6 +179,13 @@ export class StyleAnimator {
     this.propertyCache.clear();
   }
 
+  static isAnimatableProperty(property: string): boolean {
+    return (
+      EXTENDED_ANIMATABLE_PROPERTIES.has(property) ||
+      COLOR_PROPERTIES.has(property)
+    );
+  }
+
   /**
    * Enhanced color interpolation with better handling
    */
