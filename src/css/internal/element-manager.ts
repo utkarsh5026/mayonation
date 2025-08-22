@@ -1,4 +1,4 @@
-import { PropertyManager } from "@/core/property-manager";
+import { PropertyManager } from "@/animations";
 
 interface ElementState {
   element: HTMLElement;

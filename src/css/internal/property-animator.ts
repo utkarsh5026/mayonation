@@ -1,9 +1,7 @@
 import type { AnimationProperties, ProcessedKeyframe } from "../types";
 import { EaseFunction, resolveEaseFn } from "@/core/ease-fns";
-import {
-  PropertyManager,
-  type AnimatableProperty,
-} from "@/core/property-manager";
+import { PropertyManager } from "@/animations";
+import type { AnimatableProperty } from "@/animations/property-manager";
 
 interface KeyframeSegment {
   fromFrame: ProcessedKeyframe | null;
