@@ -219,7 +219,7 @@ describe("math.ts", () => {
         1 // Translation
       );
 
-      const result = decomposeMatrix(matrix);
+      const result = decomposeMatrix(matrix as any);
 
       expect(result.translate.x).toBeCloseTo(10, 1);
       expect(result.translate.y).toBeCloseTo(20, 1);
@@ -335,7 +335,7 @@ describe("math.ts", () => {
       const from = { value: 1, unit: "" };
       const to = { value: 4, unit: "" };
 
-      const result = interpolateScale(from, to, 0.5);
+      const result = interpolateScale(from as any, to as any, 0.5);
 
       expect(result.value).toBeCloseTo(2, 5);
       expect(result.unit).toBe("");
@@ -345,7 +345,7 @@ describe("math.ts", () => {
       const from = { value: 2, unit: "em" };
       const to = { value: 8, unit: "em" };
 
-      const result = interpolateScale(from, to, 0);
+      const result = interpolateScale(from as any, to as any, 0);
 
       expect(result.value).toBe(2);
       expect(result.unit).toBe("em");
@@ -355,7 +355,7 @@ describe("math.ts", () => {
       const from = { value: 0.5, unit: "rem" };
       const to = { value: 2, unit: "rem" };
 
-      const result = interpolateScale(from, to, 1);
+      const result = interpolateScale(from as any, to as any, 1);
 
       expect(result.value).toBe(2);
       expect(result.unit).toBe("rem");
@@ -365,7 +365,7 @@ describe("math.ts", () => {
       const from = { value: 0.25, unit: "" };
       const to = { value: 1, unit: "" };
 
-      const result = interpolateScale(from, to, 0.5);
+      const result = interpolateScale(from as any, to as any, 0.5);
 
       expect(result.value).toBeCloseTo(0.5, 5);
     });
@@ -374,7 +374,7 @@ describe("math.ts", () => {
       const from = { value: 0, unit: "" };
       const to = { value: 2, unit: "" };
 
-      expect(() => interpolateScale(from, to, 0.5)).toThrow(
+      expect(() => interpolateScale(from as any, to as any, 0.5)).toThrow(
         "Scale values must be positive numbers"
       );
     });
@@ -383,7 +383,7 @@ describe("math.ts", () => {
       const from = { value: -1, unit: "" };
       const to = { value: 2, unit: "" };
 
-      expect(() => interpolateScale(from, to, 0.5)).toThrow(
+      expect(() => interpolateScale(from as any, to as any, 0.5)).toThrow(
         "Scale values must be positive numbers"
       );
     });
@@ -392,7 +392,7 @@ describe("math.ts", () => {
       const from = { value: 1, unit: "" };
       const to = { value: 0, unit: "" };
 
-      expect(() => interpolateScale(from, to, 0.5)).toThrow(
+      expect(() => interpolateScale(from as any, to as any, 0.5)).toThrow(
         "Scale values must be positive numbers"
       );
     });
@@ -401,7 +401,7 @@ describe("math.ts", () => {
       const from = { value: 1, unit: "" };
       const to = { value: -2, unit: "" };
 
-      expect(() => interpolateScale(from, to, 0.5)).toThrow(
+      expect(() => interpolateScale(from as any, to as any, 0.5)).toThrow(
         "Scale values must be positive numbers"
       );
     });
@@ -413,7 +413,7 @@ describe("math.ts", () => {
         const from = { value: 350, unit: "deg" };
         const to = { value: 10, unit: "deg" };
 
-        const result = interpolateRotation(from, to, 0.5);
+        const result = interpolateRotation(from as any, to as any, 0.5);
 
         // With maintainRevolution=true, it goes from 350 to 10 directly: 350 + (10-350)*0.5 = 180
         expect(result.value).toBeCloseTo(180, 1);
@@ -424,7 +424,7 @@ describe("math.ts", () => {
         const from = { value: 45, unit: "deg" };
         const to = { value: 135, unit: "deg" };
 
-        const result = interpolateRotation(from, to, 0);
+        const result = interpolateRotation(from as any, to as any, 0);
 
         expect(result.value).toBe(45);
         expect(result.unit).toBe("deg");
@@ -434,7 +434,7 @@ describe("math.ts", () => {
         const from = { value: 45, unit: "deg" };
         const to = { value: 135, unit: "deg" };
 
-        const result = interpolateRotation(from, to, 1);
+        const result = interpolateRotation(from as any, to as any, 1);
 
         expect(result.value).toBe(135);
         expect(result.unit).toBe("deg");
@@ -444,7 +444,7 @@ describe("math.ts", () => {
         const from = { value: 350, unit: "deg" };
         const to = { value: 20, unit: "deg" };
 
-        const result = interpolateRotation(from, to, 0.25);
+        const result = interpolateRotation(from as any, to as any, 0.25);
 
         // With maintainRevolution=true: 350 + (20-350)*0.25 = 350 + (-330)*0.25 = 267.5
         expect(result.value).toBeCloseTo(267.5, 1);
@@ -458,7 +458,7 @@ describe("math.ts", () => {
         const from = { value: 10, unit: "deg" };
         const to = { value: 730, unit: "deg" }; // 720 + 10 = 2 full rotations + 10
 
-        const result = interpolateRotation(from, to, 0.5);
+        const result = interpolateRotation(from as any, to as any, 0.5);
 
         expect(result.value).toBe(370); // 10 + (720/2)
         expect(result.unit).toBe("deg");
@@ -474,7 +474,7 @@ describe("math.ts", () => {
           direction: "clockwise",
         };
 
-        const result = interpolateRotation(from, to, 0.5);
+        const result = interpolateRotation(from as any, to as any, 0.5);
 
         expect(result.value).toBeCloseTo(180, 1);
       });
@@ -487,7 +487,7 @@ describe("math.ts", () => {
           direction: "counterclockwise",
         };
 
-        const result = interpolateRotation(from, to, 0.5);
+        const result = interpolateRotation(from as any, to as any, 0.5);
 
         expect(result.value).toBeCloseTo(180, 1);
       });
@@ -500,7 +500,12 @@ describe("math.ts", () => {
           direction: "shortest",
         };
 
-        const result = interpolateRotation(from, to, 0.5, options);
+        const result = interpolateRotation(
+          from as any,
+          to as any,
+          0.5,
+          options
+        );
 
         expect(result.value).toBeCloseTo(0, 1);
       });
@@ -510,7 +515,7 @@ describe("math.ts", () => {
       const from = { value: -30, unit: "deg" };
       const to = { value: 30, unit: "deg" };
 
-      const result = interpolateRotation(from, to, 0.5);
+      const result = interpolateRotation(from as any, to as any, 0.5);
 
       // With maintainRevolution=true: -30 + (30-(-30))*0.5 = -30 + 30 = 0
       expect(result.value).toBeCloseTo(0, 1);
@@ -524,7 +529,7 @@ describe("math.ts", () => {
         direction: "shortest",
       };
 
-      const result = interpolateRotation(from, to, 0.5, options);
+      const result = interpolateRotation(from as any, to as any, 0.5, options);
 
       // Result is -45, which should be normalized to 315
       const normalizedResult =
@@ -538,7 +543,7 @@ describe("math.ts", () => {
       const from = { value: 0, unit: "px" };
       const to = { value: 100, unit: "px" };
 
-      const result = interpolateLinear(from, to, 0.5);
+      const result = interpolateLinear(from as any, to as any, 0.5);
 
       expect(result.value).toBe(50);
       expect(result.unit).toBe("px");
@@ -548,7 +553,7 @@ describe("math.ts", () => {
       const from = { value: 10, unit: "em" };
       const to = { value: 20, unit: "em" };
 
-      const result = interpolateLinear(from, to, 0);
+      const result = interpolateLinear(from as any, to as any, 0);
 
       expect(result.value).toBe(10);
       expect(result.unit).toBe("em");
@@ -558,7 +563,7 @@ describe("math.ts", () => {
       const from = { value: -5, unit: "rem" };
       const to = { value: 15, unit: "rem" };
 
-      const result = interpolateLinear(from, to, 1);
+      const result = interpolateLinear(from as any, to as any, 1);
 
       expect(result.value).toBe(15);
       expect(result.unit).toBe("rem");
@@ -568,7 +573,7 @@ describe("math.ts", () => {
       const from = { value: -10, unit: "px" };
       const to = { value: -20, unit: "px" };
 
-      const result = interpolateLinear(from, to, 0.5);
+      const result = interpolateLinear(from as any, to as any, 0.5);
 
       expect(result.value).toBe(-15);
       expect(result.unit).toBe("px");
@@ -578,7 +583,7 @@ describe("math.ts", () => {
       const from = { value: 0, unit: "%" };
       const to = { value: 100, unit: "%" };
 
-      const result = interpolateLinear(from, to, 0.25);
+      const result = interpolateLinear(from as any, to as any, 0.25);
 
       expect(result.value).toBe(25);
       expect(result.unit).toBe("%");
@@ -588,7 +593,7 @@ describe("math.ts", () => {
       const from = { value: 0, unit: "px" };
       const to = { value: 100, unit: "px" };
 
-      const result = interpolateLinear(from, to, 1.5);
+      const result = interpolateLinear(from as any, to as any, 1.5);
 
       expect(result.value).toBe(150);
       expect(result.unit).toBe("px");
@@ -598,7 +603,7 @@ describe("math.ts", () => {
       const from = { value: 50, unit: "px" };
       const to = { value: 100, unit: "px" };
 
-      const result = interpolateLinear(from, to, -0.5);
+      const result = interpolateLinear(from as any, to as any, -0.5);
 
       expect(result.value).toBe(25);
       expect(result.unit).toBe("px");
