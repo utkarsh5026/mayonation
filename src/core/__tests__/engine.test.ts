@@ -5,10 +5,12 @@ import { AnimationEngine } from "../engine";
 describe("AnimationEngine", () => {
   let onUpdate: ReturnType<typeof vi.fn>;
   let onComplete: ReturnType<typeof vi.fn>;
+  let onStart: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     onUpdate = vi.fn();
     onComplete = vi.fn();
+    onStart = vi.fn();
   });
 
   afterEach(() => {
@@ -21,6 +23,7 @@ describe("AnimationEngine", () => {
         duration: 1000,
         onUpdate,
         onComplete,
+        onStart,
       });
 
       expect(engine).toBeDefined();
@@ -81,7 +84,7 @@ describe("AnimationEngine", () => {
 
       engine.play();
       engine.pause();
-      
+
       expect(engine.isPlaying).toBe(false);
       expect(engine.isPaused).toBe(true);
     });
@@ -96,7 +99,7 @@ describe("AnimationEngine", () => {
       engine.play();
       engine.pause();
       engine.play();
-      
+
       expect(engine.isPlaying).toBe(true);
       expect(engine.isPaused).toBe(false);
     });
@@ -110,7 +113,7 @@ describe("AnimationEngine", () => {
 
       engine.play();
       engine.reset();
-      
+
       expect(engine.isPlaying).toBe(false);
       expect(engine.isPaused).toBe(false);
     });
@@ -124,9 +127,9 @@ describe("AnimationEngine", () => {
 
       engine.play();
       const wasPlaying = engine.isPlaying;
-      
+
       engine.play(); // Should not restart
-      
+
       expect(engine.isPlaying).toBe(wasPlaying);
     });
   });
@@ -165,7 +168,7 @@ describe("AnimationEngine", () => {
       engine.play();
       engine.reset();
       engine.reset(); // Second reset
-      
+
       expect(engine.isPlaying).toBe(false);
       expect(engine.isPaused).toBe(false);
     });
@@ -173,8 +176,10 @@ describe("AnimationEngine", () => {
 
   describe("Animation Frame Management", () => {
     it("should call requestAnimationFrame when starting", () => {
-      const rafSpy = vi.spyOn(global, "requestAnimationFrame").mockImplementation(() => 1);
-      
+      const rafSpy = vi
+        .spyOn(global, "requestAnimationFrame")
+        .mockImplementation(() => 1);
+
       const engine = new AnimationEngine({
         duration: 1000,
         onUpdate,
@@ -183,14 +188,18 @@ describe("AnimationEngine", () => {
 
       engine.play();
       expect(rafSpy).toHaveBeenCalled();
-      
+
       rafSpy.mockRestore();
     });
 
     it("should call cancelAnimationFrame when pausing", () => {
-      const rafSpy = vi.spyOn(global, "requestAnimationFrame").mockImplementation(() => 1);
-      const cancelSpy = vi.spyOn(global, "cancelAnimationFrame").mockImplementation(() => {});
-      
+      const rafSpy = vi
+        .spyOn(global, "requestAnimationFrame")
+        .mockImplementation(() => 1);
+      const cancelSpy = vi
+        .spyOn(global, "cancelAnimationFrame")
+        .mockImplementation(() => {});
+
       const engine = new AnimationEngine({
         duration: 1000,
         onUpdate,
@@ -199,17 +208,21 @@ describe("AnimationEngine", () => {
 
       engine.play();
       engine.pause();
-      
+
       expect(cancelSpy).toHaveBeenCalled();
-      
+
       rafSpy.mockRestore();
       cancelSpy.mockRestore();
     });
 
     it("should call cancelAnimationFrame when resetting", () => {
-      const rafSpy = vi.spyOn(global, "requestAnimationFrame").mockImplementation(() => 1);
-      const cancelSpy = vi.spyOn(global, "cancelAnimationFrame").mockImplementation(() => {});
-      
+      const rafSpy = vi
+        .spyOn(global, "requestAnimationFrame")
+        .mockImplementation(() => 1);
+      const cancelSpy = vi
+        .spyOn(global, "cancelAnimationFrame")
+        .mockImplementation(() => {});
+
       const engine = new AnimationEngine({
         duration: 1000,
         onUpdate,
@@ -218,9 +231,9 @@ describe("AnimationEngine", () => {
 
       engine.play();
       engine.reset();
-      
+
       expect(cancelSpy).toHaveBeenCalled();
-      
+
       rafSpy.mockRestore();
       cancelSpy.mockRestore();
     });
@@ -232,7 +245,7 @@ describe("AnimationEngine", () => {
       let mockNow = 0;
       vi.spyOn(performance, "now").mockImplementation(() => mockNow);
       vi.spyOn(global, "requestAnimationFrame").mockImplementation(() => 1);
-      
+
       const engine = new AnimationEngine({
         duration: 0,
         onUpdate,
@@ -246,9 +259,11 @@ describe("AnimationEngine", () => {
 
     it("should properly initialize timing", () => {
       let mockNow = 1000;
-      const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => mockNow);
+      const nowSpy = vi
+        .spyOn(performance, "now")
+        .mockImplementation(() => mockNow);
       vi.spyOn(global, "requestAnimationFrame").mockImplementation(() => 1);
-      
+
       const engine = new AnimationEngine({
         duration: 500,
         onUpdate,
@@ -256,7 +271,7 @@ describe("AnimationEngine", () => {
       });
 
       engine.play();
-      
+
       // Should have called performance.now() to get start time
       expect(nowSpy).toHaveBeenCalled();
     });
@@ -288,7 +303,7 @@ describe("AnimationEngine", () => {
     it("should accept callback functions", () => {
       const customUpdate = vi.fn();
       const customComplete = vi.fn();
-      
+
       const engine = new AnimationEngine({
         duration: 1000,
         onUpdate: customUpdate,
