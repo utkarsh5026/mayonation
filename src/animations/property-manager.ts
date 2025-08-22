@@ -4,9 +4,10 @@ import {
   isNumericValue,
   type AnimationValue,
   type ColorSpace,
-} from "./animation-val";
+} from "@/core/animation-val";
 import { type CSSPropertyName } from "../animations/css/units";
 import { convertColorValueToCssString } from "@/utils/color";
+import { StyleAnimator } from "./styles/style-animator";
 
 /**
  * A property that can be animated like a transform or a CSS property.
@@ -20,12 +21,14 @@ export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
  */
 export class PropertyManager {
   private readonly transformHandler: TransformHandler;
-  private readonly cssHandler: CSSHandler;
+  private readonly cssHandler: StyleAnimator;
   private readonly activeProperties: Set<AnimatableProperty> = new Set();
 
   constructor(private readonly element: HTMLElement, space?: ColorSpace) {
     this.transformHandler = new TransformHandler(element);
-    this.cssHandler = new CSSHandler(element, { colorSpace: space });
+    this.cssHandler = new StyleAnimator(element, {
+      colorSpace: space,
+    });
   }
 
   /**
