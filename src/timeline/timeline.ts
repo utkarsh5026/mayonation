@@ -1,6 +1,6 @@
 import { TimelineSegment, type TimelineSegmentConfig } from "./segment";
 import { AnimationOptions } from "@/core/config";
-import { resolveEaseFn } from "@/core/ease_fns";
+import { resolveEaseFn } from "@/core/ease-fns";
 import {
   type BaseKeyframe,
   type ProcessedBaseKeyframe,

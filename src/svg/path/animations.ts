@@ -1,4 +1,4 @@
-import { EaseFunction, resolveEaseFn } from "../../core/ease_fns";
+import { EaseFunction, resolveEaseFn } from "../../core/ease-fns";
 import {
   BaseKeyframeManager,
   type BaseKeyframe,

@@ -1,4 +1,4 @@
-import type { EaseFn, EaseFnName } from "./ease_fns";
+import type { EaseFn, EaseFnName } from "./ease-fns";
 import type { TransformConfig } from "../animations/transform/units";
 import type { CssPropertyConfig } from "../animations/css/units";
 import type { AnimationValue } from "./animation-val";

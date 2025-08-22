@@ -1,4 +1,4 @@
-import { EaseFunction } from "@/core/ease_fns";
+import { EaseFunction } from "@/core/ease-fns";
 
 /**
  * Base interface for all keyframe types.

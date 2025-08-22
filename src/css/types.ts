@@ -1,5 +1,5 @@
 import { ElementLike } from "@/utils/dom";
-import { EaseFunction } from "@/core/ease_fns";
+import { EaseFunction } from "@/core/ease-fns";
 
 /**
  * Animation value types where arrays represent keyframes

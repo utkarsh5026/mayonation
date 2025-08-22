@@ -1,4 +1,4 @@
-import { resolveEaseFn } from "@/core/ease_fns";
+import { resolveEaseFn } from "@/core/ease-fns";
 import type { AnimationOptions } from "@/core/config";
 import {
   type BaseKeyframe,

@@ -1,10 +1,6 @@
 import type { AnimationOptions } from "./config";
 import { Timeline, type TimelinePosition } from "@/timeline";
 import {
-  animate as animateCSS,
-  type CSSAnimationOptions,
-} from "../animations/api";
-import {
   draw as drawSvg,
   trace as traceSvg,
   type SvgDrawOptions,
@@ -12,7 +8,6 @@ import {
 } from "../svg/api";
 import { DrawingHandler, TraceHandler } from "../svg/path/animations";
 import { BaseKeyframeManager } from "../keyframe/keyframe";
-import { CSSKeyframeManager } from "../animations/keyframe";
 import { BaseKeyframe, ProcessedBaseKeyframe } from "@/keyframe";
 
 type AnimationAPI<

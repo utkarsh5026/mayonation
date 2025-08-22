@@ -1,5 +1,5 @@
 import type { AnimationProperties, ProcessedKeyframe } from "../types";
-import { EaseFunction, resolveEaseFn } from "@/core/ease_fns";
+import { EaseFunction, resolveEaseFn } from "@/core/ease-fns";
 import {
   PropertyManager,
   type AnimatableProperty,

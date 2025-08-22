@@ -9,7 +9,7 @@ import { PropertyAnimator } from "./internal/property-animator";
 import { StaggerManager } from "./internal/stagger-manager";
 import { ElementLike, ElementResolver } from "@/utils/dom";
 import { throwIf } from "@/utils/error";
-import { resolveEaseFn } from "@/core/ease_fns";
+import { resolveEaseFn } from "@/core/ease-fns";
 
 export class CSSAnimator {
   private readonly config: Required<CSSAnimationConfig>;

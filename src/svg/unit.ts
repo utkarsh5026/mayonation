@@ -1,4 +1,4 @@
-import type { EaseFn, EaseFnName } from "@/core/ease_fns";
+import type { EaseFn, EaseFnName } from "@/core/ease-fns";
 
 /**
  * Error types for path animation

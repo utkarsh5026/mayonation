@@ -1,5 +1,5 @@
 import { BaseKeyframe, ProcessedBaseKeyframe } from "./types";
-import { resolveEaseFn } from "@/core/ease_fns";
+import { resolveEaseFn } from "@/core/ease-fns";
 
 /**
  * Base class for managing keyframe animations.

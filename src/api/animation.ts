@@ -2,7 +2,7 @@ import type { ElementLike } from "@/utils/dom";
 import { clamp } from "@/utils/math";
 import { AnimationEngine } from "@/core";
 import { CSSAnimator, AnimationKeyframe, AnimationProperties } from "@/css";
-import { EaseFunction } from "@/core/ease_fns";
+import { EaseFunction } from "@/core/ease-fns";
 
 export interface MayonationConfig {
   target: ElementLike;
