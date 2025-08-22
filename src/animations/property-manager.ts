@@ -5,9 +5,8 @@ import {
   type AnimationValue,
   type ColorSpace,
 } from "@/core/animation-val";
-import { type CSSPropertyName } from "../animations/css/units";
 import { convertColorValueToCssString } from "@/utils/color";
-import { StyleAnimator } from "./styles/style-animator";
+import { StyleAnimator, CSSPropertyName } from "./styles";
 
 /**
  * A property that can be animated like a transform or a CSS property.
