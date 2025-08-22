@@ -1,4 +1,4 @@
-import type { AnimationKeyframe } from "./types";
+import type { AnimationKeyframe } from "@/css";
 import { throwIf } from "@/utils/error";
 export class AnimationValidator {
   /**
