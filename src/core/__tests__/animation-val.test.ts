@@ -1,5 +1,3 @@
-// src/core/animation-val.test.ts
-
 import {
   createValue,
   isNumericValue,
