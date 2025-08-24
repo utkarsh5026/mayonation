@@ -81,21 +81,15 @@ export class TransformHandler {
       `Unit mismatch for ${prop}: ${from.unit} vs ${to.unit}`
     );
 
-    return safeOperation(
-      () => {
-        if (isRotateProp(prop)) {
-          return interpolateRotation(from, to, clampedProgress);
-        }
+    if (isRotateProp(prop)) {
+      return interpolateRotation(from, to, clampedProgress);
+    }
 
-        if (isScaleProp(prop)) {
-          return interpolateScale(from, to, clampedProgress);
-        }
+    if (isScaleProp(prop)) {
+      return interpolateScale(from, to, clampedProgress);
+    }
 
-        return interpolateLinear(from, to, clampedProgress);
-      },
-      `Interpolation failed for ${prop}:`,
-      from
-    );
+    return interpolateLinear(from, to, clampedProgress);
   }
 
   /**
