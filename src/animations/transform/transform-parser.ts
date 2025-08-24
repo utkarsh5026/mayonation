@@ -8,8 +8,35 @@ import { NumericValue, createValue } from "@/core/animation-val";
 import { throwIf } from "@/utils/error";
 import type { AnimationUnit } from "@/utils/unit";
 import { parseValue } from "@/utils/unit";
+import { TRANSFORM_PROPERTIES } from "./props";
 
 export class TransformParser {
+  /**
+   * Valid units for different property types
+   */
+  private readonly validUnits = {
+    length: ["px", "em", "rem", "%", "vh", "vw", "vmin", "vmax"],
+    angle: ["deg", "rad", "grad", "turn"],
+    scale: [""],
+  };
+
+  /**
+   * Check if a unit is valid for a property
+   */
+  private isValidUnitForProperty(
+    property: TransformPropertyName,
+    unit: string
+  ): boolean {
+    if (isTranslateProp(property)) {
+      return this.validUnits.length.includes(unit);
+    }
+    if (isRotateProp(property) || isSkewProp(property)) {
+      return this.validUnits.angle.includes(unit);
+    }
+
+    return this.validUnits.scale.includes(unit);
+  }
+
   /**
    * Enhanced parsing with better error handling
    */
@@ -40,7 +67,21 @@ export class TransformParser {
 
     try {
       const parsed = parseValue(value);
-      return createValue.numeric(parsed.value, parsed.unit);
+
+      const expectedUnit = TRANSFORM_PROPERTIES.get(property);
+      if (
+        parsed.unit !== "" &&
+        !this.isValidUnitForProperty(property, parsed.unit)
+      ) {
+        throw new Error(
+          `Invalid unit "${parsed.unit}" for property "${property}". Expected units like "${expectedUnit}"`
+        );
+      }
+
+      return createValue.numeric(
+        parsed.value,
+        parsed.unit || expectedUnit || ""
+      );
     } catch (error) {
       throw new Error(
         `Invalid value "${value}" for property "${property}": ${error}`
