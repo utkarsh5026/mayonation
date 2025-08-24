@@ -1,8 +1,145 @@
 /// @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach, beforeAll } from "vitest";
 import { TransformHandler } from "../../transform/handler";
 import { createValue } from "../../../core/animation-val";
+
+// Mock DOMMatrix for testing environment
+class MockDOMMatrix {
+  public m11 = 1;
+  public m12 = 0;
+  public m13 = 0;
+  public m14 = 0;
+  public m21 = 0;
+  public m22 = 1;
+  public m23 = 0;
+  public m24 = 0;
+  public m31 = 0;
+  public m32 = 0;
+  public m33 = 1;
+  public m34 = 0;
+  public m41 = 0;
+  public m42 = 0;
+  public m43 = 0;
+  public m44 = 1;
+
+  public e = 0; // translateX (m41)
+  public f = 0; // translateY (m42)
+
+  constructor(
+    m11 = 1,
+    m12 = 0,
+    m13 = 0,
+    m14 = 0,
+    m21 = 0,
+    m22 = 1,
+    m23 = 0,
+    m24 = 0,
+    m31 = 0,
+    m32 = 0,
+    m33 = 1,
+    m34 = 0,
+    m41 = 0,
+    m42 = 0,
+    m43 = 0,
+    m44 = 1
+  ) {
+    this.m11 = m11;
+    this.m12 = m12;
+    this.m13 = m13;
+    this.m14 = m14;
+    this.m21 = m21;
+    this.m22 = m22;
+    this.m23 = m23;
+    this.m24 = m24;
+    this.m31 = m31;
+    this.m32 = m32;
+    this.m33 = m33;
+    this.m34 = m34;
+    this.m41 = m41;
+    this.m42 = m42;
+    this.m43 = m43;
+    this.m44 = m44;
+
+    this.e = m41;
+    this.f = m42;
+  }
+
+  translate(x: number, y: number, z = 0) {
+    const result = new MockDOMMatrix(
+      this.m11,
+      this.m12,
+      this.m13,
+      this.m14,
+      this.m21,
+      this.m22,
+      this.m23,
+      this.m24,
+      this.m31,
+      this.m32,
+      this.m33,
+      this.m34,
+      this.m41 + x,
+      this.m42 + y,
+      this.m43 + z,
+      this.m44
+    );
+    result.e = result.m41;
+    result.f = result.m42;
+    return result;
+  }
+
+  scale(x: number, y = x, z = 1) {
+    return new MockDOMMatrix(
+      this.m11 * x,
+      this.m12 * x,
+      this.m13 * x,
+      this.m14,
+      this.m21 * y,
+      this.m22 * y,
+      this.m23 * y,
+      this.m24,
+      this.m31 * z,
+      this.m32 * z,
+      this.m33 * z,
+      this.m34,
+      this.m41,
+      this.m42,
+      this.m43,
+      this.m44
+    );
+  }
+
+  rotate(x: number, y: number, z: number) {
+    const rad = (z * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    return new MockDOMMatrix(
+      cos,
+      sin,
+      0,
+      0,
+      -sin,
+      cos,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    );
+  }
+}
+
+beforeAll(() => {
+  // @ts-expect-error - Adding DOMMatrix to global for tests
+  global.DOMMatrix = MockDOMMatrix;
+});
 
 describe("TransformHandler - Edge Cases", () => {
   let element: HTMLElement;
