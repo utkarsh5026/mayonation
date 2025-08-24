@@ -155,6 +155,7 @@ export class StyleParser {
 
   /**
    * Parse width with supported units (px, %, em, rem, vh, vw).
+   * Throws for unsupported units or unitless values - these will be caught by safeOperation.
    *
    * @param value CSS width string
    */
@@ -164,6 +165,7 @@ export class StyleParser {
 
   /**
    * Parse height with supported units (px, %, em, rem, vh, vw).
+   * Throws for unsupported units or unitless values - these will be caught by safeOperation.
    *
    * @param value CSS height string
    */
