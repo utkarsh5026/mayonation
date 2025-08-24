@@ -14,3 +14,5 @@ export const angle = new NumericInterpolator("angle");
 export const clampProgress = (progress: number): number => {
   return Math.max(0, Math.min(1, progress));
 };
+
+export { NumericInterpolator, ColorInterpolator };
