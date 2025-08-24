@@ -1,4 +1,4 @@
-import { NumericInterpolator, ColorInterpolator } from "../interpolate";
+import { NumericInterpolator, ColorInterpolator } from "../interpolators";
 import { describe, expect, test } from "vitest";
 
 describe("NumericInterpolator", () => {
