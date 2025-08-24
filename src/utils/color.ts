@@ -43,7 +43,7 @@ export const parseColor = <T extends ColorSpace>(
  * Converts RGB color values to HSL color space.
  * Uses standard RGB to HSL conversion algorithm.
  */
-export const rgbToHsl = ({ r, g, b }: RGB): HSL => {
+export const rgbToHsl = ({ r, g, b, a }: RGB): HSL => {
   const normalR = r / 255;
   const normalG = g / 255;
   const normalB = b / 255;
@@ -76,6 +76,7 @@ export const rgbToHsl = ({ r, g, b }: RGB): HSL => {
     h: Math.round(h * 360),
     s: Math.round(s * 100),
     l: Math.round(l * 100),
+    a: a // Preserve the alpha channel
   };
 };
 
@@ -83,7 +84,7 @@ export const rgbToHsl = ({ r, g, b }: RGB): HSL => {
  * Converts HSL color values to RGB color space.
  * Uses standard HSL to RGB conversion algorithm.
  */
-export const hslToRgb = ({ h, s, l }: HSL): RGB => {
+export const hslToRgb = ({ h, s, l, a }: HSL): RGB => {
   const normalH = h / 360;
   const normalS = s / 100;
   const normalL = l / 100;
@@ -117,6 +118,7 @@ export const hslToRgb = ({ h, s, l }: HSL): RGB => {
     r: Math.round(r * 255),
     g: Math.round(g * 255),
     b: Math.round(b * 255),
+    a: a // Preserve the alpha channel
   };
 };
 
@@ -190,9 +192,15 @@ const parseHexColor = (hex: string): RGB => {
  * Parses an HSL color string into an HSL object.
  */
 const parseHSLString = (color: string): HSL => {
-  const values = color.match(/\d+/g)?.map(Number);
+  // Match both integers and decimals for hsl/hsla values
+  const values = color.match(/[\d.]+/g)?.map(Number);
   if (!values || values.length < 3) {
     throw new Error(`Invalid HSL color format: ${color}`);
   }
-  return { h: values[0], s: values[1], l: values[2] };
+  return { 
+    h: values[0], 
+    s: values[1], 
+    l: values[2], 
+    a: values.length > 3 ? values[3] : 1 
+  };
 };
