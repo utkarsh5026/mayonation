@@ -197,10 +197,13 @@ const parseHSLString = (color: string): HSL => {
   if (!values || values.length < 3) {
     throw new Error(`Invalid HSL color format: ${color}`);
   }
-  return { 
+  const result: HSL = { 
     h: values[0], 
     s: values[1], 
-    l: values[2], 
-    a: values.length > 3 ? values[3] : 1 
+    l: values[2]
   };
+  if (values.length > 3) {
+    result.a = values[3];
+  }
+  return result;
 };
