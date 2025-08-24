@@ -316,7 +316,7 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
       });
       
       // These should also be handled as validation errors
-      expect(() => manager.updateProperty("width", {} as any)).not.toThrow(); // Empty object might not throw
+      expect(() => manager.updateProperty("width", {} as any)).toThrow(); // Empty object now throws due to enhanced validation
       expect(() => manager.updateProperty("width", "string" as any)).toThrow();
     });
 
