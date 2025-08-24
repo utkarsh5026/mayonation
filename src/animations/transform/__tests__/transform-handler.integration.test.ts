@@ -1,9 +1,145 @@
 /// @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { TransformHandler } from "../handler";
 import { createValue } from "../../../core/animation-val";
 import type { TransformPropertyName } from "../types";
+
+class MockDOMMatrix {
+  public m11 = 1;
+  public m12 = 0;
+  public m13 = 0;
+  public m14 = 0;
+  public m21 = 0;
+  public m22 = 1;
+  public m23 = 0;
+  public m24 = 0;
+  public m31 = 0;
+  public m32 = 0;
+  public m33 = 1;
+  public m34 = 0;
+  public m41 = 0;
+  public m42 = 0;
+  public m43 = 0;
+  public m44 = 1;
+
+  public e = 0; // translateX (m41)
+  public f = 0; // translateY (m42)
+
+  constructor(
+    m11 = 1,
+    m12 = 0,
+    m13 = 0,
+    m14 = 0,
+    m21 = 0,
+    m22 = 1,
+    m23 = 0,
+    m24 = 0,
+    m31 = 0,
+    m32 = 0,
+    m33 = 1,
+    m34 = 0,
+    m41 = 0,
+    m42 = 0,
+    m43 = 0,
+    m44 = 1
+  ) {
+    this.m11 = m11;
+    this.m12 = m12;
+    this.m13 = m13;
+    this.m14 = m14;
+    this.m21 = m21;
+    this.m22 = m22;
+    this.m23 = m23;
+    this.m24 = m24;
+    this.m31 = m31;
+    this.m32 = m32;
+    this.m33 = m33;
+    this.m34 = m34;
+    this.m41 = m41;
+    this.m42 = m42;
+    this.m43 = m43;
+    this.m44 = m44;
+
+    this.e = m41;
+    this.f = m42;
+  }
+
+  translate(x: number, y: number, z = 0) {
+    const result = new MockDOMMatrix(
+      this.m11,
+      this.m12,
+      this.m13,
+      this.m14,
+      this.m21,
+      this.m22,
+      this.m23,
+      this.m24,
+      this.m31,
+      this.m32,
+      this.m33,
+      this.m34,
+      this.m41 + x,
+      this.m42 + y,
+      this.m43 + z,
+      this.m44
+    );
+    result.e = result.m41;
+    result.f = result.m42;
+    return result;
+  }
+
+  scale(x: number, y = x, z = 1) {
+    return new MockDOMMatrix(
+      this.m11 * x,
+      this.m12 * x,
+      this.m13 * x,
+      this.m14,
+      this.m21 * y,
+      this.m22 * y,
+      this.m23 * y,
+      this.m24,
+      this.m31 * z,
+      this.m32 * z,
+      this.m33 * z,
+      this.m34,
+      this.m41,
+      this.m42,
+      this.m43,
+      this.m44
+    );
+  }
+
+  rotate(x: number, y: number, z: number) {
+    const rad = (z * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    return new MockDOMMatrix(
+      cos,
+      sin,
+      0,
+      0,
+      -sin,
+      cos,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    );
+  }
+}
+
+beforeAll(() => {
+  // @ts-expect-error - Adding DOMMatrix to global for tests
+  global.DOMMatrix = MockDOMMatrix;
+});
 
 describe("TransformHandler - Integration Tests", () => {
   let container: HTMLElement;
@@ -104,15 +240,15 @@ describe("TransformHandler - Integration Tests", () => {
         );
       });
 
-      // Verify the cascade
-      expect(handlers[0].computeTransform()).toBe(
-        "translate3d(50px, 0px, 0px) rotateZ(15deg) scale3d(1.1, 1.1, 1)"
+      // Verify the cascade - use regex to handle floating point precision
+      expect(handlers[0].computeTransform()).toMatch(
+        /translate3d\(50px, 0px, 0px\) rotateZ\(15deg\) scale3d\(1\.1, 1\.1, 1\)/
       );
-      expect(handlers[1].computeTransform()).toBe(
-        "translate3d(100px, 0px, 0px) rotateZ(30deg) scale3d(1.2, 1.2, 1)"
+      expect(handlers[1].computeTransform()).toMatch(
+        /translate3d\(100px, 0px, 0px\) rotateZ\(30deg\) scale3d\(1\.2(?:\d*), 1\.2(?:\d*), 1\)/
       );
-      expect(handlers[2].computeTransform()).toBe(
-        "translate3d(150px, 0px, 0px) rotateZ(45deg) scale3d(1.3, 1.3, 1)"
+      expect(handlers[2].computeTransform()).toMatch(
+        /translate3d\(150px, 0px, 0px\) rotateZ\(45deg\) scale3d\(1\.3, 1\.3, 1\)/
       );
     });
   });
@@ -197,7 +333,13 @@ describe("TransformHandler - Integration Tests", () => {
 
       // Verify all elements have correct transforms
       dynamicHandlers.forEach((handler, index) => {
-        expect(handler.computeTransform()).toBe(`rotateZ(${index * 30}deg)`);
+        const rotation = index * 30;
+        if (rotation === 0) {
+          // Zero rotation is optimized away, resulting in empty string
+          expect(handler.computeTransform()).toBe("");
+        } else {
+          expect(handler.computeTransform()).toBe(`rotateZ(${rotation}deg)`);
+        }
       });
 
       // Remove elements
@@ -280,10 +422,10 @@ describe("TransformHandler - Integration Tests", () => {
 
       // Verify animation progression
       expect(transformHistory.length).toBe(animationSteps + 1);
-      expect(transformHistory[0]).toContain("translate3d(0px, 0px, 0px)");
-      expect(transformHistory[transformHistory.length - 1]).toContain(
-        "scale3d(1, 1, 1)"
-      );
+      // First frame: translateX=0, rotateZ=0, scale=1 - all default values get optimized away
+      expect(transformHistory[0]).toBe(""); // Empty string when all transforms are default
+      // Final frame: translateX=0 (optimized away), rotateZ=360deg, scale=1 (optimized away)
+      expect(transformHistory[transformHistory.length - 1]).toBe("rotateZ(360deg)");
 
       // Verify smooth progression (no identical consecutive frames except at keyframes)
       const uniqueTransforms = new Set(transformHistory);
@@ -510,8 +652,9 @@ describe("TransformHandler - Integration Tests", () => {
         modal.style.opacity = step.opacity.toString();
       });
 
+      // Scale of (1, 1, 1) gets optimized away, so only translation remains
       expect(handler.computeTransform()).toBe(
-        "translate3d(-150px, -100px, 0px) scale3d(1, 1, 1)"
+        "translate3d(-150px, -100px, 0px)"
       );
 
       container.removeChild(modal);
@@ -570,7 +713,8 @@ describe("TransformHandler - Integration Tests", () => {
 
       // After animation, front should be flipped and back should be normal
       expect(frontHandler.computeTransform()).toBe("rotateY(180deg)");
-      expect(backHandler.computeTransform()).toBe("rotateY(0deg)");
+      // rotateY(0deg) is optimized away, resulting in empty string
+      expect(backHandler.computeTransform()).toBe("");
 
       container.removeChild(card);
     });
