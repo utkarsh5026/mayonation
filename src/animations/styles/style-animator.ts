@@ -16,7 +16,7 @@ import { camelToDash } from "@/utils/string";
 import { StyleParser } from "./style-parser";
 import { convertColorValueToCssString } from "@/utils/color";
 import { COLOR_PROPERTIES, EXTENDED_ANIMATABLE_PROPERTIES } from "./prop-names";
-import { clamp } from "@/utils/math";
+import { clampProgress } from "@/utils/progress";
 
 /**
  * CSS property animation handler with comprehensive support
@@ -60,7 +60,7 @@ export class StyleAnimator {
     to: AnimationValue,
     progress: number
   ): AnimationValue {
-    const clampedProgress = clamp(progress, 0, 1);
+    const clampedProgress = clampProgress(progress);
 
     throwIf(
       from.type !== to.type,
@@ -151,7 +151,10 @@ export class StyleAnimator {
     const raf =
       typeof requestAnimationFrame !== "undefined"
         ? requestAnimationFrame
-        : (callback: FrameRequestCallback) => setTimeout(() => callback(0), 16);
+        : (callback: FrameRequestCallback) => {
+            const id = setTimeout(() => callback(performance.now()), 0);
+            return id;
+          };
 
     raf(() => {
       this.flushBatchedUpdates();
@@ -243,11 +246,25 @@ export class StyleAnimator {
   }
 
   /**
-   * Round value to specified precision
+   * Round value to specified precision, preserving extreme values
    */
   private roundToPrecision(value: number): number {
+    if (
+      !Number.isFinite(value) ||
+      Math.abs(value) < Number.MIN_VALUE * 10 ||
+      Math.abs(value) > Number.MAX_SAFE_INTEGER
+    ) {
+      return value;
+    }
+
     const factor = Math.pow(10, this.config.precision);
-    return Math.round(value * factor) / factor;
+    const rounded = Math.round(value * factor) / factor;
+
+    if (rounded === 0 && value !== 0) {
+      return value;
+    }
+
+    return rounded;
   }
 
   /**
