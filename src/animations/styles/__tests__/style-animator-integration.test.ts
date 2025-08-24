@@ -62,7 +62,7 @@ describe("StyleAnimator - Integration Tests", () => {
     });
 
     // Create animators for each element
-    animators = elements.map(el => new StyleAnimator(el));
+    animators = elements.map((el) => new StyleAnimator(el));
   });
 
   afterEach(() => {
@@ -73,10 +73,22 @@ describe("StyleAnimator - Integration Tests", () => {
   describe("multi-element coordination", () => {
     it("should handle independent animations on multiple elements", () => {
       const animations = [
-        { prop: "width" as CSSPropertyName, value: createValue.numeric(150, "px") },
-        { prop: "height" as CSSPropertyName, value: createValue.numeric(120, "px") },
-        { prop: "opacity" as CSSPropertyName, value: createValue.numeric(0.7, "") },
-        { prop: "borderRadius" as CSSPropertyName, value: createValue.numeric(20, "px") },
+        {
+          prop: "width" as CSSPropertyName,
+          value: createValue.numeric(150, "px"),
+        },
+        {
+          prop: "height" as CSSPropertyName,
+          value: createValue.numeric(120, "px"),
+        },
+        {
+          prop: "opacity" as CSSPropertyName,
+          value: createValue.numeric(0.7, ""),
+        },
+        {
+          prop: "borderRadius" as CSSPropertyName,
+          value: createValue.numeric(20, "px"),
+        },
       ];
 
       // Apply different animations to each element
@@ -97,15 +109,15 @@ describe("StyleAnimator - Integration Tests", () => {
 
     it("should handle synchronized animations across elements", () => {
       const syncedValue = createValue.numeric(0.5, "");
-      
+
       // Apply same opacity to all elements
-      animators.forEach(animator => {
+      animators.forEach((animator) => {
         animator.applyAnimatedPropertyValue("opacity", syncedValue);
       });
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
-          elements.forEach(element => {
+          elements.forEach((element) => {
             expect(element.style.opacity).toBe("0.5");
           });
           resolve();
@@ -127,7 +139,7 @@ describe("StyleAnimator - Integration Tests", () => {
       return new Promise<void>((resolve) => {
         setTimeout(() => {
           // All animations should have applied by now
-          elements.forEach(element => {
+          elements.forEach((element) => {
             expect(element.style.width).toBe("200px");
           });
           resolve();
@@ -141,9 +153,9 @@ describe("StyleAnimator - Integration Tests", () => {
       const increment = 25;
 
       animators.forEach((animator, index) => {
-        const width = createValue.numeric(baseValue + (index * increment), "px");
-        const height = createValue.numeric(baseValue + (index * increment), "px");
-        
+        const width = createValue.numeric(baseValue + index * increment, "px");
+        const height = createValue.numeric(baseValue + index * increment, "px");
+
         animator.applyAnimatedPropertyValue("width", width);
         animator.applyAnimatedPropertyValue("height", height);
       });
@@ -151,7 +163,7 @@ describe("StyleAnimator - Integration Tests", () => {
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           elements.forEach((element, index) => {
-            const expectedSize = baseValue + (index * increment);
+            const expectedSize = baseValue + index * increment;
             expect(element.style.width).toBe(`${expectedSize}px`);
             expect(element.style.height).toBe(`${expectedSize}px`);
           });
@@ -162,10 +174,10 @@ describe("StyleAnimator - Integration Tests", () => {
   });
 
   describe("complex animation scenarios", () => {
-    it("should simulate a complete fade and scale animation", () => {
+    it("should simulate a complete fade and scale animation", async () => {
       const element = elements[0];
       const animator = animators[0];
-      
+
       // Simulate animation keyframes
       const keyframes = [
         { opacity: 1, scale: 1 },
@@ -175,61 +187,68 @@ describe("StyleAnimator - Integration Tests", () => {
         { opacity: 0, scale: 1 },
       ];
 
-      let currentFrame = 0;
       const animationSteps = [];
 
-      const animateFrame = () => {
-        if (currentFrame < keyframes.length) {
-          const frame = keyframes[currentFrame];
-          
-          animator.applyAnimatedPropertyValue("opacity", createValue.numeric(frame.opacity, ""));
-          // Simulate scale using width/height
-          const scaledSize = 100 * frame.scale;
-          animator.applyAnimatedPropertyValue("width", createValue.numeric(scaledSize, "px"));
-          animator.applyAnimatedPropertyValue("height", createValue.numeric(scaledSize, "px"));
-          
-          animationSteps.push({
-            frame: currentFrame,
-            opacity: frame.opacity,
-            scale: frame.scale,
-          });
-          
-          currentFrame++;
-          
-          if (currentFrame < keyframes.length) {
-            requestAnimationFrame(animateFrame);
-          }
-        }
-      };
+      // Apply all keyframes sequentially without RAF recursion
+      for (let i = 0; i < keyframes.length; i++) {
+        const frame = keyframes[i];
 
-      return new Promise<void>((resolve) => {
-        animateFrame();
-        
-        // Wait for all frames to complete
-        setTimeout(() => {
-          expect(element.style.opacity).toBe("0");
-          expect(element.style.width).toBe("100px");
-          expect(element.style.height).toBe("100px");
-          expect(animationSteps.length).toBe(keyframes.length);
-          resolve();
-        }, 100);
-      });
+        animator.applyAnimatedPropertyValue(
+          "opacity",
+          createValue.numeric(frame.opacity, "")
+        );
+        // Simulate scale using width/height
+        const scaledSize = 100 * frame.scale;
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(scaledSize, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "height",
+          createValue.numeric(scaledSize, "px")
+        );
+
+        animationSteps.push({
+          frame: i,
+          opacity: frame.opacity,
+          scale: frame.scale,
+        });
+
+        // Small delay between frames
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      // Wait for all batched updates to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(element.style.opacity).toBe("0");
+      expect(element.style.width).toBe("100px");
+      expect(element.style.height).toBe("100px");
+      expect(animationSteps.length).toBe(keyframes.length);
     });
 
     it("should handle color transition animations", () => {
       const animator = animators[0];
       const element = elements[0];
-      
+
       // Create smooth color transition
       const startColor = createValue.rgb(255, 0, 0, 1);
       const endColor = createValue.rgb(0, 255, 0, 1);
       const steps = 10;
-      
+
       for (let i = 0; i <= steps; i++) {
         setTimeout(() => {
           const progress = i / steps;
-          const interpolatedColor = animator.interpolate("backgroundColor", startColor, endColor, progress);
-          animator.applyAnimatedPropertyValue("backgroundColor", interpolatedColor);
+          const interpolatedColor = animator.interpolate(
+            "backgroundColor",
+            startColor,
+            endColor,
+            progress
+          );
+          animator.applyAnimatedPropertyValue(
+            "backgroundColor",
+            interpolatedColor
+          );
         }, i * 20);
       }
 
@@ -244,29 +263,34 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle bounce animation simulation", () => {
       const animator = animators[0];
       const element = elements[0];
-      
+
       // Simulate bounce effect using easing
       const bounceEasing = (t: number): number => {
-        if (t < 1/2.75) {
+        if (t < 1 / 2.75) {
           return 7.5625 * t * t;
-        } else if (t < 2/2.75) {
-          return 7.5625 * (t -= 1.5/2.75) * t + 0.75;
-        } else if (t < 2.5/2.75) {
-          return 7.5625 * (t -= 2.25/2.75) * t + 0.9375;
+        } else if (t < 2 / 2.75) {
+          return 7.5625 * (t -= 1.5 / 2.75) * t + 0.75;
+        } else if (t < 2.5 / 2.75) {
+          return 7.5625 * (t -= 2.25 / 2.75) * t + 0.9375;
         } else {
-          return 7.5625 * (t -= 2.625/2.75) * t + 0.984375;
+          return 7.5625 * (t -= 2.625 / 2.75) * t + 0.984375;
         }
       };
 
       const startHeight = createValue.numeric(100, "px");
       const endHeight = createValue.numeric(150, "px");
       const steps = 20;
-      
+
       for (let i = 0; i <= steps; i++) {
         setTimeout(() => {
           const linearProgress = i / steps;
           const easedProgress = bounceEasing(linearProgress);
-          const interpolated = animator.interpolate("height", startHeight, endHeight, easedProgress);
+          const interpolated = animator.interpolate(
+            "height",
+            startHeight,
+            endHeight,
+            easedProgress
+          );
           animator.applyAnimatedPropertyValue("height", interpolated);
         }, i * 30);
       }
@@ -282,28 +306,48 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle complex multi-property card animation", () => {
       const animator = animators[0];
       const element = elements[0];
-      
+
       // Simulate card hover animation
       const animations = {
-        width: { from: createValue.numeric(100, "px"), to: createValue.numeric(110, "px") },
-        height: { from: createValue.numeric(100, "px"), to: createValue.numeric(110, "px") },
-        borderRadius: { from: createValue.numeric(8, "px"), to: createValue.numeric(12, "px") },
-        opacity: { from: createValue.numeric(1, ""), to: createValue.numeric(0.95, "") },
-        backgroundColor: { 
-          from: createValue.rgb(255, 100, 50, 1), 
-          to: createValue.rgb(255, 120, 70, 1) 
+        width: {
+          from: createValue.numeric(100, "px"),
+          to: createValue.numeric(110, "px"),
+        },
+        height: {
+          from: createValue.numeric(100, "px"),
+          to: createValue.numeric(110, "px"),
+        },
+        borderRadius: {
+          from: createValue.numeric(8, "px"),
+          to: createValue.numeric(12, "px"),
+        },
+        opacity: {
+          from: createValue.numeric(1, ""),
+          to: createValue.numeric(0.95, ""),
+        },
+        backgroundColor: {
+          from: createValue.rgb(255, 100, 50, 1),
+          to: createValue.rgb(255, 120, 70, 1),
         },
       };
 
       const steps = 15;
-      
+
       for (let i = 0; i <= steps; i++) {
         setTimeout(() => {
           const progress = i / steps;
-          
+
           Object.entries(animations).forEach(([prop, { from, to }]) => {
-            const interpolated = animator.interpolate(prop as CSSPropertyName, from, to, progress);
-            animator.applyAnimatedPropertyValue(prop as CSSPropertyName, interpolated);
+            const interpolated = animator.interpolate(
+              prop as CSSPropertyName,
+              from,
+              to,
+              progress
+            );
+            animator.applyAnimatedPropertyValue(
+              prop as CSSPropertyName,
+              interpolated
+            );
           });
         }, i * 20);
       }
@@ -338,7 +382,7 @@ describe("StyleAnimator - Integration Tests", () => {
           left: ${(i % 5) * 25}px;
           background: hsl(${i * 18}, 60%, 50%);
         `;
-        
+
         container.appendChild(element);
         manyElements.push(element);
         manyAnimators.push(new StyleAnimator(element));
@@ -348,25 +392,34 @@ describe("StyleAnimator - Integration Tests", () => {
 
       // Animate all elements simultaneously
       manyAnimators.forEach((animator, index) => {
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(30 + index, "px"));
-        animator.applyAnimatedPropertyValue("height", createValue.numeric(30 + index, "px"));
-        animator.applyAnimatedPropertyValue("opacity", createValue.numeric(0.5 + (index * 0.02), ""));
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(30 + index, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "height",
+          createValue.numeric(30 + index, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "opacity",
+          createValue.numeric(0.5 + index * 0.02, "")
+        );
       });
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           const endTime = performance.now();
           const duration = endTime - startTime;
-          
+
           expect(duration).toBeLessThan(100); // Should complete efficiently
-          
+
           // Verify all animations applied
           manyElements.forEach((element, index) => {
             expect(element.style.width).toBe(`${30 + index}px`);
           });
-          
+
           // Cleanup
-          manyElements.forEach(element => container.removeChild(element));
+          manyElements.forEach((element) => container.removeChild(element));
           resolve();
         });
       });
@@ -375,15 +428,21 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle rapid property updates across multiple elements", () => {
       const updateCount = 100;
       const startTime = performance.now();
-      
+
       for (let i = 0; i < updateCount; i++) {
         animators.forEach((animator, elementIndex) => {
           const value = i + elementIndex;
-          animator.applyAnimatedPropertyValue("width", createValue.numeric(100 + value, "px"));
-          animator.applyAnimatedPropertyValue("opacity", createValue.numeric(0.5 + (value * 0.001), ""));
+          animator.applyAnimatedPropertyValue(
+            "width",
+            createValue.numeric(100 + value, "px")
+          );
+          animator.applyAnimatedPropertyValue(
+            "opacity",
+            createValue.numeric(0.5 + value * 0.001, "")
+          );
         });
       }
-      
+
       const endTime = performance.now();
       expect(endTime - startTime).toBeLessThan(200); // Should handle efficiently
 
@@ -402,15 +461,15 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should maintain performance with frequent cache access", () => {
       const accessCount = 500;
       const startTime = performance.now();
-      
+
       for (let i = 0; i < accessCount; i++) {
-        animators.forEach(animator => {
+        animators.forEach((animator) => {
           animator.currentValue("width");
           animator.currentValue("height");
           animator.currentValue("opacity");
         });
       }
-      
+
       const endTime = performance.now();
       expect(endTime - startTime).toBeLessThan(100); // Cache should make this very fast
     });
@@ -420,7 +479,7 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle dynamic element creation and animation", () => {
       const dynamicElements: HTMLElement[] = [];
       const dynamicAnimators: StyleAnimator[] = [];
-      
+
       // Create elements dynamically and animate them immediately
       for (let i = 0; i < 5; i++) {
         const element = document.createElement("div");
@@ -432,27 +491,33 @@ describe("StyleAnimator - Integration Tests", () => {
           top: ${i * 60}px;
           left: 300px;
         `;
-        
+
         container.appendChild(element);
         dynamicElements.push(element);
-        
+
         const animator = new StyleAnimator(element);
         dynamicAnimators.push(animator);
-        
+
         // Immediately start animating
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(80, "px"));
-        animator.applyAnimatedPropertyValue("opacity", createValue.numeric(0.8, ""));
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(80, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "opacity",
+          createValue.numeric(0.8, "")
+        );
       }
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
-          dynamicElements.forEach(element => {
+          dynamicElements.forEach((element) => {
             expect(element.style.width).toBe("80px");
             expect(element.style.opacity).toBe("0.8");
           });
-          
+
           // Cleanup
-          dynamicElements.forEach(element => container.removeChild(element));
+          dynamicElements.forEach((element) => container.removeChild(element));
           resolve();
         });
       });
@@ -462,14 +527,14 @@ describe("StyleAnimator - Integration Tests", () => {
       // Create nested structure
       const parentDiv = document.createElement("div");
       const childDiv = document.createElement("div");
-      
+
       parentDiv.style.cssText = `
         width: 200px;
         height: 200px;
         position: relative;
         background: rgba(255, 0, 0, 0.3);
       `;
-      
+
       childDiv.style.cssText = `
         width: 100px;
         height: 100px;
@@ -478,24 +543,33 @@ describe("StyleAnimator - Integration Tests", () => {
         left: 50px;
         background: rgba(0, 255, 0, 0.3);
       `;
-      
+
       parentDiv.appendChild(childDiv);
       container.appendChild(parentDiv);
-      
+
       const parentAnimator = new StyleAnimator(parentDiv);
       const childAnimator = new StyleAnimator(childDiv);
-      
+
       // Animate both parent and child
-      parentAnimator.applyAnimatedPropertyValue("opacity", createValue.numeric(0.8, ""));
-      childAnimator.applyAnimatedPropertyValue("width", createValue.numeric(80, "px"));
-      childAnimator.applyAnimatedPropertyValue("backgroundColor", createValue.rgb(0, 0, 255, 0.5));
+      parentAnimator.applyAnimatedPropertyValue(
+        "opacity",
+        createValue.numeric(0.8, "")
+      );
+      childAnimator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(80, "px")
+      );
+      childAnimator.applyAnimatedPropertyValue(
+        "backgroundColor",
+        createValue.rgb(0, 0, 255, 0.5)
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           expect(parentDiv.style.opacity).toBe("0.8");
           expect(childDiv.style.width).toBe("80px");
           expect(childDiv.style.backgroundColor).toContain("rgb");
-          
+
           container.removeChild(parentDiv);
           resolve();
         });
@@ -504,20 +578,27 @@ describe("StyleAnimator - Integration Tests", () => {
 
     it("should handle element removal during animation", () => {
       const tempElement = document.createElement("div");
-      tempElement.style.cssText = "width: 100px; height: 100px; background: red;";
+      tempElement.style.cssText =
+        "width: 100px; height: 100px; background: red;";
       container.appendChild(tempElement);
-      
+
       const tempAnimator = new StyleAnimator(tempElement);
-      
+
       // Start animation
-      tempAnimator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
-      
+      tempAnimator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
+
       // Remove element immediately
       container.removeChild(tempElement);
-      
+
       // Should handle gracefully
       expect(() => {
-        tempAnimator.applyAnimatedPropertyValue("height", createValue.numeric(200, "px"));
+        tempAnimator.applyAnimatedPropertyValue(
+          "height",
+          createValue.numeric(200, "px")
+        );
         tempAnimator.reset();
       }).not.toThrow();
     });
@@ -525,7 +606,7 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle CSS class changes affecting computed styles", () => {
       const testElement = elements[0];
       const animator = animators[0];
-      
+
       // Add CSS class that changes styles
       const style = document.createElement("style");
       style.textContent = `
@@ -535,19 +616,27 @@ describe("StyleAnimator - Integration Tests", () => {
         }
       `;
       document.head.appendChild(style);
-      
+
       // Apply class
       testElement.className = "animated";
-      
+
       // Animate over the new styles
-      animator.applyAnimatedPropertyValue("backgroundColor", createValue.rgb(255, 255, 0, 1));
-      animator.applyAnimatedPropertyValue("borderWidth", createValue.numeric(5, "px"));
+      animator.applyAnimatedPropertyValue(
+        "backgroundColor",
+        createValue.rgb(255, 255, 0, 1)
+      );
+      animator.applyAnimatedPropertyValue(
+        "borderWidth",
+        createValue.numeric(5, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
-          expect(testElement.style.backgroundColor).toContain("rgb(255, 255, 0)");
+          expect(testElement.style.backgroundColor).toContain(
+            "rgb(255, 255, 0)"
+          );
           expect(testElement.style.borderWidth).toBe("5px");
-          
+
           document.head.removeChild(style);
           resolve();
         });
@@ -560,21 +649,27 @@ describe("StyleAnimator - Integration Tests", () => {
       // Set up one animator to fail
       const failingElement = elements[0];
       const workingElement = elements[1];
-      
+
       const originalSetProperty = failingElement.style.setProperty;
       failingElement.style.setProperty = vi.fn(() => {
         throw new Error("Simulated DOM error");
       });
-      
+
       // Apply animations to both
-      animators[0].applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
-      animators[1].applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
+      animators[0].applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
+      animators[1].applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(200, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           // Working element should succeed
           expect(workingElement.style.width).toBe("200px");
-          
+
           // Restore
           failingElement.style.setProperty = originalSetProperty;
           resolve();
@@ -585,10 +680,10 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should recover from intermittent DOM errors", () => {
       const element = elements[0];
       const animator = animators[0];
-      
+
       let callCount = 0;
       const originalSetProperty = element.style.setProperty;
-      
+
       element.style.setProperty = vi.fn((prop, value) => {
         callCount++;
         // Fail every other call
@@ -597,18 +692,30 @@ describe("StyleAnimator - Integration Tests", () => {
         }
         return originalSetProperty.call(element.style, prop, value);
       });
-      
+
       // Apply multiple properties - some should fail, some succeed
-      animator.applyAnimatedPropertyValue("width", createValue.numeric(150, "px"));
-      animator.applyAnimatedPropertyValue("height", createValue.numeric(150, "px"));
-      animator.applyAnimatedPropertyValue("opacity", createValue.numeric(0.7, ""));
-      animator.applyAnimatedPropertyValue("borderRadius", createValue.numeric(15, "px"));
+      animator.applyAnimatedPropertyValue(
+        "width",
+        createValue.numeric(150, "px")
+      );
+      animator.applyAnimatedPropertyValue(
+        "height",
+        createValue.numeric(150, "px")
+      );
+      animator.applyAnimatedPropertyValue(
+        "opacity",
+        createValue.numeric(0.7, "")
+      );
+      animator.applyAnimatedPropertyValue(
+        "borderRadius",
+        createValue.numeric(15, "px")
+      );
 
       return new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
           // Some properties should have been applied successfully
           expect(callCount).toBeGreaterThan(0);
-          
+
           element.style.setProperty = originalSetProperty;
           resolve();
         });
@@ -617,17 +724,20 @@ describe("StyleAnimator - Integration Tests", () => {
 
     it("should handle animation state corruption gracefully", () => {
       const animator = animators[0];
-      
+
       // Corrupt internal state
       (animator as any).propertyCache.set("width", {
         originalValue: null,
         currentValue: { type: "invalid" },
         isDirty: true,
       });
-      
+
       // Should handle gracefully and recover
       expect(() => {
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(200, "px"));
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(200, "px")
+        );
         animator.currentValue("width");
         animator.reset();
       }).not.toThrow();
@@ -638,31 +748,44 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should simulate a loading spinner animation", () => {
       const spinner = elements[0];
       const animator = animators[0];
-      
+
       // Create circular spinner animation using border-radius and opacity
       const spinFrames = 8;
       let currentFrame = 0;
-      
+
       const animateSpinner = () => {
         const progress = currentFrame / spinFrames;
         const opacity = 0.3 + (Math.sin(progress * Math.PI * 2) + 1) * 0.35; // Pulsing opacity
         const size = 40 + Math.sin(progress * Math.PI * 2) * 10; // Pulsing size
-        
-        animator.applyAnimatedPropertyValue("opacity", createValue.numeric(opacity, ""));
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(size, "px"));
-        animator.applyAnimatedPropertyValue("height", createValue.numeric(size, "px"));
-        animator.applyAnimatedPropertyValue("borderRadius", createValue.numeric(size / 2, "px"));
-        
+
+        animator.applyAnimatedPropertyValue(
+          "opacity",
+          createValue.numeric(opacity, "")
+        );
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(size, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "height",
+          createValue.numeric(size, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "borderRadius",
+          createValue.numeric(size / 2, "px")
+        );
+
         currentFrame = (currentFrame + 1) % spinFrames;
-        
-        if (currentFrame < 3) { // Run for 3 full cycles
+
+        if (currentFrame < 3) {
+          // Run for 3 full cycles
           setTimeout(animateSpinner, 100);
         }
       };
 
       return new Promise<void>((resolve) => {
         animateSpinner();
-        
+
         setTimeout(() => {
           // Should have completed animation
           expect(spinner.style.borderRadius).toBeTruthy();
@@ -684,10 +807,10 @@ describe("StyleAnimator - Integration Tests", () => {
         box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         transform: translate(-50%, -50%);
       `;
-      
+
       container.appendChild(modal);
       const modalAnimator = new StyleAnimator(modal);
-      
+
       // Simulate modal entrance: scale up and fade in
       const entranceSteps = [
         { opacity: 0, width: 250, height: 150 },
@@ -695,19 +818,28 @@ describe("StyleAnimator - Integration Tests", () => {
         { opacity: 0.7, width: 310, height: 210 },
         { opacity: 1, width: 300, height: 200 },
       ];
-      
+
       let stepIndex = 0;
-      
+
       const animateEntrance = () => {
         if (stepIndex < entranceSteps.length) {
           const step = entranceSteps[stepIndex];
-          
-          modalAnimator.applyAnimatedPropertyValue("opacity", createValue.numeric(step.opacity, ""));
-          modalAnimator.applyAnimatedPropertyValue("width", createValue.numeric(step.width, "px"));
-          modalAnimator.applyAnimatedPropertyValue("height", createValue.numeric(step.height, "px"));
-          
+
+          modalAnimator.applyAnimatedPropertyValue(
+            "opacity",
+            createValue.numeric(step.opacity, "")
+          );
+          modalAnimator.applyAnimatedPropertyValue(
+            "width",
+            createValue.numeric(step.width, "px")
+          );
+          modalAnimator.applyAnimatedPropertyValue(
+            "height",
+            createValue.numeric(step.height, "px")
+          );
+
           stepIndex++;
-          
+
           if (stepIndex < entranceSteps.length) {
             setTimeout(animateEntrance, 80);
           }
@@ -716,12 +848,12 @@ describe("StyleAnimator - Integration Tests", () => {
 
       return new Promise<void>((resolve) => {
         animateEntrance();
-        
+
         setTimeout(() => {
           expect(modal.style.opacity).toBe("1");
           expect(modal.style.width).toBe("300px");
           expect(modal.style.height).toBe("200px");
-          
+
           container.removeChild(modal);
           resolve();
         }, entranceSteps.length * 80 + 50);
@@ -742,19 +874,22 @@ describe("StyleAnimator - Integration Tests", () => {
         return layer;
       });
 
-      const layerAnimators = layers.map(layer => new StyleAnimator(layer));
-      
+      const layerAnimators = layers.map((layer) => new StyleAnimator(layer));
+
       // Simulate scrolling by moving layers at different speeds
       const scrollPositions = [0, 50, 100, 150, 200];
-      
+
       scrollPositions.forEach((scrollY, scrollIndex) => {
         setTimeout(() => {
           layerAnimators.forEach((animator, layerIndex) => {
-            const speed = 0.2 + (layerIndex * 0.3); // Different parallax speeds
+            const speed = 0.2 + layerIndex * 0.3; // Different parallax speeds
             const translateY = -scrollY * speed;
-            
+
             // We can't animate transform directly, so simulate with top position
-            animator.applyAnimatedPropertyValue("opacity", createValue.numeric(1 - scrollY * 0.002, ""));
+            animator.applyAnimatedPropertyValue(
+              "opacity",
+              createValue.numeric(1 - scrollY * 0.002, "")
+            );
           });
         }, scrollIndex * 100);
       });
@@ -765,9 +900,9 @@ describe("StyleAnimator - Integration Tests", () => {
           layers.forEach((layer, index) => {
             expect(parseFloat(layer.style.opacity)).toBeLessThan(1);
           });
-          
+
           // Cleanup
-          layers.forEach(layer => container.removeChild(layer));
+          layers.forEach((layer) => container.removeChild(layer));
           resolve();
         }, scrollPositions.length * 100 + 50);
       });
@@ -776,25 +911,37 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should simulate a card deck shuffle animation", () => {
       const cards = elements.slice(0, 3); // Use first 3 elements as cards
       const cardAnimators = animators.slice(0, 3);
-      
+
       // Simulate shuffle by moving cards to random positions
       const shuffleSteps = 5;
-      
+
       for (let step = 0; step < shuffleSteps; step++) {
         setTimeout(() => {
           cardAnimators.forEach((animator, cardIndex) => {
             const randomX = Math.random() * 200;
             const randomY = Math.random() * 100;
             const randomRotation = (Math.random() - 0.5) * 20; // Simulate rotation with skew
-            
+
             // Simulate movement and rotation
-            animator.applyAnimatedPropertyValue("opacity", createValue.numeric(0.7 + Math.random() * 0.3, ""));
-            animator.applyAnimatedPropertyValue("borderRadius", createValue.numeric(8 + Math.random() * 8, "px"));
-            
+            animator.applyAnimatedPropertyValue(
+              "opacity",
+              createValue.numeric(0.7 + Math.random() * 0.3, "")
+            );
+            animator.applyAnimatedPropertyValue(
+              "borderRadius",
+              createValue.numeric(8 + Math.random() * 8, "px")
+            );
+
             // Final step - return to positions
             if (step === shuffleSteps - 1) {
-              animator.applyAnimatedPropertyValue("opacity", createValue.numeric(1, ""));
-              animator.applyAnimatedPropertyValue("borderRadius", createValue.numeric(8, "px"));
+              animator.applyAnimatedPropertyValue(
+                "opacity",
+                createValue.numeric(1, "")
+              );
+              animator.applyAnimatedPropertyValue(
+                "borderRadius",
+                createValue.numeric(8, "px")
+              );
             }
           });
         }, step * 150);
@@ -802,7 +949,7 @@ describe("StyleAnimator - Integration Tests", () => {
 
       return new Promise<void>((resolve) => {
         setTimeout(() => {
-          cards.forEach(card => {
+          cards.forEach((card) => {
             expect(card.style.opacity).toBe("1");
             expect(card.style.borderRadius).toBe("8px");
           });
@@ -816,10 +963,10 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle different color spaces across multiple animators", () => {
       const rgbAnimator = new StyleAnimator(elements[0], { colorSpace: "rgb" });
       const hslAnimator = new StyleAnimator(elements[1], { colorSpace: "hsl" });
-      
+
       const redColor = createValue.rgb(255, 0, 0, 1);
       const blueColor = createValue.hsl(240, 100, 50, 1);
-      
+
       rgbAnimator.applyAnimatedPropertyValue("backgroundColor", redColor);
       hslAnimator.applyAnimatedPropertyValue("backgroundColor", blueColor);
 
@@ -835,9 +982,9 @@ describe("StyleAnimator - Integration Tests", () => {
     it("should handle different precision settings", () => {
       const lowPrecision = new StyleAnimator(elements[0], { precision: 1 });
       const highPrecision = new StyleAnimator(elements[1], { precision: 5 });
-      
+
       const preciseValue = createValue.numeric(123.456789, "px");
-      
+
       lowPrecision.applyAnimatedPropertyValue("width", preciseValue);
       highPrecision.applyAnimatedPropertyValue("width", preciseValue);
 
@@ -850,39 +997,42 @@ describe("StyleAnimator - Integration Tests", () => {
       });
     });
 
-    it("should handle mixed configuration scenarios", () => {
+    it("should handle mixed configuration scenarios", async () => {
       const configs: CSSHandlerOptions[] = [
         { colorSpace: "rgb", precision: 1, useGPUAcceleration: true },
         { colorSpace: "hsl", precision: 3, useGPUAcceleration: false },
         { colorSpace: "rgb", precision: 0, useGPUAcceleration: true },
         {}, // Default config
       ];
-      
-      const configAnimators = elements.map((element, index) => 
-        new StyleAnimator(element, configs[index])
+
+      const configAnimators = elements.map(
+        (element, index) => new StyleAnimator(element, configs[index])
       );
-      
+
       // Apply same animation to all with different configs
       configAnimators.forEach((animator, index) => {
-        animator.applyAnimatedPropertyValue("width", createValue.numeric(150.555, "px"));
-        animator.applyAnimatedPropertyValue("backgroundColor", createValue.rgb(128, 64, 192, 1));
+        animator.applyAnimatedPropertyValue(
+          "width",
+          createValue.numeric(150.555, "px")
+        );
+        animator.applyAnimatedPropertyValue(
+          "backgroundColor",
+          createValue.rgb(128, 64, 192, 1)
+        );
       });
 
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          // Different precision should result in different values
-          expect(elements[0].style.width).toBe("150.6px"); // precision: 1
-          expect(elements[1].style.width).toBe("150.556px"); // precision: 3
-          expect(elements[2].style.width).toBe("151px"); // precision: 0
-          expect(elements[3].style.width).toBe("150.556px"); // default precision: 3
-          
-          // All should have background colors applied
-          elements.forEach(element => {
-            expect(element.style.backgroundColor).toContain("rgb");
-          });
-          
-          resolve();
-        });
+      // Wait for batched updates
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Different precision should result in different values
+      expect(elements[0].style.width).toBe("150.6px"); // precision: 1
+      expect(elements[1].style.width).toBe("150.555px"); // precision: 3
+      expect(elements[2].style.width).toBe("151px"); // precision: 0
+      expect(elements[3].style.width).toBe("150.555px"); // default precision: 3
+
+      // All should have background colors applied
+      elements.forEach((element) => {
+        expect(element.style.backgroundColor).toContain("rgb");
       });
     });
   });
