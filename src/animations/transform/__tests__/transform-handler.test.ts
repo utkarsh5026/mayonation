@@ -1,9 +1,218 @@
 /// @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  vi,
+  afterEach,
+  beforeAll,
+} from "vitest";
 import type { TransformPropertyName } from "../types";
 import { TransformHandler } from "../handler";
 import { createValue, NumericValue } from "../../../core/animation-val";
+
+class MockDOMMatrix {
+  public m11 = 1;
+  public m12 = 0;
+  public m13 = 0;
+  public m14 = 0;
+  public m21 = 0;
+  public m22 = 1;
+  public m23 = 0;
+  public m24 = 0;
+  public m31 = 0;
+  public m32 = 0;
+  public m33 = 1;
+  public m34 = 0;
+  public m41 = 0;
+  public m42 = 0;
+  public m43 = 0;
+  public m44 = 1;
+
+  public e = 0; // translateX (m41)
+  public f = 0; // translateY (m42)
+
+  constructor(
+    m11OrTransformString?: number | string,
+    m12 = 0,
+    m13 = 0,
+    m14 = 0,
+    m21 = 0,
+    m22 = 1,
+    m23 = 0,
+    m24 = 0,
+    m31 = 0,
+    m32 = 0,
+    m33 = 1,
+    m34 = 0,
+    m41 = 0,
+    m42 = 0,
+    m43 = 0,
+    m44 = 1
+  ) {
+    // Handle matrix string parsing
+    if (typeof m11OrTransformString === "string") {
+      this.parseMatrixString(m11OrTransformString);
+    } else {
+      this.m11 = m11OrTransformString ?? 1;
+      this.m12 = m12;
+      this.m13 = m13;
+      this.m14 = m14;
+      this.m21 = m21;
+      this.m22 = m22;
+      this.m23 = m23;
+      this.m24 = m24;
+      this.m31 = m31;
+      this.m32 = m32;
+      this.m33 = m33;
+      this.m34 = m34;
+      this.m41 = m41;
+      this.m42 = m42;
+      this.m43 = m43;
+      this.m44 = m44;
+
+      this.e = m41;
+      this.f = m42;
+    }
+  }
+
+  private parseMatrixString(transformString: string) {
+    // Parse 2D matrix: matrix(a, b, c, d, tx, ty)
+    const matrixMatch = transformString.match(/matrix\(([^)]+)\)/);
+    if (matrixMatch) {
+      const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+      if (values.length === 6) {
+        this.m11 = values[0]; // a
+        this.m12 = values[1]; // b
+        this.m13 = 0;
+        this.m14 = 0;
+        this.m21 = values[2]; // c
+        this.m22 = values[3]; // d
+        this.m23 = 0;
+        this.m24 = 0;
+        this.m31 = 0;
+        this.m32 = 0;
+        this.m33 = 1;
+        this.m34 = 0;
+        this.m41 = values[4]; // tx
+        this.m42 = values[5]; // ty
+        this.m43 = 0;
+        this.m44 = 1;
+
+        this.e = this.m41;
+        this.f = this.m42;
+        return;
+      }
+    }
+
+    // Default to identity matrix if parsing fails
+    this.m11 = 1;
+    this.m12 = 0;
+    this.m13 = 0;
+    this.m14 = 0;
+    this.m21 = 0;
+    this.m22 = 1;
+    this.m23 = 0;
+    this.m24 = 0;
+    this.m31 = 0;
+    this.m32 = 0;
+    this.m33 = 1;
+    this.m34 = 0;
+    this.m41 = 0;
+    this.m42 = 0;
+    this.m43 = 0;
+    this.m44 = 1;
+    this.e = 0;
+    this.f = 0;
+  }
+
+  translate(x: number, y: number, z = 0) {
+    const result = new MockDOMMatrix(
+      this.m11,
+      this.m12,
+      this.m13,
+      this.m14,
+      this.m21,
+      this.m22,
+      this.m23,
+      this.m24,
+      this.m31,
+      this.m32,
+      this.m33,
+      this.m34,
+      this.m41 + x,
+      this.m42 + y,
+      this.m43 + z,
+      this.m44
+    );
+    result.e = result.m41;
+    result.f = result.m42;
+    return result;
+  }
+
+  scale(x: number, y = x, z = 1) {
+    return new MockDOMMatrix(
+      this.m11 * x,
+      this.m12 * x,
+      this.m13 * x,
+      this.m14,
+      this.m21 * y,
+      this.m22 * y,
+      this.m23 * y,
+      this.m24,
+      this.m31 * z,
+      this.m32 * z,
+      this.m33 * z,
+      this.m34,
+      this.m41,
+      this.m42,
+      this.m43,
+      this.m44
+    );
+  }
+
+  rotate(x: number, y: number, z: number) {
+    const rad = (z * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    return new MockDOMMatrix(
+      cos,
+      sin,
+      0,
+      0,
+      -sin,
+      cos,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    );
+  }
+}
+
+beforeAll(() => {
+  // @ts-expect-error - Adding DOMMatrix to global for tests
+  global.DOMMatrix = MockDOMMatrix;
+
+  // Mock getComputedStyle to return element's actual transform
+  const originalGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = (element: Element) => {
+    const htmlElement = element as HTMLElement;
+    return {
+      ...originalGetComputedStyle(element),
+      transform: htmlElement.style.transform || "none",
+    } as CSSStyleDeclaration;
+  };
+});
 
 describe("TransformHandler", () => {
   let element: HTMLElement;
@@ -599,12 +808,27 @@ describe("TransformHandler", () => {
       handler.updateTransform("skewX", createValue.numeric(10, "deg"));
 
       const result = handler.computeTransform();
-      const parts = result.split(" ");
 
-      expect(parts[0]).toContain("translate3d");
-      expect(parts[1]).toContain("rotateZ");
-      expect(parts[2]).toContain("scale3d");
-      expect(parts[3]).toContain("skew");
+      // Extract transform functions using regex instead of simple split
+      const translateMatch = result.match(/translate3d\([^)]+\)/);
+      const rotateMatch = result.match(/rotateZ\([^)]+\)/);
+      const scaleMatch = result.match(/scale3d\([^)]+\)/);
+      const skewMatch = result.match(/skew\([^)]+\)/);
+
+      expect(translateMatch).not.toBeNull();
+      expect(rotateMatch).not.toBeNull();
+      expect(scaleMatch).not.toBeNull();
+      expect(skewMatch).not.toBeNull();
+
+      // Check order by finding index positions
+      const translateIndex = result.indexOf(translateMatch![0]);
+      const rotateIndex = result.indexOf(rotateMatch![0]);
+      const scaleIndex = result.indexOf(scaleMatch![0]);
+      const skewIndex = result.indexOf(skewMatch![0]);
+
+      expect(translateIndex).toBeLessThan(rotateIndex);
+      expect(rotateIndex).toBeLessThan(scaleIndex);
+      expect(scaleIndex).toBeLessThan(skewIndex);
     });
   });
 
