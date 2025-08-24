@@ -16,6 +16,7 @@ import { camelToDash } from "@/utils/string";
 import { StyleParser } from "./style-parser";
 import { convertColorValueToCssString } from "@/utils/color";
 import { COLOR_PROPERTIES, EXTENDED_ANIMATABLE_PROPERTIES } from "./prop-names";
+import { clamp } from "@/utils/math";
 
 /**
  * CSS property animation handler with comprehensive support
@@ -33,9 +34,16 @@ export class StyleAnimator {
 
   constructor(targetElement: HTMLElement, options: CSSHandlerOptions = {}) {
     this.targetElement = targetElement;
-    this.elementComputedStyles = window.getComputedStyle(targetElement);
+    this.elementComputedStyles = safeOperation(
+      () => window.getComputedStyle(targetElement),
+      "Failed to get computed styles:",
+      {
+        getPropertyValue: () => "",
+        fontSize: "16px",
+      } as any
+    );
     this.config = {
-      colorSpace: options.colorSpace ?? "hsl",
+      colorSpace: options.colorSpace ?? "rgb",
       precision: options.precision ?? 3,
       useGPUAcceleration: options.useGPUAcceleration ?? true,
     };
@@ -52,10 +60,7 @@ export class StyleAnimator {
     to: AnimationValue,
     progress: number
   ): AnimationValue {
-    throwIf(
-      progress < 0 || progress > 1,
-      `Invalid progress value: ${progress}. Must be between 0 and 1.`
-    );
+    const clampedProgress = clamp(progress, 0, 1);
 
     throwIf(
       from.type !== to.type,
@@ -65,17 +70,17 @@ export class StyleAnimator {
     return safeOperation(
       () => {
         if (isColorValue(from) && isColorValue(to)) {
-          return this.interpolateColor(from, to, progress);
+          return this.interpolateColor(from, to, clampedProgress);
         }
 
         if (isNumericValue(from) && isNumericValue(to)) {
-          return this.interpolateNumeric(from, to, progress);
+          return this.interpolateNumeric(from, to, clampedProgress);
         }
 
         throw new Error(`Unsupported value type for property: ${property}`);
       },
       `Interpolation failed for ${property}:`,
-      progress < 0.5 ? from : to
+      clampedProgress < 0.5 ? from : to
     );
   }
 
@@ -141,7 +146,14 @@ export class StyleAnimator {
     if (this.updateScheduled) return;
 
     this.updateScheduled = true;
-    requestAnimationFrame(() => {
+
+    // Use requestAnimationFrame with fallback for environments without it
+    const raf =
+      typeof requestAnimationFrame !== "undefined"
+        ? requestAnimationFrame
+        : (callback: FrameRequestCallback) => setTimeout(() => callback(0), 16);
+
+    raf(() => {
       this.flushBatchedUpdates();
       this.updateScheduled = false;
     });
@@ -218,7 +230,7 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced numeric interpolation
+   * Enhanced numeric interpolation - precision rounding only applied when converting to CSS strings
    */
   private interpolateNumeric(
     from: NumericValue,
@@ -226,8 +238,8 @@ export class StyleAnimator {
     progress: number
   ): NumericValue {
     const value = linear.interpolate(from.value, to.value, progress);
-    const roundedValue = this.roundToPrecision(value);
-    return createValue.numeric(roundedValue, from.unit);
+    // Don't apply precision rounding here - only when converting to CSS string
+    return createValue.numeric(value, from.unit);
   }
 
   /**
@@ -264,7 +276,11 @@ export class StyleAnimator {
   }
 
   private getComputedVal(property: CSSPropertyName): string {
-    return this.elementComputedStyles.getPropertyValue(camelToDash(property));
+    return safeOperation(
+      () => this.elementComputedStyles.getPropertyValue(camelToDash(property)),
+      `Failed to get computed value for ${property}:`,
+      "" // Fallback to empty string if getPropertyValue fails
+    );
   }
 
   /**
@@ -293,21 +309,31 @@ export class StyleAnimator {
    */
   private createConversionContext(): ConversionContext {
     const parentElement = this.targetElement.parentElement;
-    const parentRect = parentElement?.getBoundingClientRect() ?? {
-      width: 0,
-      height: 0,
-    };
+    const parentRect = safeOperation(
+      () => parentElement?.getBoundingClientRect() ?? { width: 0, height: 0 },
+      "Failed to get parent bounding rect:",
+      { width: 0, height: 0 }
+    );
+
+    const fontSize = safeOperation(
+      () => parseFloat(this.elementComputedStyles.fontSize) || 16,
+      "Failed to get font size:",
+      16
+    );
+
+    const viewportSize = safeOperation(
+      () => ({ width: window.innerWidth, height: window.innerHeight }),
+      "Failed to get viewport size:",
+      { width: 1024, height: 768 }
+    );
 
     return {
       parentSize: {
         width: parentRect.width,
         height: parentRect.height,
       },
-      fontSize: parseFloat(this.elementComputedStyles.fontSize) || 16,
-      viewportSize: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      },
+      fontSize,
+      viewportSize,
     };
   }
 
