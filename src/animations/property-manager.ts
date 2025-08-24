@@ -3,6 +3,8 @@ import {
   NumericValue,
   type AnimationValue,
   type ColorSpace,
+  isRGBColor,
+  isHSLColor,
 } from "@/core/animation-val";
 import { StyleAnimator, CSSPropertyName } from "./styles";
 import { TransformHandler, TransformPropertyName } from "./transform";
@@ -382,8 +384,56 @@ export class PropertyManager {
   }
 
   private validateValue(value: AnimationValue, property: string): void {
-    if (!value || typeof value !== "object") {
-      throw new Error(`Invalid value for property ${property}`);
+    throwIf(
+      !value || typeof value !== "object",
+      `Invalid value for property ${property}`
+    );
+
+    throwIf(
+      !value.type,
+      `Invalid AnimationValue: missing type for property ${property}`
+    );
+
+    if (
+      value.type === "numeric" &&
+      (typeof value.value !== "number" || !isFinite(value.value))
+    ) {
+      throw new Error(`Invalid numeric value for property ${property}`);
+    }
+
+    if (value.type === "color") {
+      if (!value.value || typeof value.value !== "object") {
+        throw new Error(`Invalid color value for property ${property}`);
+      }
+
+      const colorValue = value.value;
+      if (isRGBColor(colorValue)) {
+        if (
+          typeof colorValue.r !== "number" ||
+          typeof colorValue.g !== "number" ||
+          typeof colorValue.b !== "number" ||
+          typeof colorValue.a !== "number"
+        ) {
+          throw new Error(`Invalid RGB color value for property ${property}`);
+        }
+      } else if (isHSLColor(colorValue)) {
+        if (
+          typeof colorValue.h !== "number" ||
+          typeof colorValue.s !== "number" ||
+          typeof colorValue.l !== "number" ||
+          typeof colorValue.a !== "number"
+        ) {
+          throw new Error(`Invalid HSL color value for property ${property}`);
+        }
+      }
+    }
+
+    if (!["numeric", "color"].includes((value as any).type)) {
+      throw new Error(
+        `Unknown AnimationValue type: ${
+          (value as any).type
+        } for property ${property}`
+      );
     }
 
     if (this.isTransformProperty(property) && !isNumericValue(value)) {
