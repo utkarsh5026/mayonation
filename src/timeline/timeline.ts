@@ -169,7 +169,8 @@ export class Timeline {
           return;
         }
 
-        const localProgress = (currentTime - startTime) / animator.totalDuration;
+        const localProgress =
+          (currentTime - startTime) / animator.totalDuration;
         animator.update(clamp(localProgress, 0, 1));
       } catch (error) {
         console.error(`Timeline animator update error:`, error);
@@ -184,7 +185,7 @@ export class Timeline {
       endTime: end,
       id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     });
-    
+
     // Update total duration and last added time
     this.totalDuration = Math.max(this.totalDuration, end);
     this.lastAddedTime = end;
@@ -195,7 +196,7 @@ export class Timeline {
     if (typeof position === "number") return position;
     if (position === "<") return 0;
     if (position === ">") return this.totalDuration;
-    
+
     if (typeof position === "string") {
       if (position.startsWith("+=")) {
         return this.lastAddedTime + parseFloat(position.slice(2));
@@ -204,7 +205,7 @@ export class Timeline {
         return this.lastAddedTime - parseFloat(position.slice(2));
       }
     }
-    
+
     return this.lastAddedTime;
   }
 
