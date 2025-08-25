@@ -104,6 +104,11 @@ describe("CSSAnimator", () => {
         isActive: true,
         isComplete: false,
       }),
+      getElementProgressAtTime: vi.fn().mockReturnValue({
+        progress: 0.5,
+        isActive: true,
+        isComplete: false,
+      }),
       getTotalDuration: vi.fn().mockReturnValue(2000),
     };
     MockedStaggerManager.mockReturnValue(mockStaggerManager);
@@ -208,7 +213,7 @@ describe("CSSAnimator", () => {
       expect(() => new CSSAnimator(baseConfig)).toThrow();
       expect(mockedThrowIf).toHaveBeenCalledWith(
         true,
-        "Target must resolve to at least one HTMLElement"
+        "Target must resolve to at least one HTMLElement or SVGElement"
       );
     });
 
@@ -367,7 +372,9 @@ describe("CSSAnimator", () => {
     });
 
     it("should only update active or complete elements", () => {
-      mockStaggerManager.getElementProgressAtTime
+      // Reset the mock to ensure clean state
+      mockStaggerManager.getElementProgressAtTime = vi
+        .fn()
         .mockReturnValueOnce({
           progress: 0.3,
           isActive: true,
@@ -549,7 +556,7 @@ describe("CSSAnimator", () => {
         target: ".test",
         duration: 1000,
         to: {
-          opacity: (index) => (index === 0 ? 0.5 : [0, 1]),
+          opacity: (index) => (index === 0 ? 0.5 : [0, 1]) as any,
           translateX: () => "100px",
         },
       };
@@ -592,7 +599,7 @@ describe("CSSAnimator", () => {
       MockedElementResolver.resolve.mockReturnValue([]);
 
       expect(() => new CSSAnimator(baseConfig)).toThrow(
-        "Target must resolve to at least one HTMLElement"
+        "Target must resolve to at least one HTMLElement or SVGElement"
       );
     });
   });
@@ -600,22 +607,30 @@ describe("CSSAnimator", () => {
   describe("Integration Scenarios", () => {
     it("should work with staggered animations", () => {
       const config = { ...baseConfig, stagger: 100 };
-      mockStaggerManager.getElementProgressAtTime
-        .mockReturnValueOnce({
-          progress: 0.5,
-          isActive: true,
-          isComplete: false,
-        })
-        .mockReturnValueOnce({
-          progress: 0.2,
-          isActive: true,
-          isComplete: false,
-        })
-        .mockReturnValueOnce({
-          progress: 0,
-          isActive: false,
-          isComplete: false,
-        });
+
+      // Create a fresh mock for this test
+      const freshStaggerManager = {
+        getElementProgressAtTime: vi
+          .fn()
+          .mockReturnValueOnce({
+            progress: 0.5,
+            isActive: true,
+            isComplete: false,
+          })
+          .mockReturnValueOnce({
+            progress: 0.2,
+            isActive: true,
+            isComplete: false,
+          })
+          .mockReturnValueOnce({
+            progress: 0,
+            isActive: false,
+            isComplete: false,
+          }),
+        getTotalDuration: vi.fn().mockReturnValue(2000),
+      };
+
+      MockedStaggerManager.mockReturnValue(freshStaggerManager as any);
 
       const animator = new CSSAnimator(config);
       animator.update(0.5);
