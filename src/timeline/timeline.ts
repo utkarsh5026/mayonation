@@ -5,13 +5,21 @@ import { ElementLike } from "@/utils/dom";
 import { EaseFunction } from "@/core/ease-fns";
 import { clamp } from "@/utils/math";
 
-interface TimelineItem {
+export interface TimelineItem {
   animator: CSSAnimator;
   startTime: number;
   endTime: number;
   id: string;
 }
 
+/**
+ * High-level animation timeline.
+ *
+ * - Schedules multiple CSS animations on one clock.
+ * - Supports placement tokens ("<", ">", "+=x", "-=x") or absolute times.
+ * - Controls playback (play, pause, resume, seek, reset).
+ * - Emits lifecycle events: start, update, complete, pause, resume.
+ */
 export class Timeline {
   private items: TimelineItem[] = [];
   private engine: AnimationEngine | null = null;
@@ -19,10 +27,25 @@ export class Timeline {
   private lastAddedTime: number = 0;
   private eventCallbacks: Map<string, Function[]> = new Map();
 
+  /**
+   * Create a timeline.
+   * @param options.loop If true, restarts when completed.
+   */
   constructor(private options: { loop?: boolean } = {}) {}
 
   /**
-   * Add CSS animation to timeline with enhanced property support
+   * Add a CSS animation to the timeline.
+   *
+   * Usage:
+   * - position "<" at time 0
+   * - position ">" at current end
+   * - position "+=500" 500ms after last add
+   * - position "-=250" 250ms before last add
+   *
+   * @param target Elements to animate (selector, element, or list).
+   * @param config Animation config: duration, delay, stagger, ease, from/to, keyframes.
+   * @param position Optional placement token or absolute ms.
+   * @returns this (chainable)
    */
   add(
     target: ElementLike,
@@ -51,6 +74,11 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Start playback (no-op if already playing).
+   * Triggers start/update/complete events as time advances.
+   * @returns this
+   */
   play(): Timeline {
     if (this.engine?.isPlaying) return this;
 
@@ -89,6 +117,11 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Jump to a time/position without playing.
+   * @param position Absolute ms or token ("<", ">", "+=x", "-=x").
+   * @returns this
+   */
   seek(position: number | TimelinePosition): Timeline {
     const time =
       typeof position === "number" ? position : this.resolvePosition(position);
@@ -102,16 +135,28 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Pause playback.
+   * @returns this
+   */
   pause(): Timeline {
     this.engine?.pause();
     return this;
   }
 
+  /**
+   * Resume playback (starts if not started).
+   * @returns this
+   */
   resume(): Timeline {
     this.engine?.play();
     return this;
   }
 
+  /**
+   * Stop engine and reset all items to their initial state.
+   * @returns this
+   */
   reset(): Timeline {
     this.engine?.reset();
     this.items.forEach((item) => {
@@ -125,6 +170,13 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Listen to a timeline event.
+   * Events: "start", "update", "complete", "pause", "resume".
+   * @param event Event name.
+   * @param callback Handler invoked with event data.
+   * @returns this
+   */
   on(event: TimelineEvent, callback: Function): Timeline {
     if (!this.eventCallbacks.has(event)) {
       this.eventCallbacks.set(event, []);
@@ -133,6 +185,12 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Remove a previously registered handler.
+   * @param event Event name.
+   * @param callback Same reference passed to on().
+   * @returns this
+   */
   off(event: TimelineEvent, callback: Function): Timeline {
     const callbacks = this.eventCallbacks.get(event);
     if (callbacks) {
@@ -142,18 +200,25 @@ export class Timeline {
     return this;
   }
 
+  /** Total scheduled duration (ms). */
   get duration(): number {
     return this.totalDuration;
   }
 
+  /** True while timeline is playing. */
   get isPlaying(): boolean {
     return this.engine?.isPlaying ?? false;
   }
 
+  /** True while timeline is paused. */
   get isPaused(): boolean {
     return this.engine?.isPaused ?? false;
   }
 
+  /**
+   * Internal: update all items to reflect a global time (ms).
+   * Converts global time to each item's local progress and updates its animator.
+   */
   private updateAllItems(currentTime: number): void {
     this.items.forEach((item) => {
       const { animator, startTime, endTime } = item;
@@ -178,6 +243,9 @@ export class Timeline {
     });
   }
 
+  /**
+   * Internal: add an item and extend total duration.
+   */
   private addItem(animator: CSSAnimator, start: number, end: number) {
     this.items.push({
       animator,
@@ -191,6 +259,10 @@ export class Timeline {
     this.lastAddedTime = end;
   }
 
+  /**
+   * Internal: resolve a position token to an absolute time (ms).
+   * "<" => 0, ">" => timeline end, "+=x" => last + x, "-=x" => last - x.
+   */
   private resolvePosition(position?: TimelinePosition): number {
     if (position === undefined) return this.lastAddedTime;
     if (typeof position === "number") return position;
@@ -209,6 +281,9 @@ export class Timeline {
     return this.lastAddedTime;
   }
 
+  /**
+   * Internal: emit an event to registered handlers.
+   */
   private emit(event: string, data?: any): void {
     const callbacks = this.eventCallbacks.get(event) ?? [];
     callbacks.forEach((cb) => {
