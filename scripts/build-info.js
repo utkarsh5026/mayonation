@@ -129,6 +129,16 @@ Generated at: ${new Date().toLocaleString()}
   console.log('\n🎉 Build completed successfully!');
   console.log(readableInfo);
 
+  // Run bundle analysis
+  try {
+    const BundleAnalyzer = require('./bundle-analyzer');
+    const analyzer = new BundleAnalyzer();
+    console.log('\n' + '='.repeat(60));
+    analyzer.analyze();
+  } catch (error) {
+    console.log('\n⚠️  Bundle analysis not available. Run: node scripts/bundle-analyzer.js');
+  }
+
   return buildInfo;
 }
 
