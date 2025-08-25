@@ -9,6 +9,12 @@ export class StaggerManager {
   private elementCount: number;
   private totalDuration: number;
 
+  /**
+   * @param staggerDelay Delay between starts of consecutive elements (ms).
+   * @param elementCount Total number of elements.
+   * @param baseDuration Duration for a single element (ms).
+   * Initializes the total timeline length including stagger.
+   */
   constructor(
     staggerDelay: number,
     elementCount: number,
@@ -20,14 +26,21 @@ export class StaggerManager {
   }
 
   /**
-   * Get total duration including stagger
+   * Total timeline length including stagger (ms).
+   * @returns Total duration in milliseconds.
    */
   getTotalDuration(): number {
     return this.totalDuration;
   }
 
   /**
-   * Calculate element progress based on global elapsed time
+   * Element progress at a given global elapsed time.
+   * - Before its start: progress 0, inactive.
+   * - After its end: progress 1, complete.
+   * - Otherwise: (elapsed - startTime)/baseDuration (clamped).
+   * @param elementIndex Zero-based element index.
+   * @param elapsed Global elapsed time (ms).
+   * @param baseDuration Duration for a single element (ms).
    */
   getElementProgressAtTime(
     elementIndex: number,
@@ -77,8 +90,11 @@ export class StaggerManager {
   ): number {
     return this.getElementStartTime(elementIndex) + baseDuration;
   }
+
   /**
-   * Calculate total animation duration including stagger
+   * Total duration including the last element's staggered start (ms).
+   * @param baseDuration Duration for a single element (ms).
+   * @returns Total duration in milliseconds.
    */
   private calculateTotalDuration(baseDuration: number): number {
     const lastElementStartTime = (this.elementCount - 1) * this.staggerDelay;
