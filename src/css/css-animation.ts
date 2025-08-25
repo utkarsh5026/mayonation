@@ -4,9 +4,7 @@ import type {
   ProcessedKeyframe,
   AnimationValue,
 } from "./types";
-import { ElementManager } from "./internal/element-manager";
-import { PropertyAnimator } from "./internal/property-animator";
-import { StaggerManager } from "./internal/stagger-manager";
+import { ElementManager, PropertyAnimator, StaggerManager } from "./internal";
 import { ElementLike, ElementResolver } from "@/utils/dom";
 import { throwIf } from "@/utils/error";
 import { resolveEaseFn } from "@/core/ease-fns";
@@ -226,9 +224,9 @@ export class CSSAnimator {
     index: number,
     element: HTMLElement
   ): ProcessedKeyframe[] {
-    const allProperties = { ...this.config.from, ...this.config.to };
+    const allProps = { ...this.config.from, ...this.config.to };
     const maxLength = this.getMaxKeyFrameLengthGiven(
-      Object.values(allProperties),
+      Object.values(allProps),
       index,
       element
     );
@@ -238,7 +236,7 @@ export class CSSAnimator {
       const offset = i / (maxLength - 1); // 0, 0.5, 1 for 3 keyframes
       const properties: Record<string, any> = {};
 
-      Object.entries(allProperties).forEach(([property, value]) => {
+      Object.entries(allProps).forEach(([property, value]) => {
         const resolved = this.resolveAnimationValue(value, index, element);
 
         if (Array.isArray(resolved)) {
@@ -252,9 +250,10 @@ export class CSSAnimator {
             index,
             element
           );
-        } else {
-          properties[property] = resolved;
+          return;
         }
+
+        properties[property] = resolved;
       });
 
       keyframes.push({
