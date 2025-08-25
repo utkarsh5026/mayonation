@@ -4,7 +4,7 @@ import {
   type BaseKeyframe,
   type ProcessedBaseKeyframe,
 } from "../../keyframe/keyframe";
-import { linear } from "../../utils/interpolate";
+import { linear } from "@/utils/interpolators";
 
 /**
  * Static options for configuring SVG path styling
@@ -41,28 +41,6 @@ type ProcessedDrawingKeyframe = Required<InterpolatedProps> &
  * This class manages the animation of SVG paths by controlling properties like stroke opacity
  * and dash offset to create drawing effects. It supports both forward and reverse animations,
  * partial path drawing, and customizable styling.
- *
- * @example
- * ```ts
- * // Create a basic drawing animation
- * const path = document.querySelector('path');
- * const handler = new DrawingHandler(path);
- *
- * // Customize the animation with options
- * const handler = new DrawingHandler(path, {
- *   stroke: 'red',
- *   strokeWidth: 2,
- *   reverse: true,
- *   startPercentage: 0.2,
- *   endPercentage: 0.8
- * });
- *
- * // Add custom keyframes
- * const handler = new DrawingHandler(path, {}, [
- *   { offset: 0, strokeOpacity: 0, strokeDashoffset: 0 },
- *   { offset: 1, strokeOpacity: 1, strokeDashoffset: 100 }
- * ]);
- * ```
  */
 export class DrawingHandler extends BaseKeyframeManager<
   DrawingKeyframe,

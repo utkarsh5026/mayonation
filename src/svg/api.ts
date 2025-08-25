@@ -5,7 +5,6 @@ import {
   type StaticPathOptions,
   type TraceKeyframe,
 } from "./path/animations";
-import type { AnimationOptions } from "../core/config";
 
 /**
  * Resolves the provided element(s) into an array of SVGPathElement.

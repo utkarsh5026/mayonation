@@ -3,9 +3,8 @@ import {
   createValue,
   NumericValue,
 } from "../core/animation-val";
-import { linear } from "../utils/interpolate";
+import { linear } from "@/utils/interpolators";
 import { convertLength, parseValue } from "../utils/unit";
-import AnimationHandler from "../animations/handler";
 
 /**
  * Defines the attributes for different types of SVG shapes.
@@ -121,7 +120,7 @@ type ShapeAttribute<T extends ShapeType> =
  * Handles animation of SVG shapes by managing their attribute transitions.
  * Each shape type (rect, circle, etc.) has its own set of animatable attributes.
  */
-export class ShapeAnimationHandler implements AnimationHandler {
+export class ShapeAnimationHandler {
   private readonly element: SVGElement;
   private readonly shapeType: ShapeType;
   private readonly currentValues: Map<string, AnimationValue> = new Map();
