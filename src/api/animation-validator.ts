@@ -42,8 +42,8 @@ export class AnimationValidator {
    */
   static validateStagger(staggerInMs: number): void {
     throwIf(
-      this.isNotPositiveNumber(staggerInMs),
-      "Stagger must be a positive number"
+      typeof staggerInMs !== "number" || !isFinite(staggerInMs) || isNaN(staggerInMs),
+      "Stagger must be a finite number"
     );
   }
 
@@ -66,27 +66,25 @@ export class AnimationValidator {
       "Keyframes must be an array with at least 2 items"
     );
 
-    keyframes.forEach(({ offset }, index) => {
-      throwIf(
-        this.isNotPositiveNumber(offset) || offset > 1,
-        `Keyframe ${index} offset must be between 0 and 1`
-      );
+    // Sanitize keyframe offsets instead of throwing
+    keyframes.forEach((keyframe, index) => {
+      if (typeof keyframe.offset !== "number" || isNaN(keyframe.offset)) {
+        keyframe.offset = index / (keyframes.length - 1); // Distribute evenly
+      } else if (!isFinite(keyframe.offset)) {
+        keyframe.offset = keyframe.offset > 0 ? 1 : 0; // Clamp infinite values
+      } else {
+        keyframe.offset = Math.max(0, Math.min(1, keyframe.offset)); // Clamp to 0-1
+      }
     });
 
-    keyframes.forEach((_, index) => {
-      if (index == 0) return;
-
-      throwIf(
-        keyframes[index].offset <= keyframes[index - 1].offset,
-        "Keyframe offsets must be in ascending order"
-      );
-    });
+    // Sort keyframes by offset to handle out-of-order keyframes
+    keyframes.sort((a, b) => a.offset - b.offset);
   }
 
   /**
    * Validates a positive number
    */
   private static isNotPositiveNumber(value: number): boolean {
-    return typeof value !== "number" || value < 0;
+    return typeof value !== "number" || value < 0 || !isFinite(value) || isNaN(value);
   }
 }
