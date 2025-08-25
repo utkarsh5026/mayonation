@@ -1,3 +1,3 @@
-import { ElementManager } from "./element-manager";
-
-export { ElementManager };
+export { ElementManager } from "./element-manager";
+export { StaggerManager } from "./stagger-manager";
+export { PropertyAnimator } from "./property-animator";
