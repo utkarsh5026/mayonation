@@ -46,7 +46,12 @@
     "prepublishOnly": "npm run clean && npm run build",
     "test": "vitest",
     "test:watch": "vitest --watch",
-    "serve": "vite"
+    "serve": "vite",
+    "benchmark": "node benchmarks/animation-benchmarks.js run",
+    "benchmark:single": "node benchmarks/animation-benchmarks.js single",
+    "benchmark:profile": "node benchmarks/animation-benchmarks.js profile",
+    "benchmark:compare": "node benchmarks/library-comparison.js",
+    "benchmark:report": "node benchmarks/reporter.js html"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
