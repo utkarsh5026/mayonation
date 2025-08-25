@@ -1,4 +1,5 @@
 import { normalizeAngle } from "../math";
+import { Interpolator } from "./base";
 
 /**
  * Interpolates between numeric values using different mathematical spaces.

@@ -1,5 +1,6 @@
 import type { RGB, HSL, ColorSpace } from "@/core/animation-val";
 import { clamp, normalizeAngle } from "@/utils/math";
+import { Interpolator } from "./base";
 
 /**
  * Interpolates between colors in either RGB or HSL color space.
