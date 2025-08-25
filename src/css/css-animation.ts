@@ -59,7 +59,7 @@ export class CSSAnimator {
 
     this.elements.forEach((_, i) => {
       const { progress, isActive, isComplete } =
-        this.staggerManager.calculateElementProgress(
+        this.staggerManager.getElementProgressAtTime(
           i,
           elapsed,
           this.config.duration
