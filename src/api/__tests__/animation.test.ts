@@ -4,8 +4,6 @@ import { AnimationEngine } from "@/core";
 import { CSSAnimator } from "@/css";
 import { clamp } from "@/utils/math";
 import type { ElementLike } from "@/utils/dom";
-
-// Mock dependencies
 vi.mock("@/core");
 vi.mock("@/css");
 vi.mock("@/utils/math");
@@ -23,7 +21,9 @@ describe("Mayonation Unit Tests", () => {
     vi.clearAllMocks();
 
     // Mock clamp utility
-    mockedClamp.mockImplementation((value, min, max) => Math.min(Math.max(value, min), max));
+    mockedClamp.mockImplementation((value, min, max) =>
+      Math.min(Math.max(value, min), max)
+    );
 
     // Mock CSSAnimator
     mockCSSAnimator = {
@@ -49,7 +49,7 @@ describe("Mayonation Unit Tests", () => {
 
     // Base configuration for testing
     baseConfig = {
-      target: '.test-element',
+      target: ".test-element",
       duration: 1000,
       from: { opacity: 0 },
       to: { opacity: 1 },
@@ -80,7 +80,7 @@ describe("Mayonation Unit Tests", () => {
 
       expect(animation).toBeInstanceOf(Mayonation);
       expect(animation.id).toBeDefined();
-      expect(typeof animation.id).toBe('string');
+      expect(typeof animation.id).toBe("string");
       expect(animation.config).toEqual(expect.objectContaining(baseConfig));
     });
 
@@ -95,7 +95,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should create CSSAnimator with correct configuration", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         duration: 2000,
         delay: 500,
         stagger: 100,
@@ -108,7 +108,7 @@ describe("Mayonation Unit Tests", () => {
       new Mayonation(config);
 
       expect(MockedCSSAnimator).toHaveBeenCalledWith({
-        target: '.test',
+        target: ".test",
         duration: 2000,
         delay: 500,
         stagger: 100,
@@ -124,7 +124,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should use default duration when not provided", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         from: { opacity: 0 },
         to: { opacity: 1 },
       };
@@ -141,7 +141,7 @@ describe("Mayonation Unit Tests", () => {
     it("should generate unique IDs for different instances", async () => {
       const animation1 = new Mayonation(baseConfig);
       // Add small delay to ensure different timestamps
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise((resolve) => setTimeout(resolve, 1));
       const animation2 = new Mayonation(baseConfig);
 
       expect(animation1.id).not.toBe(animation2.id);
@@ -200,7 +200,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle delay before starting animation", async () => {
       mockCSSAnimator.delay = 500;
-      
+
       animation.play();
 
       expect(global.setTimeout).toHaveBeenCalledWith(expect.any(Function), 500);
@@ -254,24 +254,24 @@ describe("Mayonation Unit Tests", () => {
 
       // Get the callbacks passed to AnimationEngine
       const engineCall = MockedAnimationEngine.mock.calls[0][0];
-      
+
       // Test onStart callback
-      engineCall.onStart();
+      (engineCall as any).onStart();
       expect(mockCSSAnimator.start).toHaveBeenCalledTimes(1);
 
       // Test onUpdate callback
-      engineCall.onUpdate(0.5);
+      (engineCall as any).onUpdate(0.5);
       expect(mockCSSAnimator.update).toHaveBeenCalledWith(0.5);
 
       // Test onComplete callback
-      engineCall.onComplete();
+      (engineCall as any).onComplete();
       expect(mockCSSAnimator.complete).toHaveBeenCalledTimes(1);
     });
 
     it("should call config callbacks through engine callbacks", async () => {
       const onPause = vi.fn();
       const onResume = vi.fn();
-      
+
       const config: MayonationConfig = {
         ...baseConfig,
         onPause,
@@ -285,11 +285,11 @@ describe("Mayonation Unit Tests", () => {
       const engineCall = MockedAnimationEngine.mock.calls[0][0];
 
       // Test onPause callback
-      engineCall.onPause();
+      (engineCall as any).onPause();
       expect(onPause).toHaveBeenCalledTimes(1);
 
       // Test onResume callback
-      engineCall.onResume();
+      (engineCall as any).onResume();
       expect(onResume).toHaveBeenCalledTimes(1);
     });
   });
@@ -322,7 +322,7 @@ describe("Mayonation Unit Tests", () => {
     it("should resume the animation engine after pause", async () => {
       animation.play();
       animation.pause();
-      
+
       // Resume should work after pause
       expect(() => animation.resume()).not.toThrow();
     });
@@ -341,7 +341,7 @@ describe("Mayonation Unit Tests", () => {
       // The clamp function should be called, but since we're mocking modules,
       // we just test that the animator calls update with the progress
       expect(mockCSSAnimator.update).toHaveBeenCalledWith(0.5);
-      
+
       // Engine might not exist if play() hasn't been called yet
       expect(() => animation.seek(0.5)).not.toThrow();
     });
@@ -395,14 +395,14 @@ describe("Mayonation Unit Tests", () => {
   describe("Config Variations", () => {
     it("should handle minimal configuration", () => {
       const minimalConfig: MayonationConfig = {
-        target: '.test',
+        target: ".test",
       };
 
       expect(() => new Mayonation(minimalConfig)).not.toThrow();
-      
+
       expect(MockedCSSAnimator).toHaveBeenCalledWith(
         expect.objectContaining({
-          target: '.test',
+          target: ".test",
           duration: 1000, // Default duration
         })
       );
@@ -410,20 +410,20 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle complex configuration", () => {
       const complexConfig: MayonationConfig = {
-        target: [document.createElement('div')],
+        target: [document.createElement("div")],
         duration: 2000,
         delay: 500,
         stagger: 100,
         ease: "easeInOut",
-        from: { 
-          opacity: 0, 
-          translateX: -100, 
-          scale: 0.8 
+        from: {
+          opacity: 0,
+          translateX: -100,
+          scale: 0.8,
         },
-        to: { 
-          opacity: 1, 
-          translateX: 0, 
-          scale: 1 
+        to: {
+          opacity: 1,
+          translateX: 0,
+          scale: 1,
         },
         keyframes: [
           { offset: 0, opacity: 0 },
@@ -445,13 +445,18 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle different target types", () => {
       const configs = [
-        { target: '.class-selector' as ElementLike },
-        { target: '#id-selector' as ElementLike },
-        { target: document.createElement('div') as ElementLike },
-        { target: [document.createElement('div'), document.createElement('span')] as ElementLike },
+        { target: ".class-selector" as ElementLike },
+        { target: "#id-selector" as ElementLike },
+        { target: document.createElement("div") as ElementLike },
+        {
+          target: [
+            document.createElement("div"),
+            document.createElement("span"),
+          ] as ElementLike,
+        },
       ];
 
-      configs.forEach(config => {
+      configs.forEach((config) => {
         expect(() => new Mayonation(config)).not.toThrow();
       });
     });
@@ -466,9 +471,9 @@ describe("Mayonation Unit Tests", () => {
 
     it("should create a finished promise", async () => {
       const playPromise = animation.play();
-      
+
       expect(playPromise).toBeInstanceOf(Promise);
-      
+
       // For testing, we just verify the promise exists
       // The actual resolution depends on the engine completing
     }, 1000); // Shorter timeout
@@ -495,7 +500,7 @@ describe("Mayonation Unit Tests", () => {
   describe("Edge Cases", () => {
     it("should handle undefined callback functions", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         duration: 1000,
         onStart: undefined,
         onUpdate: undefined,
@@ -509,7 +514,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle zero duration", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         duration: 0,
       };
 
@@ -519,7 +524,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle negative duration", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         duration: -1000,
       };
 
@@ -529,7 +534,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle very large duration", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         duration: Number.MAX_SAFE_INTEGER,
       };
 
@@ -539,7 +544,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle NaN duration", () => {
       const config: MayonationConfig = {
-        target: '.test',
+        target: ".test",
         duration: NaN,
       };
 
@@ -549,7 +554,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should handle extreme seek values", () => {
       const animation = new Mayonation(baseConfig);
-      
+
       expect(() => animation.seek(Number.POSITIVE_INFINITY)).not.toThrow();
       expect(() => animation.seek(Number.NEGATIVE_INFINITY)).not.toThrow();
       expect(() => animation.seek(NaN)).not.toThrow();
@@ -572,7 +577,7 @@ describe("Mayonation Unit Tests", () => {
   describe("Memory Management", () => {
     it("should clean up properly on reset", () => {
       const animation = new Mayonation(baseConfig);
-      
+
       animation.play();
       animation.reset();
 
@@ -594,7 +599,7 @@ describe("Mayonation Unit Tests", () => {
 
     it("should not leak when creating many instances", () => {
       const animations = [];
-      
+
       for (let i = 0; i < 100; i++) {
         animations.push(new Mayonation(baseConfig));
       }
@@ -610,7 +615,9 @@ describe("Mayonation Unit Tests", () => {
         throw new Error("CSSAnimator creation failed");
       });
 
-      expect(() => new Mayonation(baseConfig)).toThrow("CSSAnimator creation failed");
+      expect(() => new Mayonation(baseConfig)).toThrow(
+        "CSSAnimator creation failed"
+      );
     });
 
     it("should handle AnimationEngine creation failure", () => {
@@ -619,7 +626,7 @@ describe("Mayonation Unit Tests", () => {
       });
 
       const animation = new Mayonation(baseConfig);
-      
+
       // The error might be thrown during play() or caught internally
       try {
         animation.play();
@@ -629,15 +636,17 @@ describe("Mayonation Unit Tests", () => {
     });
 
     it("should handle callback function errors", async () => {
-      const onStart = vi.fn(() => { throw new Error("onStart error"); });
-      
+      const onStart = vi.fn(() => {
+        throw new Error("onStart error");
+      });
+
       const config: MayonationConfig = {
         ...baseConfig,
         onStart,
       };
 
       const animation = new Mayonation(config);
-      
+
       // The callback error might be handled internally or thrown
       try {
         animation.play();
@@ -652,7 +661,7 @@ describe("Mayonation Unit Tests", () => {
       });
 
       const animation = new Mayonation(baseConfig);
-      
+
       expect(() => animation.seek(0.5)).toThrow("Clamp error");
     });
   });
