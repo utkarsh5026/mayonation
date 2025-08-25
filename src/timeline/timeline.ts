@@ -58,7 +58,13 @@ export class Timeline {
       duration: this.totalDuration,
       loop: this.options.loop,
       onStart: () => {
-        this.items.forEach((item) => item.animator.start());
+        this.items.forEach((item) => {
+          try {
+            item.animator.start();
+          } catch (error) {
+            console.error(`Timeline animator start error:`, error);
+          }
+        });
         this.emit("start");
       },
       onUpdate: (progress: number) => {
@@ -66,7 +72,13 @@ export class Timeline {
         this.emit("update", { progress, time: progress * this.totalDuration });
       },
       onComplete: () => {
-        this.items.forEach((item) => item.animator.complete());
+        this.items.forEach((item) => {
+          try {
+            item.animator.complete();
+          } catch (error) {
+            console.error(`Timeline animator complete error:`, error);
+          }
+        });
         this.emit("complete");
       },
       onPause: () => this.emit("pause"),
@@ -102,7 +114,13 @@ export class Timeline {
 
   reset(): Timeline {
     this.engine?.reset();
-    this.items.forEach((item) => item.animator.reset());
+    this.items.forEach((item) => {
+      try {
+        item.animator.reset();
+      } catch (error) {
+        console.error(`Timeline animator reset error:`, error);
+      }
+    });
     this.lastAddedTime = 0;
     return this;
   }
@@ -140,18 +158,22 @@ export class Timeline {
     this.items.forEach((item) => {
       const { animator, startTime, endTime } = item;
 
-      if (currentTime < startTime) {
-        animator.update(0);
-        return;
-      }
+      try {
+        if (currentTime < startTime) {
+          animator.update(0);
+          return;
+        }
 
-      if (currentTime >= endTime) {
-        animator.update(1);
-        return;
-      }
+        if (currentTime >= endTime) {
+          animator.update(1);
+          return;
+        }
 
-      const localProgress = (currentTime - startTime) / animator.totalDuration;
-      animator.update(clamp(localProgress, 0, 1));
+        const localProgress = (currentTime - startTime) / animator.totalDuration;
+        animator.update(clamp(localProgress, 0, 1));
+      } catch (error) {
+        console.error(`Timeline animator update error:`, error);
+      }
     });
   }
 
@@ -162,6 +184,10 @@ export class Timeline {
       endTime: end,
       id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     });
+    
+    // Update total duration and last added time
+    this.totalDuration = Math.max(this.totalDuration, end);
+    this.lastAddedTime = end;
   }
 
   private resolvePosition(position?: TimelinePosition): number {
@@ -169,12 +195,16 @@ export class Timeline {
     if (typeof position === "number") return position;
     if (position === "<") return 0;
     if (position === ">") return this.totalDuration;
-    if (position.startsWith("+=")) {
-      return this.lastAddedTime + parseFloat(position.slice(2));
+    
+    if (typeof position === "string") {
+      if (position.startsWith("+=")) {
+        return this.lastAddedTime + parseFloat(position.slice(2));
+      }
+      if (position.startsWith("-=")) {
+        return this.lastAddedTime - parseFloat(position.slice(2));
+      }
     }
-    if (position.startsWith("-=")) {
-      return this.lastAddedTime - parseFloat(position.slice(2));
-    }
+    
     return this.lastAddedTime;
   }
 
