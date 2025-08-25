@@ -3,6 +3,7 @@ import { clamp } from "@/utils/math";
 import { AnimationEngine } from "@/core";
 import { CSSAnimator, AnimationKeyframe, AnimationProperties } from "@/css";
 import { EaseFunction } from "@/core/ease-fns";
+import { AnimationValidator } from "./animation-validator";
 
 export interface MayonationConfig {
   target: ElementLike;
@@ -36,6 +37,31 @@ export class Mayonation {
   constructor(config: MayonationConfig) {
     this.id = `${Date.now()}`;
     this.config = Object.freeze({ ...config });
+
+    // Validate configuration parameters
+    const duration = config.duration ?? 1000;
+    AnimationValidator.validateDuration(duration);
+
+    if (config.delay !== undefined) {
+      AnimationValidator.validateDelay(config.delay);
+    }
+
+    if (config.stagger !== undefined) {
+      AnimationValidator.validateStagger(config.stagger);
+    }
+
+    if (config.repeat !== undefined && config.repeat !== "infinite") {
+      AnimationValidator.validateRepeat(config.repeat);
+    }
+
+    if (config.keyframes && config.keyframes.length > 0) {
+      // Only validate keyframes if they're the primary animation method
+      // If from/to are also provided, keyframes can be supplementary
+      const hasFromTo = config.from || config.to;
+      if (!hasFromTo || config.keyframes.length >= 2) {
+        AnimationValidator.validateKeyframes(config.keyframes);
+      }
+    }
 
     this.cssAnimator = new CSSAnimator({
       target: config.target,
