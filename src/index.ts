@@ -1,7 +1,16 @@
-import PathBuilder from "./svg/path/path-builder";
+// Main exports for full library usage
+export { Mayonation, type MayonationConfig } from "./api";
+export { Timeline } from "./timeline";
+export type { ElementLike } from "./utils/dom";
+
+// Core easing functions (most commonly used)
 export * from "./core/ease-fns";
-export { PathBuilder };
-import { Mayonation, MayonationConfig } from "@/api";
+
+// SVG path builder (commonly used)
+export { default as PathBuilder } from "./svg/path/path-builder";
+
+// Convenience functions
+import { Mayonation, MayonationConfig } from "./api";
 import { Timeline } from "./timeline";
 import { ElementLike } from "./utils/dom";
 
@@ -21,3 +30,11 @@ export function mayo(targetOrConfig: any, config?: any): Mayonation {
   }
   return new Mayonation(targetOrConfig);
 }
+
+// Re-export submodules for selective importing
+export * as core from "./core";
+export * as animations from "./animations";
+export * as utils from "./utils/interpolators";
+
+// SVG functionality (under development - not exported for tree-shaking yet)
+// export * as svg from "./svg/api";
