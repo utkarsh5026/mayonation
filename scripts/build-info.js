@@ -2,12 +2,23 @@
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { execSync } = require('child_process');
 
 function getFileSize(filePath) {
   try {
     const stats = fs.statSync(filePath);
     return stats.size;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function getGzippedSize(filePath) {
+  try {
+    const content = fs.readFileSync(filePath);
+    const gzipped = zlib.gzipSync(content);
+    return gzipped.length;
   } catch (error) {
     return 0;
   }
@@ -71,20 +82,29 @@ function generateBuildInfo() {
   ];
 
   let totalSize = 0;
+  let totalGzippedSize = 0;
   distFiles.forEach(file => {
     const filePath = path.join(distPath, file);
     const size = getFileSize(filePath);
+    const gzippedSize = getGzippedSize(filePath);
     if (size > 0) {
       buildInfo.files[file] = {
         size: size,
-        sizeFormatted: formatBytes(size)
+        sizeFormatted: formatBytes(size),
+        gzippedSize: gzippedSize,
+        gzippedSizeFormatted: formatBytes(gzippedSize),
+        compressionRatio: size > 0 ? ((size - gzippedSize) / size * 100).toFixed(1) + '%' : '0%'
       };
       totalSize += size;
+      totalGzippedSize += gzippedSize;
     }
   });
 
   buildInfo.totalSize = totalSize;
   buildInfo.totalSizeFormatted = formatBytes(totalSize);
+  buildInfo.totalGzippedSize = totalGzippedSize;
+  buildInfo.totalGzippedSizeFormatted = formatBytes(totalGzippedSize);
+  buildInfo.totalCompressionRatio = totalSize > 0 ? ((totalSize - totalGzippedSize) / totalSize * 100).toFixed(1) + '%' : '0%';
 
   // Write build info to JSON file
   const buildInfoPath = path.join(distPath, 'build-info.json');
@@ -112,11 +132,11 @@ ${'='.repeat(60)}
    Date: ${buildInfo.commitDate}
 
 📁 Build Output:
-   Total Size: ${buildInfo.totalSizeFormatted}
+   Total Size: ${buildInfo.totalSizeFormatted} (${buildInfo.totalGzippedSizeFormatted} gzipped, ${buildInfo.totalCompressionRatio} compression)
    
    Files:
 ${Object.entries(buildInfo.files)
-  .map(([file, info]) => `   • ${file}: ${info.sizeFormatted}`)
+  .map(([file, info]) => `   • ${file}: ${info.sizeFormatted} (${info.gzippedSizeFormatted} gzipped, ${info.compressionRatio} compression)`)
   .join('\n')}
 
 Generated at: ${new Date().toLocaleString()}

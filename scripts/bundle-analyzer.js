@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 /**
  * Bundle Size Analyzer for Mayonation
@@ -27,13 +28,19 @@ class BundleAnalyzer {
   getFileSize(filePath) {
     try {
       const stats = fs.statSync(filePath);
+      const content = fs.readFileSync(filePath);
+      const gzipped = zlib.gzipSync(content);
       return {
         bytes: stats.size,
         formatted: this.formatBytes(stats.size),
-        kb: Math.round(stats.size / 1024 * 100) / 100
+        kb: Math.round(stats.size / 1024 * 100) / 100,
+        gzippedBytes: gzipped.length,
+        gzippedFormatted: this.formatBytes(gzipped.length),
+        gzippedKb: Math.round(gzipped.length / 1024 * 100) / 100,
+        compressionRatio: stats.size > 0 ? ((stats.size - gzipped.length) / stats.size * 100).toFixed(1) + '%' : '0%'
       };
     } catch (error) {
-      return { bytes: 0, formatted: '0 B', kb: 0 };
+      return { bytes: 0, formatted: '0 B', kb: 0, gzippedBytes: 0, gzippedFormatted: '0 B', gzippedKb: 0, compressionRatio: '0%' };
     }
   }
 
@@ -256,9 +263,11 @@ class BundleAnalyzer {
 
     // Build files breakdown
     console.log('📦 BUILD FILES:');
-    console.log('-'.repeat(30));
+    console.log('-'.repeat(50));
+    console.log('  File'.padEnd(17) + 'Size'.padStart(10) + 'Gzipped'.padStart(12) + 'Compression'.padStart(12));
+    console.log('-'.repeat(50));
     Object.entries(this.results.files).forEach(([filename, size]) => {
-      console.log(`  ${filename.padEnd(15)} ${size.formatted.padStart(8)} (${size.kb} KB)`);
+      console.log(`  ${filename.padEnd(15)} ${size.formatted.padStart(8)} ${size.gzippedFormatted.padStart(10)} ${size.compressionRatio.padStart(10)}`);
     });
 
     // Source analysis
@@ -295,21 +304,27 @@ class BundleAnalyzer {
 
     // Library comparison
     console.log('\n⚖️  LIBRARY COMPARISON:');
-    console.log('-'.repeat(30));
+    console.log('-'.repeat(50));
+    console.log('  Library'.padEnd(17) + 'Size (KB)'.padStart(10) + 'Gzipped'.padStart(12) + 'Status'.padStart(8));
+    console.log('-'.repeat(50));
+    
     const buildKB = this.results.files['index.js']?.kb || 0;
+    const buildGzippedKB = this.results.files['index.js']?.gzippedKb || 0;
+    
     const comparisons = [
-      { name: 'Motion (mini)', size: 2.6, status: buildKB > 2.6 ? '❌' : '✅' },
-      { name: 'Popmotion', size: 4.5, status: buildKB > 4.5 ? '❌' : '✅' },
-      { name: 'Motion (full)', size: 18, status: buildKB > 18 ? '❌' : '✅' },
-      { name: 'GSAP', size: 23, status: buildKB > 23 ? '❌' : '✅' },
-      { name: 'Anime.js', size: 25, status: buildKB > 25 ? '❌' : '✅' },
-      { name: 'Mayonation', size: buildKB, status: '📍' },
-      { name: 'Framer Motion', size: 119, status: buildKB < 119 ? '✅' : '❌' }
+      { name: 'Motion (mini)', size: 2.6, gzipped: 1.2, status: buildKB > 2.6 ? '❌' : '✅' },
+      { name: 'Popmotion', size: 4.5, gzipped: 2.1, status: buildKB > 4.5 ? '❌' : '✅' },
+      { name: 'Motion (full)', size: 18, gzipped: 6.8, status: buildKB > 18 ? '❌' : '✅' },
+      { name: 'GSAP', size: 23, gzipped: 8.5, status: buildKB > 23 ? '❌' : '✅' },
+      { name: 'Anime.js', size: 25, gzipped: 9.2, status: buildKB > 25 ? '❌' : '✅' },
+      { name: 'Mayonation', size: buildKB, gzipped: buildGzippedKB, status: '📍' },
+      { name: 'Framer Motion', size: 119, gzipped: 42.5, status: buildKB < 119 ? '✅' : '❌' }
     ];
 
     comparisons.forEach(lib => {
       const indicator = lib.name === 'Mayonation' ? lib.status : lib.status;
-      console.log(`  ${indicator} ${lib.name.padEnd(15)} ${lib.size.toString().padStart(6)} KB`);
+      const gzippedStr = lib.name === 'Mayonation' ? `${lib.gzipped}` : `~${lib.gzipped}`;
+      console.log(`  ${indicator} ${lib.name.padEnd(15)} ${lib.size.toString().padStart(6)} ${gzippedStr.padStart(8)} ${indicator.padStart(4)}`);
     });
 
     console.log('\n' + '='.repeat(60));
