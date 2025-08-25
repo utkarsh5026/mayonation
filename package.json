@@ -41,6 +41,7 @@
     "build": "tsup && node scripts/build-info.js",
     "build:only": "tsup",
     "build:analyze": "npm run build:only && node scripts/bundle-analyzer.js",
+    "build:watch": "tsup --watch --onSuccess \"node scripts/build-info.js\"",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build",
