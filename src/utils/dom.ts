@@ -1,3 +1,4 @@
+import { throwIf } from "./error";
 export type ElementLike = string | Element | Element[] | NodeListOf<Element>;
 
 export class ElementResolver {
@@ -29,6 +30,29 @@ export class ElementResolver {
     throw new Error(
       "Invalid target type. Expected string, Element, Element[], or NodeList"
     );
+  }
+
+  /**
+   * Resolves target elements from various input types (selector, element, array).
+   * Filters results to ensure only HTMLElements are included.
+   * @param target Selector/element/collection.
+   */
+  static resolveHTMLElements(target: ElementLike): HTMLElement[] {
+    try {
+      const elements = this.resolve(target).filter(
+        (el): el is HTMLElement =>
+          el instanceof HTMLElement || el instanceof SVGElement
+      ) as HTMLElement[];
+
+      throwIf(
+        elements.length === 0,
+        "Target must resolve to at least one HTMLElement or SVGElement"
+      );
+
+      return elements;
+    } catch (error) {
+      throw new Error(`Failed to resolve target: ${error}`);
+    }
   }
 
   static validateElements(elements: Element[]): void {
