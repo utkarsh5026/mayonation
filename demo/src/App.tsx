@@ -14,7 +14,7 @@ function App() {
   const [activeSection, setActiveSection] = useState("Hero");
 
   return (
-    <div className="bg-black text-white min-h-screen">
+    <div className="bg-black text-white min-h-screen font-source-code-pro">
       <Navigation
         activeSection={activeSection}
         setActiveSection={setActiveSection}
