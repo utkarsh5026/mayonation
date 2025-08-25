@@ -1,6 +1,5 @@
 import PathBuilder from "./svg/path/path-builder";
 export * from "./core/ease-fns";
-export { PropertiesConfig } from "./core/config";
 export { PathBuilder };
 import { Mayonation, MayonationConfig } from "@/api";
 import { Timeline } from "./timeline";
