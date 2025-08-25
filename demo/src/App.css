@@ -1,0 +1,47 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.demo-section {
+  margin: 3rem 0;
+  padding: 2rem;
+  border: 2px solid #333;
+  border-radius: 8px;
+}
+
+.demo-box {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  margin: 2rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.demo-circle {
+  width: 120px;
+  height: 120px;
+  background-color: #4ecdc4;
+  border-radius: 50%;
+  margin: 2rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.demo-circle:hover {
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+}
