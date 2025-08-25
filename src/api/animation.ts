@@ -38,7 +38,6 @@ export class Mayonation {
     this.id = `${Date.now()}`;
     this.config = Object.freeze({ ...config });
 
-    // Validate configuration parameters
     const duration = config.duration ?? 1000;
     AnimationValidator.validateDuration(duration);
 
@@ -55,8 +54,6 @@ export class Mayonation {
     }
 
     if (config.keyframes && config.keyframes.length > 0) {
-      // Only validate keyframes if they're the primary animation method
-      // If from/to are also provided, keyframes can be supplementary
       const hasFromTo = config.from || config.to;
       if (!hasFromTo || config.keyframes.length >= 2) {
         AnimationValidator.validateKeyframes(config.keyframes);
@@ -64,17 +61,8 @@ export class Mayonation {
     }
 
     this.cssAnimator = new CSSAnimator({
-      target: config.target,
-      duration: config.duration ?? 1000,
-      delay: config.delay,
-      stagger: config.stagger,
-      ease: config.ease,
-      from: config.from,
-      to: config.to,
-      keyframes: config.keyframes,
-      onStart: config.onStart,
-      onUpdate: config.onUpdate,
-      onComplete: config.onComplete,
+      ...config,
+      duration,
     });
 
     this._finishedPromise = new Promise((resolve) => {
