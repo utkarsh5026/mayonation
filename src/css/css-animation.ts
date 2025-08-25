@@ -20,6 +20,10 @@ export class CSSAnimator {
   private readonly elements: HTMLElement[];
   private readonly resolvedKeyframes: Map<number, ProcessedKeyframe[]>;
 
+  /**
+   * Prepare managers, resolve targets, and precompute keyframes.
+   * @param config Animation configuration.
+   */
   constructor(config: CSSAnimationConfig) {
     this.resolvedKeyframes = new Map();
     this.config = {
@@ -46,23 +50,27 @@ export class CSSAnimator {
     this.resolveAllPropertiesAndKeyframes();
   }
 
+  /**
+   * Advance the animation to a normalized progress [0..1] and update all elements.
+   * @param globalProgress Global timeline progress.
+   */
   public update(globalProgress: number): void {
     const elapsed = globalProgress * this.totalDuration;
 
-    for (let i = 0; i < this.elements.length; i++) {
-      const elementProgress = this.staggerManager.calculateElementProgress(
-        i,
-        elapsed,
-        this.config.duration
-      );
+    this.elements.forEach((_, i) => {
+      const { progress, isActive, isComplete } =
+        this.staggerManager.calculateElementProgress(
+          i,
+          elapsed,
+          this.config.duration
+        );
 
-      const { progress, isActive, isComplete } = elementProgress;
       this.elementManager.updateElement(i, progress, isActive, isComplete);
 
       if (isActive || isComplete) {
         this.updateElement(i, progress);
       }
-    }
+    });
 
     this.config.onUpdate(globalProgress, {
       elapsed,
@@ -78,26 +86,44 @@ export class CSSAnimator {
     this.elementManager.reset();
   }
 
+  /**
+   * Total duration including stagger and delay (ms).
+   */
   public get totalDuration(): number {
     return this.staggerManager.getTotalDuration();
   }
 
+  /**
+   * Base animation duration excluding stagger (ms).
+   */
   public get baseDuration(): number {
     return this.config.duration;
   }
 
+  /**
+   * Initial delay before starting (ms).
+   */
   public get delay(): number {
     return this.config.delay;
   }
 
+  /**
+   * Number of target elements.
+   */
   public get elementCount(): number {
     return this.elements.length;
   }
 
+  /**
+   * Invoke onStart hook.
+   */
   public start(): void {
     this.config.onStart();
   }
 
+  /**
+   * Jump to end state and invoke onComplete.
+   */
   public complete(): void {
     this.update(1);
     this.config.onComplete();
@@ -106,16 +132,18 @@ export class CSSAnimator {
   /**
    * Resolves target elements from various input types (selector, element, array).
    * Filters results to ensure only HTMLElements are included.
+   * @param target Selector/element/collection.
    */
   private resolveElements(target: ElementLike): HTMLElement[] {
     try {
       const elements = ElementResolver.resolve(target).filter(
-        (el): el is HTMLElement => el instanceof HTMLElement
-      );
+        (el): el is HTMLElement =>
+          el instanceof HTMLElement || el instanceof SVGElement
+      ) as HTMLElement[];
 
       throwIf(
         elements.length === 0,
-        "Target must resolve to at least one HTMLElement"
+        "Target must resolve to at least one HTMLElement or SVGElement"
       );
 
       return elements;
@@ -125,7 +153,7 @@ export class CSSAnimator {
   }
 
   /**
-   * Resolve properties and convert arrays to proper keyframes
+   * Prepare per-element keyframes from from/to, arrays, or explicit keyframes.
    */
   private resolveAllPropertiesAndKeyframes(): void {
     const { from, to } = this.config;
@@ -168,7 +196,9 @@ export class CSSAnimator {
   }
 
   /**
-   * ✅ CORRECT: Build keyframes from array properties
+   * Build processed keyframes for an element from config keyframes or array props.
+   * @param index Element index.
+   * @param element Target element.
    */
   private buildKeyframesForElement(
     index: number,
@@ -176,6 +206,7 @@ export class CSSAnimator {
   ): ProcessedKeyframe[] {
     const { keyframes } = this.config;
     if (keyframes.length > 0) {
+      // already has keyframes
       return keyframes.map((kf) => ({
         offset: kf.offset,
         properties: this.resolvePropertiesForElement(kf, index, element),
@@ -187,7 +218,9 @@ export class CSSAnimator {
   }
 
   /**
-   * ✅ CORRECT: Convert array properties to keyframes
+   * Expand array/functional values into evenly spaced keyframes.
+   * @param index Element index.
+   * @param element Target element.
    */
   private buildKeyframesFromArrayProperties(
     index: number,
@@ -233,6 +266,9 @@ export class CSSAnimator {
     return keyframes;
   }
 
+  /**
+   * Get the number of frames required based on longest array value (min 2).
+   */
   private getMaxKeyFrameLengthGiven(
     propValues: (AnimationValue | undefined)[],
     index: number,
@@ -251,7 +287,7 @@ export class CSSAnimator {
   }
 
   /**
-   * Check if properties contain arrays (keyframes)
+   * Check if any property is an array or function (needs keyframe expansion).
    */
   private hasArrayProperties(properties: AnimationProperties): boolean {
     return Object.values(properties).some((value) => {
@@ -263,7 +299,7 @@ export class CSSAnimator {
   }
 
   /**
-   * Resolve simple properties (non-array values)
+   * Resolve simple per-element values (ignores offset/easing).
    */
   private resolvePropertiesForElement(
     properties: AnimationProperties,
@@ -283,7 +319,7 @@ export class CSSAnimator {
   }
 
   /**
-   * Resolve animation value (including array keyframes)
+   * Resolve a value for an element (number|string|array|function).
    */
   private resolveAnimationValue(
     value: AnimationValue | undefined,
@@ -308,7 +344,9 @@ export class CSSAnimator {
   }
 
   /**
-   * Update element with resolved keyframes
+   * Apply keyframes to one element at the given progress.
+   * @param elementIndex Element index.
+   * @param progress Normalized progress [0..1].
    */
   private updateElement(elementIndex: number, progress: number): void {
     const propMgr = this.elementManager.getPropertyManager(elementIndex);
@@ -321,6 +359,9 @@ export class CSSAnimator {
     animator.updateElement(propMgr, progress, this.config.ease);
   }
 
+  /**
+   * Count active elements (for diagnostics).
+   */
   private getActiveElementCount(): number {
     return this.elementManager.getAllStates().filter((state) => state.isActive)
       .length;
