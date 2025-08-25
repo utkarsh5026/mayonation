@@ -331,7 +331,7 @@ describe("Timeline Integration Tests", () => {
       expect(result).toBe(timeline);
 
       // Test seeking with position string
-      timeline.seek(">=");
+      timeline.seek(">=" as any);
     });
   });
 
@@ -357,7 +357,10 @@ describe("Timeline Integration Tests", () => {
       expect(onStart).toHaveBeenCalledTimes(1);
 
       engineCall.onUpdate(0.5);
-      expect(onUpdate).toHaveBeenCalledWith({ progress: 0.5, time: expect.any(Number) });
+      expect(onUpdate).toHaveBeenCalledWith({
+        progress: 0.5,
+        time: expect.any(Number),
+      });
 
       engineCall.onComplete();
       expect(onComplete).toHaveBeenCalledTimes(1);
