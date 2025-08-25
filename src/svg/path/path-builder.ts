@@ -3,7 +3,7 @@
  * Makes path creation more intuitive by providing chainable methods
  * that correspond to natural drawing actions.
  */
-class PathBuilder {
+export class PathBuilder {
   private readonly pathData: string[] = [];
 
   /**
@@ -11,7 +11,7 @@ class PathBuilder {
    * @param x - X coordinate
    * @param y - Y coordinate
    */
-  public moveTo(x: number, y: number): this {
+  moveTo(x: number, y: number): this {
     this.pathData.push(`M ${x} ${y}`);
     return this;
   }
@@ -21,7 +21,7 @@ class PathBuilder {
    * @param x - X coordinate
    * @param y - Y coordinate
    */
-  public lineTo(x: number, y: number): this {
+  lineTo(x: number, y: number): this {
     this.pathData.push(`L ${x} ${y}`);
     return this;
   }
@@ -30,7 +30,7 @@ class PathBuilder {
    * Draw a horizontal line to the specified x coordinate
    * @param x - X coordinate
    */
-  public horizontalLineTo(x: number): this {
+  horizontalLineTo(x: number): this {
     this.pathData.push(`H ${x}`);
     return this;
   }
@@ -39,7 +39,7 @@ class PathBuilder {
    * Draw a vertical line to the specified y coordinate
    * @param y - Y coordinate
    */
-  public verticalLineTo(y: number): this {
+  verticalLineTo(y: number): this {
     this.pathData.push(`V ${y}`);
     return this;
   }
@@ -53,7 +53,7 @@ class PathBuilder {
    * @param endX - End point X
    * @param endY - End point Y
    */
-  public curveTo(
+  curveTo(
     controlPoint1X: number,
     controlPoint1Y: number,
     controlPoint2X: number,
@@ -75,7 +75,7 @@ class PathBuilder {
    * @param endX - End point X
    * @param endY - End point Y
    */
-  public smoothCurveTo(
+  smoothCurveTo(
     controlPoint2X: number,
     controlPoint2Y: number,
     endX: number,
@@ -94,7 +94,7 @@ class PathBuilder {
    * @param endX - End point X
    * @param endY - End point Y
    */
-  public quadraticCurveTo(
+  quadraticCurveTo(
     controlX: number,
     controlY: number,
     endX: number,
@@ -114,7 +114,7 @@ class PathBuilder {
    * @param endX - End point X
    * @param endY - End point Y
    */
-  public arcTo(
+  arcTo(
     rx: number,
     ry: number,
     xRotation: number,
@@ -132,7 +132,7 @@ class PathBuilder {
   /**
    * Close the current path by drawing a line back to the starting point
    */
-  public closePath(): this {
+  closePath(): this {
     this.pathData.push("Z");
     return this;
   }
@@ -140,7 +140,7 @@ class PathBuilder {
   /**
    * Generate the complete SVG path data string
    */
-  public toString(): string {
+  toString(): string {
     return this.pathData.join(" ");
   }
 }
