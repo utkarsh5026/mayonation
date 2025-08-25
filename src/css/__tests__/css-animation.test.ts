@@ -331,7 +331,7 @@ describe("CSSAnimator", () => {
 
       animator.update(globalProgress);
 
-      expect(mockStaggerManager.calculateElementProgress).toHaveBeenCalledTimes(
+      expect(mockStaggerManager.getElementProgressAtTime).toHaveBeenCalledTimes(
         3
       );
       expect(mockElementManager.updateElement).toHaveBeenCalledTimes(3);
@@ -339,7 +339,7 @@ describe("CSSAnimator", () => {
       // Check that each element is updated
       for (let i = 0; i < 3; i++) {
         expect(
-          mockStaggerManager.calculateElementProgress
+          mockStaggerManager.getElementProgressAtTime
         ).toHaveBeenNthCalledWith(i + 1, i, 1000, 1000);
         expect(mockElementManager.updateElement).toHaveBeenNthCalledWith(
           i + 1,
@@ -367,7 +367,7 @@ describe("CSSAnimator", () => {
     });
 
     it("should only update active or complete elements", () => {
-      mockStaggerManager.calculateElementProgress
+      mockStaggerManager.getElementProgressAtTime
         .mockReturnValueOnce({
           progress: 0.3,
           isActive: true,
@@ -394,12 +394,12 @@ describe("CSSAnimator", () => {
       animator.update(0);
       animator.update(1);
 
-      expect(mockStaggerManager.calculateElementProgress).toHaveBeenCalledWith(
+      expect(mockStaggerManager.getElementProgressAtTime).toHaveBeenCalledWith(
         expect.any(Number),
         0,
         1000
       );
-      expect(mockStaggerManager.calculateElementProgress).toHaveBeenCalledWith(
+      expect(mockStaggerManager.getElementProgressAtTime).toHaveBeenCalledWith(
         expect.any(Number),
         2000,
         1000
@@ -410,12 +410,12 @@ describe("CSSAnimator", () => {
       animator.update(-0.5);
       animator.update(2.0);
 
-      expect(mockStaggerManager.calculateElementProgress).toHaveBeenCalledWith(
+      expect(mockStaggerManager.getElementProgressAtTime).toHaveBeenCalledWith(
         expect.any(Number),
         -1000,
         1000
       );
-      expect(mockStaggerManager.calculateElementProgress).toHaveBeenCalledWith(
+      expect(mockStaggerManager.getElementProgressAtTime).toHaveBeenCalledWith(
         expect.any(Number),
         4000,
         1000
@@ -445,7 +445,7 @@ describe("CSSAnimator", () => {
 
       expect(onComplete).toHaveBeenCalledTimes(1);
       // Should update with progress = 1
-      expect(mockStaggerManager.calculateElementProgress).toHaveBeenCalledWith(
+      expect(mockStaggerManager.getElementProgressAtTime).toHaveBeenCalledWith(
         expect.any(Number),
         expect.any(Number),
         1000
@@ -600,7 +600,7 @@ describe("CSSAnimator", () => {
   describe("Integration Scenarios", () => {
     it("should work with staggered animations", () => {
       const config = { ...baseConfig, stagger: 100 };
-      mockStaggerManager.calculateElementProgress
+      mockStaggerManager.getElementProgressAtTime
         .mockReturnValueOnce({
           progress: 0.5,
           isActive: true,

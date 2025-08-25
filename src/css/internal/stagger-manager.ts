@@ -1,3 +1,5 @@
+import { clampProgress } from "@/utils/progress";
+
 /**
  * Calculates stagger timing for multiple elements
  * Responsibility: Stagger calculations, element timing coordination
@@ -27,7 +29,7 @@ export class StaggerManager {
   /**
    * Calculate element progress based on global elapsed time
    */
-  calculateElementProgress(
+  getElementProgressAtTime(
     elementIndex: number,
     elapsed: number,
     baseDuration: number
@@ -51,9 +53,9 @@ export class StaggerManager {
       };
     }
 
-    const elementProgress = (elapsed - startTime) / baseDuration;
+    const progress = (elapsed - startTime) / baseDuration;
     return {
-      progress: Math.max(0, Math.min(1, elementProgress)),
+      progress: clampProgress(progress),
       isActive: true,
       isComplete: false,
     };
