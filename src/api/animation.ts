@@ -94,6 +94,7 @@ export class Mayonation {
       this.engine = new AnimationEngine({
         duration: this.cssAnimator.totalDuration,
         loop: this.config.repeat === "infinite",
+        yoyo: this.config.yoyo ?? false,
         onStart: () => {
           this.cssAnimator.start();
         },
