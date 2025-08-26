@@ -1,8 +1,10 @@
 import { AnimationCallbacks } from "@/css/types";
+import { clampProgress } from "@/utils/progress";
 
 interface AnimationEngineOptions extends AnimationCallbacks {
   duration: number;
   loop?: boolean;
+  yoyo?: boolean;
 }
 
 /**
@@ -18,6 +20,7 @@ export class AnimationEngine {
   private readonly duration: number;
   private readonly options: AnimationCallbacks & {
     loop?: boolean;
+    yoyo?: boolean;
   };
 
   constructor(options: AnimationEngineOptions) {
@@ -84,7 +87,7 @@ export class AnimationEngine {
    * through animations or jumping to specific points.
    */
   seek(progress: number): void {
-    const clampedProgress = Math.max(0, Math.min(1, progress));
+    const clampedProgress = clampProgress(progress);
     this.options.onUpdate?.(clampedProgress);
   }
 
@@ -112,13 +115,12 @@ export class AnimationEngine {
     if (this.state !== "playing" || !this.startTime) return;
 
     const elapsed = performance.now() - this.startTime;
-    let progress = elapsed / this.duration;
-
-    progress = this.options.loop ? progress % 1 : Math.min(progress, 1);
+    const rawProgress = elapsed / this.duration;
+    const progress = this.calculateProgress(rawProgress);
 
     this.options.onUpdate?.(progress);
 
-    if (progress >= 1 && !this.options.loop) {
+    if (this.shouldComplete(rawProgress)) {
       this.state = "completed";
       this.options.onComplete?.();
       return;
@@ -140,5 +142,31 @@ export class AnimationEngine {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+  }
+
+  /**
+   * Calculate the actual progress value considering loop and yoyo settings
+   */
+  private calculateProgress(rawProgress: number): number {
+    if (!this.options.loop) {
+      return Math.min(rawProgress, 1);
+    }
+
+    if (!this.options.yoyo) {
+      return rawProgress % 1;
+    }
+
+    const cycleProgress = rawProgress % 2;
+    return cycleProgress <= 1 ? cycleProgress : 2 - cycleProgress;
+  }
+
+  /**
+   * Determine if animation should complete
+   */
+  private shouldComplete(rawProgress: number): boolean {
+    if (this.options.loop) {
+      return false;
+    }
+    return rawProgress >= 1;
   }
 }
