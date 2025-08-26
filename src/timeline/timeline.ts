@@ -5,47 +5,118 @@ import { ElementLike } from "@/utils/dom";
 import { EaseFunction } from "@/core/ease-fns";
 import { clamp } from "@/utils/math";
 
+/**
+ * Represents an animation item in the timeline with its timing information
+ */
 export interface TimelineItem {
-  animator: CSSAnimator;
-  startTime: number;
-  endTime: number;
+  /** Unique identifier for this timeline item */
   id: string;
+  /** The CSS animator that handles the actual animation */
+  animator: CSSAnimator;
+  /** When this animation starts on the timeline (ms) */
+  startTime: number;
+  /** When this animation ends on the timeline (ms) */
+  endTime: number;
+  /** Duration of just this animation (ms) */
+  duration: number;
+  /** Current state of this animation item */
+  state: "pending" | "active" | "complete";
 }
 
 /**
- * High-level animation timeline.
+ * Configuration for timeline behavior
+ */
+export interface TimelineOptions {
+  /** Whether the timeline should loop when it completes */
+  loop?: boolean;
+  /** Called when timeline starts */
+  onStart?(): void;
+  /** Called on each timeline update */
+  onUpdate?(progress: number, info?: TimelineUpdateInfo): void;
+  /** Called when timeline completes */
+  onComplete?(): void;
+  /** Called when timeline is paused */
+  onPause?(): void;
+  /** Called when timeline is resumed */
+  onResume?(): void;
+}
+
+/**
+ * Information provided during timeline updates
+ */
+export interface TimelineUpdateInfo {
+  /** Current time position in the timeline (ms) */
+  currentTime: number;
+  /** Total timeline duration (ms) */
+  totalDuration: number;
+  /** Number of currently active animations */
+  activeAnimations: number;
+  /** Timeline progress as a percentage (0-100) */
+  progressPercent: number;
+}
+
+/**
+ * High-level animation timeline that orchestrates multiple CSS animations.
  *
- * - Schedules multiple CSS animations on one clock.
- * - Supports placement tokens ("<", ">", "+=x", "-=x") or absolute times.
- * - Controls playback (play, pause, resume, seek, reset).
- * - Emits lifecycle events: start, update, complete, pause, resume.
+ * The Timeline manages global time coordination while delegating individual
+ * element animations to CSSAnimator instances. It provides precise control
+ * over animation sequencing, parallel execution, and relative positioning.
+ *
+ * Key Features:
+ * - Sequential and parallel animation scheduling
+ * - Relative positioning with tokens ("<", ">", "+=", "-=")
+ * - Precise seek/scrub functionality
+ * - Event-driven updates
+ * - Loop support
+ * - Pause/resume capabilities
+ *
+ * @example
+ * ```typescript
+ * const tl = new Timeline({ loop: false });
+ *
+ * tl.add('#box1', { from: { x: 0 }, to: { x: 100 }, duration: 1000 })
+ *   .add('#box2', { from: { y: 0 }, to: { y: 100 }, duration: 800 }, "+=200")
+ *   .add('#box3', { from: { scale: 1 }, to: { scale: 2 }, duration: 600 }, "<")
+ *   .play();
+ * ```
  */
 export class Timeline {
   private items: TimelineItem[] = [];
   private engine: AnimationEngine | null = null;
-  private totalDuration: number = 0;
-  private lastAddedTime: number = 0;
-  private eventCallbacks: Map<string, Function[]> = new Map();
+  private eventCallbacks: Map<TimelineEvent, Function[]> = new Map();
+  private options: TimelineOptions;
+
+  // Timing state
+  private _totalDuration: number = 0;
+  private _lastEndTime: number = 0;
+  private currentTimelineTime: number = 0;
 
   /**
-   * Create a timeline.
-   * @param options.loop If true, restarts when completed.
+   * Creates a new Timeline instance
+   * @param options Configuration options for timeline behavior
    */
-  constructor(private options: { loop?: boolean } = {}) {}
+  constructor(options: TimelineOptions = {}) {
+    this.options = {
+      loop: false,
+      ...options,
+    };
+  }
 
   /**
-   * Add a CSS animation to the timeline.
+   * Adds an animation to the timeline at the specified position.
    *
-   * Usage:
-   * - position "<" at time 0
-   * - position ">" at current end
-   * - position "+=500" 500ms after last add
-   * - position "-=250" 250ms before last add
+   * Position tokens:
+   * - `"<"`: Start at timeline beginning (0ms)
+   * - `">"`: Start at current timeline end
+   * - `"+=500"`: Start 500ms after current timeline end
+   * - `"-=300"`: Start 300ms before current timeline end
+   * - `undefined`: Start at current timeline end (same as ">")
+   * - `number`: Start at specific time in milliseconds
    *
-   * @param target Elements to animate (selector, element, or list).
-   * @param config Animation config: duration, delay, stagger, ease, from/to, keyframes.
-   * @param position Optional placement token or absolute ms.
-   * @returns this (chainable)
+   * @param target Elements to animate (selector, element, or array)
+   * @param config Animation configuration
+   * @param position Where to place this animation on the timeline
+   * @returns This timeline instance (for chaining)
    */
   add(
     target: ElementLike,
@@ -60,122 +131,214 @@ export class Timeline {
     },
     position?: TimelinePosition
   ): Timeline {
-    const startTime = this.resolvePosition(position);
-    const duration = config.duration ?? 1000;
+    try {
+      // Create the CSS animator
+      const animator = new CSSAnimator({
+        target,
+        duration: config.duration ?? 1000,
+        delay: 0, // Timeline manages timing, not individual animators
+        stagger: config.stagger ?? 0,
+        ease: config.ease,
+        from: config.from,
+        to: config.to,
+        keyframes: config.keyframes,
+      });
 
-    const animator = new CSSAnimator({
-      target,
-      duration,
-      ...config,
-    });
+      // Resolve the start position on the timeline
+      const startTime = this.resolvePosition(position);
+      const endTime = startTime + animator.totalDuration;
 
-    const endTime = startTime + animator.totalDuration;
-    this.addItem(animator, startTime, endTime);
-    return this;
+      // Create timeline item
+      const item: TimelineItem = {
+        id: this.generateItemId(),
+        animator,
+        startTime,
+        endTime,
+        duration: animator.totalDuration,
+        state: "pending",
+      };
+
+      // Add to timeline and update duration tracking
+      this.items.push(item);
+      this.updateTimelineDuration();
+
+      return this;
+    } catch (error) {
+      console.error("Timeline.add() error:", error);
+      throw error;
+    }
   }
 
   /**
-   * Start playback (no-op if already playing).
-   * Triggers start/update/complete events as time advances.
-   * @returns this
+   * Starts timeline playback.
+   * If already playing, returns the existing state.
+   * Creates a new animation engine and begins the timeline.
+   *
+   * @returns This timeline instance
    */
   play(): Timeline {
-    if (this.engine?.isPlaying) return this;
-
-    this.engine = new AnimationEngine({
-      duration: this.totalDuration,
-      loop: this.options.loop,
-      onStart: () => {
-        this.items.forEach((item) => {
-          try {
-            item.animator.start();
-          } catch (error) {
-            console.error(`Timeline animator start error:`, error);
-          }
-        });
-        this.emit("start");
-      },
-      onUpdate: (progress: number) => {
-        this.updateAllItems(progress * this.totalDuration);
-        this.emit("update", { progress, time: progress * this.totalDuration });
-      },
-      onComplete: () => {
-        this.items.forEach((item) => {
-          try {
-            item.animator.complete();
-          } catch (error) {
-            console.error(`Timeline animator complete error:`, error);
-          }
-        });
-        this.emit("complete");
-      },
-      onPause: () => this.emit("pause"),
-      onResume: () => this.emit("resume"),
-    });
-
-    this.engine.play();
-    return this;
-  }
-
-  /**
-   * Jump to a time/position without playing.
-   * @param position Absolute ms or token ("<", ">", "+=x", "-=x").
-   * @returns this
-   */
-  seek(position: number | TimelinePosition): Timeline {
-    const time =
-      typeof position === "number" ? position : this.resolvePosition(position);
-
-    this.updateAllItems(time);
-
-    if (this.engine) {
-      this.engine.seek(time / this.totalDuration);
+    if (this.engine?.isPlaying) {
+      return this;
     }
 
-    return this;
+    try {
+      // Clean up any existing engine
+      if (this.engine) {
+        this.engine.reset();
+      }
+
+      // Create new animation engine
+      this.engine = new AnimationEngine({
+        duration: this._totalDuration,
+        loop: this.options.loop,
+        onStart: () => {
+          this.currentTimelineTime = 0;
+          this.emit("start");
+          this.options.onStart?.();
+        },
+        onUpdate: (globalProgress: number) => {
+          this.currentTimelineTime = globalProgress * this._totalDuration;
+          this.updateAllItems(this.currentTimelineTime);
+
+          const updateInfo: TimelineUpdateInfo = {
+            currentTime: this.currentTimelineTime,
+            totalDuration: this._totalDuration,
+            activeAnimations: this.getActiveItemCount(),
+            progressPercent: Math.round(globalProgress * 100),
+          };
+
+          this.emit("update", { progress: globalProgress, info: updateInfo });
+          this.options.onUpdate?.(globalProgress, updateInfo);
+        },
+        onComplete: () => {
+          // Ensure all animations reach their final state
+          this.updateAllItems(this._totalDuration);
+          this.markAllItemsComplete();
+
+          this.emit("complete");
+          this.options.onComplete?.();
+        },
+        onPause: () => {
+          this.emit("pause");
+          this.options.onPause?.();
+        },
+        onResume: () => {
+          this.emit("resume");
+          this.options.onResume?.();
+        },
+      });
+
+      this.engine.play();
+      return this;
+    } catch (error) {
+      console.error("Timeline.play() error:", error);
+      return this;
+    }
   }
 
   /**
-   * Pause playback.
-   * @returns this
+   * Pauses timeline playback at the current position.
+   * Can be resumed later with play() or resume().
+   *
+   * @returns This timeline instance
    */
   pause(): Timeline {
-    this.engine?.pause();
+    try {
+      this.engine?.pause();
+    } catch (error) {
+      console.error("Timeline.pause() error:", error);
+    }
     return this;
   }
 
   /**
-   * Resume playback (starts if not started).
-   * @returns this
+   * Resumes a paused timeline from its current position.
+   * If not paused, starts the timeline.
+   *
+   * @returns This timeline instance
    */
   resume(): Timeline {
-    this.engine?.play();
+    try {
+      if (this.engine?.isPaused) {
+        this.engine.play();
+      } else {
+        this.play();
+      }
+    } catch (error) {
+      console.error("Timeline.resume() error:", error);
+    }
     return this;
   }
 
   /**
-   * Stop engine and reset all items to their initial state.
-   * @returns this
+   * Seeks to a specific time position in the timeline.
+   * Updates all animations to their state at that time.
+   *
+   * @param position Time position (ms) or position token
+   * @returns This timeline instance
+   */
+  seek(position: number | TimelinePosition): Timeline {
+    try {
+      const targetTime =
+        typeof position === "number"
+          ? position
+          : this.resolvePosition(position);
+
+      // Clamp to valid range
+      const clampedTime = clamp(targetTime, 0, this._totalDuration);
+
+      // Update timeline state
+      this.currentTimelineTime = clampedTime;
+      this.updateAllItems(clampedTime);
+
+      // Update engine if it exists
+      if (this.engine) {
+        const progress =
+          this._totalDuration > 0 ? clampedTime / this._totalDuration : 0;
+        this.engine.seek(progress);
+      }
+    } catch (error) {
+      console.error("Timeline.seek() error:", error);
+    }
+    return this;
+  }
+
+  /**
+   * Resets the timeline to its initial state.
+   * Stops playback and resets all animations to their starting values.
+   *
+   * @returns This timeline instance
    */
   reset(): Timeline {
-    this.engine?.reset();
-    this.items.forEach((item) => {
-      try {
-        item.animator.reset();
-      } catch (error) {
-        console.error(`Timeline animator reset error:`, error);
-      }
-    });
-    this.lastAddedTime = 0;
+    try {
+      // Reset engine
+      this.engine?.reset();
+      this.engine = null;
+
+      // Reset timeline time
+      this.currentTimelineTime = 0;
+
+      // Reset all animation items
+      this.items.forEach((item) => {
+        try {
+          item.animator.reset();
+          item.state = "pending";
+        } catch (error) {
+          console.error(`Error resetting timeline item ${item.id}:`, error);
+        }
+      });
+    } catch (error) {
+      console.error("Timeline.reset() error:", error);
+    }
     return this;
   }
 
   /**
-   * Listen to a timeline event.
-   * Events: "start", "update", "complete", "pause", "resume".
-   * @param event Event name.
-   * @param callback Handler invoked with event data.
-   * @returns this
+   * Registers an event listener for timeline events.
+   *
+   * @param event Event name ('start', 'update', 'complete', 'pause', 'resume')
+   * @param callback Function to call when event occurs
+   * @returns This timeline instance
    */
   on(event: TimelineEvent, callback: Function): Timeline {
     if (!this.eventCallbacks.has(event)) {
@@ -186,109 +349,191 @@ export class Timeline {
   }
 
   /**
-   * Remove a previously registered handler.
-   * @param event Event name.
-   * @param callback Same reference passed to on().
-   * @returns this
+   * Removes an event listener.
+   *
+   * @param event Event name
+   * @param callback Function to remove (must be same reference as used in on())
+   * @returns This timeline instance
    */
   off(event: TimelineEvent, callback: Function): Timeline {
     const callbacks = this.eventCallbacks.get(event);
     if (callbacks) {
       const index = callbacks.indexOf(callback);
-      if (index > -1) callbacks.splice(index, 1);
+      if (index > -1) {
+        callbacks.splice(index, 1);
+      }
     }
     return this;
   }
 
-  /** Total scheduled duration (ms). */
-  get duration(): number {
-    return this.totalDuration;
+  /**
+   * Removes all animations from the timeline and resets duration.
+   * Does not affect currently playing state.
+   *
+   * @returns This timeline instance
+   */
+  clear(): Timeline {
+    this.items = [];
+    this._totalDuration = 0;
+    this._lastEndTime = 0;
+    return this;
   }
 
-  /** True while timeline is playing. */
+  // Getters for timeline state
+
+  /** Total timeline duration in milliseconds */
+  get duration(): number {
+    return this._totalDuration;
+  }
+
+  /** Current time position in the timeline (milliseconds) */
+  get currentTime(): number {
+    return this.currentTimelineTime;
+  }
+
+  /** Whether the timeline is currently playing */
   get isPlaying(): boolean {
     return this.engine?.isPlaying ?? false;
   }
 
-  /** True while timeline is paused. */
+  /** Whether the timeline is currently paused */
   get isPaused(): boolean {
     return this.engine?.isPaused ?? false;
   }
 
+  /** Number of animations in the timeline */
+  get itemCount(): number {
+    return this.items.length;
+  }
+
+  /** Current progress as a number between 0 and 1 */
+  get progress(): number {
+    return this._totalDuration > 0
+      ? this.currentTimelineTime / this._totalDuration
+      : 0;
+  }
+
+  // Private methods
+
   /**
-   * Internal: update all items to reflect a global time (ms).
-   * Converts global time to each item's local progress and updates its animator.
+   * Updates all timeline items based on the current timeline time.
+   * Determines which animations should be active and updates them accordingly.
    */
   private updateAllItems(currentTime: number): void {
     this.items.forEach((item) => {
-      const { animator, startTime, endTime } = item;
-
       try {
-        if (currentTime < startTime) {
-          animator.update(0);
-          return;
+        let localProgress = 0;
+        let newState: TimelineItem["state"] = "pending";
+
+        if (currentTime < item.startTime) {
+          // Animation hasn't started yet
+          localProgress = 0;
+          newState = "pending";
+        } else if (currentTime >= item.endTime) {
+          // Animation is complete
+          localProgress = 1;
+          newState = "complete";
+        } else {
+          // Animation is currently active
+          localProgress = (currentTime - item.startTime) / item.duration;
+          newState = "active";
         }
 
-        if (currentTime >= endTime) {
-          animator.update(1);
-          return;
-        }
+        // Update item state
+        item.state = newState;
 
-        const localProgress =
-          (currentTime - startTime) / animator.totalDuration;
-        animator.update(clamp(localProgress, 0, 1));
+        // Update the animator with clamped progress
+        const clampedProgress = clamp(localProgress, 0, 1);
+        item.animator.update(clampedProgress);
       } catch (error) {
-        console.error(`Timeline animator update error:`, error);
+        console.error(`Error updating timeline item ${item.id}:`, error);
       }
     });
   }
 
   /**
-   * Internal: add an item and extend total duration.
-   */
-  private addItem(animator: CSSAnimator, start: number, end: number) {
-    this.items.push({
-      animator,
-      startTime: start,
-      endTime: end,
-      id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-    });
-
-    // Update total duration and last added time
-    this.totalDuration = Math.max(this.totalDuration, end);
-    this.lastAddedTime = end;
-  }
-
-  /**
-   * Internal: resolve a position token to an absolute time (ms).
-   * "<" => 0, ">" => timeline end, "+=x" => last + x, "-=x" => last - x.
+   * Resolves a position token to an absolute time in milliseconds.
    */
   private resolvePosition(position?: TimelinePosition): number {
-    if (position === undefined) return this.lastAddedTime;
-    if (typeof position === "number") return position;
-    if (position === "<") return 0;
-    if (position === ">") return this.totalDuration;
+    if (position === undefined) {
+      return this._lastEndTime;
+    }
+
+    if (typeof position === "number") {
+      return Math.max(0, position);
+    }
+
+    switch (position) {
+      case "<":
+        return 0;
+      case ">":
+        return this._lastEndTime;
+    }
 
     if (typeof position === "string") {
       if (position.startsWith("+=")) {
-        return this.lastAddedTime + parseFloat(position.slice(2));
+        const offset = parseFloat(position.slice(2));
+        return this._lastEndTime + Math.max(0, offset);
       }
+
       if (position.startsWith("-=")) {
-        return this.lastAddedTime - parseFloat(position.slice(2));
+        const offset = parseFloat(position.slice(2));
+        return Math.max(0, this._lastEndTime - Math.max(0, offset));
       }
     }
 
-    return this.lastAddedTime;
+    // Fallback to end time
+    return this._lastEndTime;
   }
 
   /**
-   * Internal: emit an event to registered handlers.
+   * Updates the timeline duration based on current items.
    */
-  private emit(event: string, data?: any): void {
+  private updateTimelineDuration(): void {
+    if (this.items.length === 0) {
+      this._totalDuration = 0;
+      this._lastEndTime = 0;
+      return;
+    }
+
+    // Calculate total duration as the latest end time
+    this._totalDuration = Math.max(...this.items.map((item) => item.endTime));
+    this._lastEndTime = this._totalDuration;
+  }
+
+  /**
+   * Generates a unique ID for timeline items.
+   */
+  private generateItemId(): string {
+    return `timeline_item_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+  }
+
+  /**
+   * Returns the number of currently active animations.
+   */
+  private getActiveItemCount(): number {
+    return this.items.filter((item) => item.state === "active").length;
+  }
+
+  /**
+   * Marks all timeline items as complete (used when timeline finishes).
+   */
+  private markAllItemsComplete(): void {
+    this.items.forEach((item) => {
+      item.state = "complete";
+    });
+  }
+
+  /**
+   * Emits an event to all registered listeners.
+   */
+  private emit(event: TimelineEvent, data?: any): void {
     const callbacks = this.eventCallbacks.get(event) ?? [];
-    callbacks.forEach((cb) => {
+    callbacks.forEach((callback) => {
       try {
-        cb(data);
+        callback(data);
       } catch (error) {
         console.error(`Timeline event "${event}" callback error:`, error);
       }
