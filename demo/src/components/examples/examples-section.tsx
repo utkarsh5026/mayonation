@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { PlayCircle, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlayCircle, RotateCcw, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { mayo, timeline } from "mayonation";
 import { examples } from "./examples";
 import Prism from "prismjs";
@@ -9,12 +9,23 @@ import "prismjs/components/prism-typescript";
 const ExamplesSection: React.FC = () => {
   const [currentExample, setCurrentExample] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const currentDemo = examples[currentExample];
 
   useEffect(() => {
     Prism.highlightAll();
   }, [currentExample]);
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(currentDemo.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
   const renderDemo = (
     demoType: string,
     element: HTMLElement,
@@ -280,14 +291,50 @@ const ExamplesSection: React.FC = () => {
               {currentDemo.description}
             </p>
 
-            <div className="relative">
-              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                <pre className="text-sm overflow-x-auto">
-                  <code className="language-typescript">
-                    {currentDemo.code}
-                  </code>
-                </pre>
+            <div className="relative group">
+              <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl border border-gray-800/50 shadow-2xl">
+                {/* Header with language label and copy button */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/50">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <span className="text-xs font-medium text-gray-400 ml-3">
+                      TypeScript
+                    </span>
+                  </div>
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-xs text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={14} />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Code content */}
+                <div className="p-6 overflow-hidden">
+                  <pre className="text-sm leading-relaxed overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                    <code className="language-typescript">
+                      {currentDemo.code}
+                    </code>
+                  </pre>
+                </div>
               </div>
+              
+              {/* Subtle glow effect */}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 blur-xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             </div>
           </div>
 
