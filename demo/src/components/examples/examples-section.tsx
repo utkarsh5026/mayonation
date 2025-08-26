@@ -268,115 +268,125 @@ const ExamplesSection: React.FC = () => {
         </div>
 
         {/* Main Example Display */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
           {/* Code Side */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold text-white mb-2">
-                  {currentDemo.title}
-                </h3>
-                <div className="flex items-center space-x-3 mb-4">
-                  <span className="px-3 py-1 bg-gray-800 text-gray-300 text-sm rounded-full">
+          <div className="flex flex-col justify-between min-h-[600px]">
+            {/* Header Section */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-gray-800 to-gray-700 text-gray-300 text-sm font-medium rounded-full border border-gray-600">
                     {currentDemo.category}
                   </span>
-                  <span className="text-gray-500 text-sm">
+                  <span className="text-gray-500 text-sm font-medium">
                     {currentExample + 1} of {examples.length}
                   </span>
                 </div>
+                <h3 className="text-3xl font-bold text-white leading-tight">
+                  {currentDemo.title}
+                </h3>
+                <p className="text-gray-400 leading-relaxed text-lg">
+                  {currentDemo.description}
+                </p>
               </div>
             </div>
 
-            <p className="text-gray-400 leading-relaxed">
-              {currentDemo.description}
-            </p>
-
-            <div className="relative group">
-              <div className="bg-gray-900/90 backdrop-blur-sm rounded-xl border border-gray-800/50 shadow-2xl">
-                {/* Header with language label and copy button */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/50">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex space-x-1">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            {/* Code Block */}
+            <div className="relative group flex-1 flex flex-col justify-center">
+              <div className="bg-black border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+                {/* Header with enhanced styling */}
+                <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
                     </div>
-                    <span className="text-xs font-medium text-gray-400 ml-3">
+                    <div className="h-4 w-px bg-gray-600 mx-2"></div>
+                    <span className="text-sm font-semibold text-gray-300 tracking-wide">
                       TypeScript
                     </span>
                   </div>
                   <button
                     onClick={copyToClipboard}
-                    className="flex items-center space-x-1 px-3 py-1.5 text-xs text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-all duration-200 border border-gray-600 hover:border-gray-500"
                   >
                     {copied ? (
                       <>
-                        <Check size={14} />
-                        <span>Copied!</span>
+                        <Check size={16} className="text-green-400" />
+                        <span className="text-green-400 font-medium">Copied!</span>
                       </>
                     ) : (
                       <>
-                        <Copy size={14} />
-                        <span>Copy</span>
+                        <Copy size={16} />
+                        <span>Copy Code</span>
                       </>
                     )}
                   </button>
                 </div>
                 
-                {/* Code content */}
-                <div className="p-6 overflow-hidden">
-                  <pre className="text-sm leading-relaxed overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                    <code className="language-typescript">
+                {/* Code content with enhanced styling */}
+                <div className="p-8 bg-black overflow-hidden">
+                  <pre className="text-sm leading-7 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+                    <code className="language-typescript block">
                       {currentDemo.code}
                     </code>
                   </pre>
                 </div>
               </div>
               
-              {/* Subtle glow effect */}
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10 blur-xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              {/* Enhanced glow effect */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-2xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             </div>
           </div>
 
           {/* Animation Side */}
-          <div className="space-y-6">
-            <div className="relative">
-              <div className="aspect-video bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden relative">
-                {/* Animated background */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${currentDemo.gradient} opacity-10`}
-                />
+          <div className="flex flex-col justify-between min-h-[600px]">
+            {/* Preview Container */}
+            <div className="flex-1 flex flex-col justify-center">
+              <div className="relative">
+                {/* Main preview area */}
+                <div className="aspect-video bg-gray-950 rounded-2xl border border-gray-800 overflow-hidden relative shadow-xl">
+                  {/* Subtle grid pattern */}
+                  <div
+                    className="absolute inset-0 opacity-10"
+                    style={{
+                      backgroundImage: `
+                        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+                      `,
+                      backgroundSize: "40px 40px",
+                    }}
+                  />
 
-                {/* Grid pattern */}
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)",
-                    backgroundSize: "20px 20px",
-                  }}
-                />
+                  {/* Demo element container */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {renderDemoElement()}
+                  </div>
+                </div>
 
-                {/* Demo element container */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {renderDemoElement()}
+                {/* Floating info badge */}
+                <div className="absolute -top-3 left-6 px-4 py-2 bg-black border border-gray-600 rounded-lg shadow-lg">
+                  <span className="text-xs font-semibold text-gray-300 tracking-wider">
+                    LIVE PREVIEW
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center justify-center space-x-4">
+            {/* Enhanced Controls */}
+            <div className="flex items-center justify-center space-x-6 mt-8">
               <button
                 onClick={handlePlayAnimation}
                 disabled={isPlaying}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
+                className={`group flex items-center space-x-3 px-8 py-4 rounded-2xl font-semibold transition-all duration-300 transform ${
                   isPlaying
-                    ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                    : `bg-gradient-to-r ${currentDemo.gradient} text-white hover:scale-105 shadow-lg`
+                    ? "bg-gray-800 text-gray-500 cursor-not-allowed scale-95"
+                    : `bg-gradient-to-r ${currentDemo.gradient} text-white hover:scale-105 shadow-2xl hover:shadow-purple-500/30`
                 }`}
               >
-                <PlayCircle size={20} />
-                <span>{isPlaying ? "Playing..." : "Play Animation"}</span>
+                <PlayCircle size={22} className={!isPlaying ? "group-hover:rotate-12 transition-transform" : ""} />
+                <span className="text-lg">{isPlaying ? "Playing..." : "Play Animation"}</span>
               </button>
 
               <button
@@ -391,9 +401,10 @@ const ExamplesSection: React.FC = () => {
                     element.style.opacity = "";
                   }
                 }}
-                className="p-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors"
+                className="group p-4 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-2xl transition-all duration-300 border border-gray-600 hover:border-gray-500 hover:scale-105"
+                title="Reset Animation"
               >
-                <RotateCcw size={20} />
+                <RotateCcw size={22} className="group-hover:rotate-180 transition-transform duration-300" />
               </button>
             </div>
           </div>
