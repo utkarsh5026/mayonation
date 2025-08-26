@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   PlayCircle,
   RotateCcw,
@@ -18,11 +18,53 @@ const ExamplesSection: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Track active animations and timeouts for cleanup
+  const activeAnimationsRef = useRef<
+    Array<{ stop?: () => void; reset?: () => void }>
+  >([]);
+  const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const currentDemo = examples[currentExample];
 
   useEffect(() => {
     Prism.highlightAll();
   }, [currentExample]);
+
+  // Cleanup function to stop all active animations
+  const cleanupAnimations = () => {
+    // Clear any pending cleanup timeout
+    if (cleanupTimeoutRef.current) {
+      clearTimeout(cleanupTimeoutRef.current);
+      cleanupTimeoutRef.current = null;
+    }
+
+    // Stop all active animations
+    activeAnimationsRef.current.forEach((animation) => {
+      if (animation.stop) animation.stop();
+      if (animation.reset) animation.reset();
+    });
+    activeAnimationsRef.current = [];
+  };
+
+  // Reset element to initial state
+  const resetElement = (element: HTMLElement) => {
+    // Remove all inline styles that might have been applied
+    element.style.transform = "";
+    element.style.backgroundColor = "";
+    element.style.borderRadius = "";
+    element.style.opacity = "";
+    element.style.transition = "";
+
+    // Reset stagger items
+    const staggerItems = element.querySelectorAll(".stagger-item");
+    staggerItems.forEach((item) => {
+      const htmlItem = item as HTMLElement;
+      htmlItem.style.transform = "";
+      htmlItem.style.opacity = "";
+      htmlItem.style.transition = "";
+      htmlItem.style.transitionDelay = "";
+    });
+  };
 
   const copyToClipboard = async () => {
     try {
@@ -33,6 +75,7 @@ const ExamplesSection: React.FC = () => {
       console.error("Failed to copy code:", err);
     }
   };
+
   const renderDemo = (
     demoType: string,
     element: HTMLElement,
@@ -40,24 +83,18 @@ const ExamplesSection: React.FC = () => {
   ) => {
     if (!element) return null;
 
-    // // Reset element first
-    // element.style.transform = "";
-    // element.style.backgroundColor = "";
-    // element.style.borderRadius = "";
-    // element.style.opacity = "";
+    // Clean up any existing animations first
+    cleanupAnimations();
 
-    // Reset stagger items if they exist
-    const staggerItems = element.querySelectorAll(".stagger-item");
-    staggerItems.forEach((item) => {
-      (item as HTMLElement).style.transform = "";
-      (item as HTMLElement).style.opacity = "";
-    });
+    // Reset element to initial state
+    resetElement(element);
 
     const target = `#${elementID}`;
+    let animationInstance = null;
 
     switch (demoType) {
       case "basicTransform":
-        mayo({
+        animationInstance = mayo({
           target,
           duration: 1500,
           to: {
@@ -66,11 +103,13 @@ const ExamplesSection: React.FC = () => {
             translateX: 50,
           },
           ease: "easeInOutCubic",
-        }).play();
+        });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
 
       case "colorMorphing":
-        mayo({
+        animationInstance = mayo({
           target,
           duration: 2000,
           to: {
@@ -79,51 +118,62 @@ const ExamplesSection: React.FC = () => {
             scale: 1.2,
           },
           ease: "easeInOut",
-        }).play();
+        });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
 
       case "staggerWave":
-        staggerItems.forEach((item, index) => {
-          const htmlItem = item as HTMLElement;
-          htmlItem.style.transition = `all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)`;
-          htmlItem.style.transitionDelay = `${index * 150}ms`;
-          setTimeout(() => {
-            htmlItem.style.transform =
-              "translateY(-40px) scale(1.1) rotate(15deg)";
-          }, 50);
+        // For stagger wave, we'll use mayo with stagger instead of manual CSS transitions
+        animationInstance = mayo({
+          target: `${target} .stagger-item`,
+          duration: 1000,
+          stagger: 150,
+          to: {
+            translateY: -40,
+            scale: 1.1,
+            rotateZ: 15,
+          },
+          ease: "easeInOut",
         });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
 
-      case "keyframePath": {
-        mayo({
+      case "keyframePath":
+        animationInstance = mayo({
           target,
           duration: 3000,
           keyframes: [
             { offset: 0, translateX: 0, translateY: 0, scale: 1 },
-            { offset: 0.25, translateX: 1000, translateY: -500, scale: 0.2 },
-            { offset: 0.5, translateX: 500, translateY: -1000, scale: 1.8 },
-            { offset: 0.75, translateX: -500, translateY: -1500, scale: 0.9 },
-            { offset: 1, translateX: 0, translateY: 0, scale: 2 },
+            { offset: 0.25, translateX: 100, translateY: -50, scale: 0.8 },
+            { offset: 0.5, translateX: 50, translateY: -100, scale: 1.2 },
+            { offset: 0.75, translateX: -50, translateY: -50, scale: 0.9 },
+            { offset: 1, translateX: 0, translateY: 0, scale: 1 },
           ],
           ease: "easeIn",
-        }).play();
+        });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
-      }
+
       case "elasticBounce":
-        mayo({
+        animationInstance = mayo({
           target,
-          duration: 500,
+          duration: 2000,
           to: {
             translateX: 120,
             scale: 1.4,
             rotateZ: 360,
           },
           ease: "easeInOutCubic",
-        }).play();
+        });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
 
-      case "chainSequence": {
-        timeline()
+      case "chainSequence":
+        animationInstance = timeline()
           .add(target, {
             to: { scale: 1.3, rotateZ: 90 },
             duration: 500,
@@ -139,51 +189,65 @@ const ExamplesSection: React.FC = () => {
           .add(target, {
             to: { rotateZ: 270, borderRadius: "50%" },
             duration: 600,
-          })
-          .play();
-        break;
-      }
+          });
 
-      case "pulseEffect": {
-        mayo({
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
+        break;
+
+      case "pulseEffect":
+        animationInstance = mayo({
           target,
-          duration: 500,
+          duration: 1000,
           to: {
-            scale: 1.8,
+            scale: 1.3,
             opacity: 0.7,
             borderRadius: "50%",
           },
           repeat: "infinite",
           yoyo: true,
           ease: "easeInOutQuad",
-        }).play();
+        });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
-      }
 
       case "springPhysics": {
-        element.style.transition =
-          "all 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-        setTimeout(() => {
-          element.style.transform =
-            "translateX(100px) translateY(-60px) rotate(180deg) scale(1.2)";
-        }, 50);
+        // Create a custom easing function for spring physics
+        const springEasing = (t: number) => {
+          const c4 = (2 * Math.PI) / 3;
+          return t === 0
+            ? 0
+            : t === 1
+            ? 1
+            : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+        };
+
+        animationInstance = mayo({
+          target,
+          duration: 2500,
+          to: {
+            translateX: 100,
+            translateY: -60,
+            rotateZ: 180,
+            scale: 1.2,
+          },
+          ease: springEasing,
+        });
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
         break;
       }
     }
 
-    return setTimeout(() => {
-      element.style.transition = "all 0.5s ease-in-out";
-      element.style.transform = "";
-      element.style.backgroundColor = "";
-      element.style.borderRadius = "";
-      element.style.opacity = "";
+    // Set up cleanup after animation completes
+    cleanupTimeoutRef.current = setTimeout(() => {
+      resetElement(element);
       setIsPlaying(false);
-
-      staggerItems.forEach((item) => {
-        (item as HTMLElement).style.transform = "";
-        (item as HTMLElement).style.opacity = "";
-      });
+      cleanupAnimations();
     }, 4000);
+
+    return cleanupTimeoutRef.current;
   };
 
   const handlePlayAnimation = () => {
@@ -192,18 +256,43 @@ const ExamplesSection: React.FC = () => {
     setIsPlaying(true);
     const elementID = `demo-element-${currentExample}`;
     const element = document.getElementById(elementID);
+
     if (element) {
       renderDemo(currentDemo.demo, element, elementID);
     }
   };
 
+  const handleReset = () => {
+    const elementID = `demo-element-${currentExample}`;
+    const element = document.getElementById(elementID);
+
+    if (element) {
+      cleanupAnimations();
+      resetElement(element);
+      setIsPlaying(false);
+    }
+  };
+
   const nextExample = () => {
+    // Clean up current animations when switching examples
+    cleanupAnimations();
+    setIsPlaying(false);
     setCurrentExample((prev) => (prev + 1) % examples.length);
   };
 
   const prevExample = () => {
+    // Clean up current animations when switching examples
+    cleanupAnimations();
+    setIsPlaying(false);
     setCurrentExample((prev) => (prev - 1 + examples.length) % examples.length);
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupAnimations();
+    };
+  }, []);
 
   const renderDemoElement = () => {
     switch (currentDemo.demo) {
@@ -248,6 +337,7 @@ const ExamplesSection: React.FC = () => {
             <button
               onClick={prevExample}
               className="p-2 text-gray-400 hover:text-white transition-colors"
+              disabled={isPlaying}
             >
               <ChevronLeft size={24} />
             </button>
@@ -256,12 +346,18 @@ const ExamplesSection: React.FC = () => {
               {examples.map((_, index) => (
                 <button
                   key={index}
-                  onClick={() => setCurrentExample(index)}
+                  onClick={() => {
+                    if (!isPlaying) {
+                      cleanupAnimations();
+                      setCurrentExample(index);
+                    }
+                  }}
+                  disabled={isPlaying}
                   className={`w-3 h-3 rounded-full transition-all ${
                     index === currentExample
                       ? "bg-white scale-125"
                       : "bg-gray-600 hover:bg-gray-400"
-                  }`}
+                  } ${isPlaying ? "cursor-not-allowed opacity-50" : ""}`}
                 />
               ))}
             </div>
@@ -269,6 +365,7 @@ const ExamplesSection: React.FC = () => {
             <button
               onClick={nextExample}
               className="p-2 text-gray-400 hover:text-white transition-colors"
+              disabled={isPlaying}
             >
               <ChevronRight size={24} />
             </button>
@@ -409,17 +506,7 @@ const ExamplesSection: React.FC = () => {
               </button>
 
               <button
-                onClick={() => {
-                  const element = document.getElementById(
-                    `demo-element-${currentExample}`
-                  );
-                  if (element) {
-                    element.style.transform = "";
-                    element.style.backgroundColor = "";
-                    element.style.borderRadius = "";
-                    element.style.opacity = "";
-                  }
-                }}
+                onClick={handleReset}
                 className="group p-4 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-2xl transition-all duration-300 border border-gray-600 hover:border-gray-500 hover:scale-105"
                 title="Reset Animation"
               >
