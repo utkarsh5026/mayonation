@@ -1,21 +1,20 @@
-import React, { useState } from "react";
-import {
-  PlayCircle,
-  RotateCcw,
-  Copy,
-  Code2,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { mayo, timeline } from "mate";
+import React, { useState, useEffect } from "react";
+import { PlayCircle, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { mayo, timeline } from "mayonation";
 import { examples } from "./examples";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-typescript";
 
 const ExamplesSection: React.FC = () => {
   const [currentExample, setCurrentExample] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
 
   const currentDemo = examples[currentExample];
+
+  useEffect(() => {
+    Prism.highlightAll();
+  }, [currentExample]);
   const renderDemo = (
     demoType: string,
     element: HTMLElement,
@@ -117,23 +116,28 @@ const ExamplesSection: React.FC = () => {
               to: { translateX: 80, backgroundColor: "#10B981" },
               duration: 800,
             },
-            "+=500"
+            "+=100"
           )
-
+          .add(target, {
+            to: { rotateZ: 270, borderRadius: "50%" },
+            duration: 600,
+          })
           .play();
         break;
       }
 
       case "pulseEffect": {
-        let pulseCount = 0;
-        const pulseInterval = setInterval(() => {
-          element.style.transition = "all 1s ease-in-out";
-          element.style.transform =
-            pulseCount % 2 === 0 ? "scale(1.3)" : "scale(1)";
-          element.style.opacity = pulseCount % 2 === 0 ? "0.7" : "1";
-          pulseCount++;
-          if (pulseCount > 4) clearInterval(pulseInterval);
-        }, 1000);
+        mayo({
+          target,
+          duration: 1000,
+          to: {
+            scale: 1.3,
+            opacity: 0.7,
+          },
+          repeat: "infinite",
+          yoyo: true,
+          ease: "easeInOutQuad",
+        }).play();
         break;
       }
 
@@ -154,6 +158,7 @@ const ExamplesSection: React.FC = () => {
       element.style.backgroundColor = "";
       element.style.borderRadius = "";
       element.style.opacity = "";
+      setIsPlaying(false);
 
       staggerItems.forEach((item) => {
         (item as HTMLElement).style.transform = "";
@@ -171,16 +176,6 @@ const ExamplesSection: React.FC = () => {
     if (element) {
       renderDemo(currentDemo.demo, element, elementID);
     }
-
-    setTimeout(() => {
-      setIsPlaying(false);
-    }, 4500);
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(currentDemo.code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const nextExample = () => {
@@ -286,24 +281,8 @@ const ExamplesSection: React.FC = () => {
             </p>
 
             <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Code2 size={16} className="text-gray-400" />
-                  <span className="text-gray-400 text-sm font-mono">
-                    TypeScript
-                  </span>
-                </div>
-                <button
-                  onClick={handleCopyCode}
-                  className="flex items-center space-x-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors"
-                >
-                  <Copy size={14} />
-                  <span>{copiedCode ? "Copied!" : "Copy Code"}</span>
-                </button>
-              </div>
-
               <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                <pre className="text-sm text-gray-300 overflow-x-auto">
+                <pre className="text-sm overflow-x-auto">
                   <code className="language-typescript">
                     {currentDemo.code}
                   </code>
@@ -368,28 +347,6 @@ const ExamplesSection: React.FC = () => {
                 className="p-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors"
               >
                 <RotateCcw size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Info */}
-        <div className="mt-20 text-center">
-          <div className="bg-gray-900/30 rounded-2xl p-8 border border-gray-800">
-            <h4 className="text-xl font-semibold text-white mb-4">
-              Ready to Start Animating?
-            </h4>
-            <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
-              All these examples use the actual Mayonation library with its tiny
-              ~5KB bundle size. Copy any code snippet and start creating your
-              own animations.
-            </p>
-            <div className="flex items-center justify-center space-x-4">
-              <button className="px-6 py-3 bg-white text-black font-medium rounded-xl hover:bg-gray-100 transition-colors">
-                Get Started
-              </button>
-              <button className="px-6 py-3 border border-gray-600 text-gray-300 font-medium rounded-xl hover:border-gray-500 transition-colors">
-                View Documentation
               </button>
             </div>
           </div>
