@@ -5,7 +5,6 @@ import {
   InstallationSection,
   ExamplesSection,
   APISection,
-  DemoSection,
   Navigation,
   FeaturesSection,
 } from "./components";
@@ -24,18 +23,16 @@ function App() {
         {activeSection === "Hero" && (
           <>
             <HeroSection />
-            <FeaturesSection />
-            <DemoSection />
-            <APISection />
             <ExamplesSection />
+            <APISection />
             <InstallationSection />
+            <FeaturesSection />
           </>
         )}
-        {activeSection === "Features" && <FeaturesSection />}
-        {activeSection === "Demos" && <DemoSection />}
         {activeSection === "API" && <APISection />}
         {activeSection === "Examples" && <ExamplesSection />}
         {activeSection === "Installation" && <InstallationSection />}
+        {activeSection === "Features" && <FeaturesSection />}
       </main>
 
       <Footer />

@@ -12,11 +12,10 @@ const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const sections = [
     "Hero",
-    "Features",
-    "Demos",
-    "API",
     "Examples",
+    "API",
     "Installation",
+    "Features",
   ];
 
   return (
