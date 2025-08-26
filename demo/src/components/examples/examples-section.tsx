@@ -151,6 +151,7 @@ const ExamplesSection: React.FC = () => {
           to: {
             scale: 1.8,
             opacity: 0.7,
+            borderRadius: "50%",
           },
           repeat: "infinite",
           yoyo: true,
