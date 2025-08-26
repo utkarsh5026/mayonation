@@ -83,9 +83,9 @@ new Mayonation({
     },
   ];
 
-  const renderDemo = (demoType: string, elementId: string) => {
+  const renderDemo = (demoType: string, elementId: string): Mayonation | null => {
     const element = document.getElementById(elementId);
-    if (!element) return;
+    if (!element) return null;
 
     let animation: Mayonation | null = null;
 
