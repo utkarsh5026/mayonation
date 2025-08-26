@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { PlayCircle, RotateCcw, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import {
+  PlayCircle,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Check,
+} from "lucide-react";
 import { mayo, timeline } from "mayonation";
 import { examples } from "./examples";
 import Prism from "prismjs";
@@ -23,7 +30,7 @@ const ExamplesSection: React.FC = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy code:', err);
+      console.error("Failed to copy code:", err);
     }
   };
   const renderDemo = (
@@ -140,9 +147,9 @@ const ExamplesSection: React.FC = () => {
       case "pulseEffect": {
         mayo({
           target,
-          duration: 1000,
+          duration: 500,
           to: {
-            scale: 1.3,
+            scale: 1.8,
             opacity: 0.7,
           },
           repeat: "infinite",
@@ -314,7 +321,9 @@ const ExamplesSection: React.FC = () => {
                     {copied ? (
                       <>
                         <Check size={16} className="text-green-400" />
-                        <span className="text-green-400 font-medium">Copied!</span>
+                        <span className="text-green-400 font-medium">
+                          Copied!
+                        </span>
                       </>
                     ) : (
                       <>
@@ -324,7 +333,7 @@ const ExamplesSection: React.FC = () => {
                     )}
                   </button>
                 </div>
-                
+
                 {/* Code content with enhanced styling */}
                 <div className="p-8 bg-black overflow-hidden">
                   <pre className="text-sm leading-7 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
@@ -334,7 +343,7 @@ const ExamplesSection: React.FC = () => {
                   </pre>
                 </div>
               </div>
-              
+
               {/* Enhanced glow effect */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-2xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             </div>
@@ -385,8 +394,17 @@ const ExamplesSection: React.FC = () => {
                     : `bg-gradient-to-r ${currentDemo.gradient} text-white hover:scale-105 shadow-2xl hover:shadow-purple-500/30`
                 }`}
               >
-                <PlayCircle size={22} className={!isPlaying ? "group-hover:rotate-12 transition-transform" : ""} />
-                <span className="text-lg">{isPlaying ? "Playing..." : "Play Animation"}</span>
+                <PlayCircle
+                  size={22}
+                  className={
+                    !isPlaying
+                      ? "group-hover:rotate-12 transition-transform"
+                      : ""
+                  }
+                />
+                <span className="text-lg">
+                  {isPlaying ? "Playing..." : "Play Animation"}
+                </span>
               </button>
 
               <button
@@ -404,7 +422,10 @@ const ExamplesSection: React.FC = () => {
                 className="group p-4 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-2xl transition-all duration-300 border border-gray-600 hover:border-gray-500 hover:scale-105"
                 title="Reset Animation"
               >
-                <RotateCcw size={22} className="group-hover:rotate-180 transition-transform duration-300" />
+                <RotateCcw
+                  size={22}
+                  className="group-hover:rotate-180 transition-transform duration-300"
+                />
               </button>
             </div>
           </div>
