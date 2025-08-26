@@ -5,8 +5,7 @@ import type {
   AnimationValue,
 } from "./types";
 import { ElementManager, PropertyAnimator, StaggerManager } from "./internal";
-import { ElementLike, ElementResolver } from "@/utils/dom";
-import { throwIf } from "@/utils/error";
+import { ElementResolver } from "@/utils/dom";
 import { resolveEaseFn } from "@/core/ease-fns";
 
 export class CSSAnimator {
@@ -36,7 +35,7 @@ export class CSSAnimator {
       onUpdate: config.onUpdate ?? (() => {}),
       onComplete: config.onComplete ?? (() => {}),
     };
-    this.elements = this.resolveElements(this.config.target);
+    this.elements = ElementResolver.resolveHTMLElements(this.config.target);
 
     this.elementManager = new ElementManager(this.elements);
     this.staggerManager = new StaggerManager(
@@ -128,29 +127,6 @@ export class CSSAnimator {
   }
 
   /**
-   * Resolves target elements from various input types (selector, element, array).
-   * Filters results to ensure only HTMLElements are included.
-   * @param target Selector/element/collection.
-   */
-  private resolveElements(target: ElementLike): HTMLElement[] {
-    try {
-      const elements = ElementResolver.resolve(target).filter(
-        (el): el is HTMLElement =>
-          el instanceof HTMLElement || el instanceof SVGElement
-      ) as HTMLElement[];
-
-      throwIf(
-        elements.length === 0,
-        "Target must resolve to at least one HTMLElement or SVGElement"
-      );
-
-      return elements;
-    } catch (error) {
-      throw new Error(`Failed to resolve target: ${error}`);
-    }
-  }
-
-  /**
    * Prepare per-element keyframes from from/to, arrays, or explicit keyframes.
    */
   private resolveAllPropertiesAndKeyframes(): void {
@@ -191,6 +167,13 @@ export class CSSAnimator {
 
       handleSimpleProperties(index, element);
     });
+
+    console.log(
+      "Resolved Keyframes",
+      this.resolvedKeyframes,
+      " Len",
+      this.resolvedKeyframes.size
+    );
   }
 
   /**

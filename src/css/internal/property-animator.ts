@@ -2,6 +2,7 @@ import type { AnimationProperties, ProcessedKeyframe } from "../types";
 import { EaseFunction, resolveEaseFn } from "@/core/ease-fns";
 import { PropertyManager } from "@/animations";
 import type { AnimatableProperty } from "@/animations/property-manager";
+import { AnimationValue } from "@/core";
 
 interface KeyframeSegment {
   fromFrame: ProcessedKeyframe | null;
@@ -110,6 +111,8 @@ export class PropertyAnimator {
       ...Object.keys(toProps),
     ]);
 
+    console.log("Resolved All properties ", allProps);
+
     allProps.forEach((prop) => {
       if (!PropertyManager.isAnimatable(prop)) return;
 
@@ -124,11 +127,12 @@ export class PropertyAnimator {
 
         if (toValue === undefined) return;
 
+        console.log("Resolved Actual from and to", actualFromValue, toValue);
         this.updateProperty(
           propertyManager,
           prop,
-          actualFromValue,
-          toValue,
+          actualFromValue as any,
+          toValue as any,
           progress
         );
       } catch (error) {
@@ -142,15 +146,24 @@ export class PropertyAnimator {
   private updateProperty(
     propertyManager: PropertyManager,
     prop: AnimatableProperty,
-    fromValue: any,
-    toValue: any,
+    fromValue: AnimationValue,
+    toValue: AnimationValue,
     progress: number
   ): void {
-    const fromParsed = propertyManager.parse(
-      prop as AnimatableProperty,
-      fromValue
-    );
-    const toParsed = propertyManager.parse(prop as AnimatableProperty, toValue);
+    let fromParsed: any;
+    let toParsed: any;
+
+    if (fromValue && typeof fromValue === "object" && fromValue.type) {
+      fromParsed = fromValue;
+    } else {
+      fromParsed = propertyManager.parse(prop as AnimatableProperty, fromValue);
+    }
+
+    if (toValue && typeof toValue === "object" && toValue.type) {
+      toParsed = toValue;
+    } else {
+      toParsed = propertyManager.parse(prop as AnimatableProperty, toValue);
+    }
 
     if (fromParsed && toParsed) {
       const interpolated = propertyManager.interpolate(

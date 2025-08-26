@@ -16,7 +16,7 @@ import {
   type ColorSpace,
   isRGBColor,
   isHSLColor,
-} from "@/core/animation-val";
+} from "@/core";
 import { StyleAnimator, CSSPropertyName } from "./styles";
 import { TransformHandler, TransformPropertyName } from "./transform";
 import { safeOperation, throwIf } from "@/utils/error";

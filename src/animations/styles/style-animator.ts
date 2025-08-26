@@ -19,7 +19,37 @@ import { COLOR_PROPERTIES, EXTENDED_ANIMATABLE_PROPERTIES } from "./prop-names";
 import { clampProgress } from "@/utils/progress";
 
 /**
- * CSS property animation handler with comprehensive support
+ * StyleAnimator
+ *
+ * High-level CSS property animation handler focused on:
+ * - Parsing CSS values into normalized AnimationValue objects
+ * - Interpolating numeric and color values with consistent semantics
+ * - Batching and applying DOM style writes efficiently
+ * - Caching current values to minimize reads and re-parsing
+ *
+ * Typical usage:
+ * @example
+ * ```ts
+ * const el = document.querySelector<HTMLElement>('#box')!;
+ * const styles = new StyleAnimator(el, {
+ *   colorSpace: 'rgb',       // default
+ *   precision: 3,            // default
+ *   useGPUAcceleration: true // default (delegated where relevant)
+ * });
+ *
+ * // Parse start/end values
+ * const from = styles.parse('opacity', '0');     // => { type: 'numeric', value: 0, unit: '' }
+ * const to   = styles.parse('opacity', '1');     // => { type: 'numeric', value: 1, unit: '' }
+ *
+ * // Interpolate and apply
+ * const mid = styles.interpolate('opacity', from, to, 0.5);
+ * styles.applyAnimatedPropertyValue('opacity', mid); // batched and flushed on next rAF
+ * ```
+ *
+ * Notes:
+ * - Batching: applyAnimatedPropertyValue stores pending style changes and flushes them on the next frame.
+ * - Precision: numeric values are rounded when converted to CSS strings, not during interpolation.
+ * - Color space: interpolation occurs in the configured color space ('rgb' or 'hsl'); default is 'rgb'.
  */
 export class StyleAnimator {
   private readonly targetElement: HTMLElement;
@@ -32,6 +62,20 @@ export class StyleAnimator {
   private updateScheduled: boolean = false;
   private parser: StyleParser;
 
+  /**
+   * Creates a new StyleAnimator for a target element.
+   *
+   * @param targetElement Element whose styles will be read/animated.
+   * @param options Optional handler configuration:
+   *  - colorSpace: 'rgb' | 'hsl' (default: 'rgb')
+   *  - precision: number of digits used when serializing numeric CSS (default: 3)
+   *  - useGPUAcceleration: hint for GPU-friendly behavior (delegated; default: true)
+   *
+   * Behavior:
+   * - Reads computed styles with safe fallbacks.
+   * - Initializes a parser with the desired color space.
+   * - Creates a unit conversion context from the element, its parent, and viewport.
+   */
   constructor(targetElement: HTMLElement, options: CSSHandlerOptions = {}) {
     this.targetElement = targetElement;
     this.elementComputedStyles = safeOperation(
@@ -52,7 +96,28 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced interpolation with support for complex values
+   * Interpolates between two CSS AnimationValues for a property.
+   *
+   * - Colors: interpolated in the configured color space ('rgb' or 'hsl').
+   * - Numbers: interpolated linearly; rounding applied only when serializing to CSS.
+   * - Progress is clamped to [0, 1].
+   *
+   * @param property CSS property name.
+   * @param from Start value (must be same type as `to`).
+   * @param to End value (must be same type as `from`).
+   * @param progress Number in [0, 1].
+   * @returns Interpolated AnimationValue.
+   *
+   * @throws If types differ or value types are unsupported for the property.
+   *
+   * Fallback: on internal error, returns `from` when progress < 0.5, else `to`.
+   *
+   * @example
+   * ```ts
+   * const from = styles.parse('backgroundColor', 'rgb(255 0 0)')!;
+   * const to = styles.parse('backgroundColor', '#00f')!;
+   * const mid = styles.interpolate('backgroundColor', from, to, 0.5);
+   * ```
    */
   interpolate(
     property: CSSPropertyName,
@@ -85,7 +150,18 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced property value getter with caching
+   * Returns the current computed AnimationValue for a CSS property.
+   *
+   * - Uses a cache to avoid repeated parsing.
+   * - Falls back to defaults when computed is empty/auto/none.
+   *
+   * @param cssProperty CSS property name.
+   * @returns Parsed AnimationValue in normalized form.
+   *
+   * @example
+   * ```ts
+   * const current = styles.currentValue('opacity'); // => { type: 'numeric', value: 1, unit: '' }
+   * ```
    */
   currentValue(cssProperty: CSSPropertyName): AnimationValue {
     const cacheKey = cssProperty;
@@ -115,7 +191,13 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced property value parsing with better error handling
+   * Parses a CSS string into a normalized AnimationValue for a property.
+   *
+   * @param cssProperty CSS property name.
+   * @param cssValue Raw CSS string (e.g., '16px', '50%', '#09f', 'hsl(0 100% 50%)').
+   * @returns Parsed AnimationValue.
+   *
+   * @throws If the property is not supported/animatable or parsing fails.
    */
   parse(cssProperty: CSSPropertyName, cssValue: string): AnimationValue {
     if (!this.isValidProperty(cssProperty)) {
@@ -126,7 +208,20 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced property application with batching
+   * Queues a new animated value for a CSS property and schedules a batched DOM write.
+   *
+   * - Converts the AnimationValue to a CSS string (with precision rounding for numbers).
+   * - Updates internal cache to reflect the new value.
+   * - Defers DOM writes to the next animation frame for performance.
+   *
+   * @param prop CSS property to update.
+   * @param val Normalized AnimationValue to apply.
+   *
+   * @example
+   * ```ts
+   * const v = styles.parse('opacity', '0.25')!;
+   * styles.applyAnimatedPropertyValue('opacity', v); // flushed on next rAF
+   * ```
    */
   applyAnimatedPropertyValue(prop: CSSPropertyName, val: AnimationValue): void {
     const cssVal = this.convertAnimationValueToCssString(prop, val);
@@ -142,6 +237,11 @@ export class StyleAnimator {
     this.scheduleBatchedUpdate();
   }
 
+  /**
+   * Schedule a requestAnimationFrame to flush pending style updates.
+   * Includes a setTimeout fallback for environments without rAF.
+   * @internal
+   */
   private scheduleBatchedUpdate(): void {
     if (this.updateScheduled) return;
 
@@ -163,7 +263,10 @@ export class StyleAnimator {
   }
 
   /**
-   * Apply all batched updates at once
+   * Flushes all queued style updates in one batch write to the DOM.
+   * Resets the pending updates queue after application.
+   * Robust to individual property set failures.
+   * @internal
    */
   private flushBatchedUpdates(): void {
     this.batchedUpdates.forEach((value, property) => {
@@ -176,7 +279,13 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced reset with proper cleanup
+   * Resets internal caches and restores original computed property values.
+   *
+   * - Clears pending batched updates without applying them.
+   * - Restores each cached property's originalValue to the element.
+   * - Clears the property cache.
+   *
+   * Safe to call between animations to reset the element to its initial state.
    */
   reset(): void {
     this.batchedUpdates.clear();
@@ -191,6 +300,9 @@ export class StyleAnimator {
     this.propertyCache.clear();
   }
 
+  /**
+   * Returns true if the given property is supported for animation by this handler.
+   */
   static isAnimatableProperty(property: string): boolean {
     return (
       EXTENDED_ANIMATABLE_PROPERTIES.has(property) ||
@@ -199,7 +311,8 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced color interpolation with better handling
+   * Interpolates between two colors in the configured color space.
+   * @internal
    */
   private interpolateColor(
     from: ColorValue,
@@ -233,7 +346,9 @@ export class StyleAnimator {
   }
 
   /**
-   * Enhanced numeric interpolation - precision rounding only applied when converting to CSS strings
+   * Linearly interpolates two numeric values.
+   * Precision rounding is deferred until CSS string conversion.
+   * @internal
    */
   private interpolateNumeric(
     from: NumericValue,
@@ -246,7 +361,8 @@ export class StyleAnimator {
   }
 
   /**
-   * Round value to specified precision, preserving extreme values
+   * Rounds a number to the configured precision while preserving extreme/sentinel values.
+   * @internal
    */
   private roundToPrecision(value: number): number {
     if (
@@ -268,19 +384,23 @@ export class StyleAnimator {
   }
 
   /**
-   * Normalize color to target color space
+   * Converts a color value to the configured color space if needed.
+   * Currently returns the input as-is; hook for future conversion.
+   * @internal
    */
   private normalizeColorSpace(colorValue: ColorValue): ColorValue {
     if (colorValue.space === this.config.colorSpace) {
       return colorValue;
     }
 
-    // TODO: We will Convert between color spaces if needed
+    // TODO: Convert between color spaces if needed
     return colorValue;
   }
 
   /**
-   * Get computed property value with fallbacks
+   * Resolves a property's computed CSS value with sensible fallbacks.
+   * - Replaces empty/auto/none values with defaults for interpolation.
+   * @internal
    */
   private getComputedPropertyValue(property: CSSPropertyName): string {
     let value = this.getComputedVal(property);
@@ -292,6 +412,11 @@ export class StyleAnimator {
     return value;
   }
 
+  /**
+   * Reads the computed style value for a property in dashed form.
+   * Errors are caught and return empty string.
+   * @internal
+   */
   private getComputedVal(property: CSSPropertyName): string {
     return safeOperation(
       () => this.elementComputedStyles.getPropertyValue(camelToDash(property)),
@@ -301,7 +426,8 @@ export class StyleAnimator {
   }
 
   /**
-   * Get default values for properties
+   * Default values used when computed styles are empty/auto/none.
+   * @internal
    */
   private getDefaultPropertyValue(property: CSSPropertyName): string {
     const defaults: Record<string, string> = {
@@ -322,7 +448,11 @@ export class StyleAnimator {
   }
 
   /**
-   * Create conversion context for unit calculations
+   * Builds a conversion context for units based on:
+   * - Parent element bounding rect
+   * - Element font size
+   * - Viewport size
+   * @internal
    */
   private createConversionContext(): ConversionContext {
     const parentElement = this.targetElement.parentElement;
@@ -354,13 +484,20 @@ export class StyleAnimator {
     };
   }
 
+  /**
+   * Writes a CSS property (in dashed form) to the target element's inline styles.
+   * @internal
+   */
   private setTargetProp(prop: string, val: string) {
     const dashedProperty = camelToDash(prop);
     this.targetElement.style.setProperty(dashedProperty, val);
   }
 
   /**
-   * Enhanced value to CSS string conversion
+   * Converts an AnimationValue to a CSS string suitable for inline styles.
+   * - Colors: serialized to CSS color strings.
+   * - Numbers: rounded to configured precision and suffixed with unit.
+   * @internal
    */
   private convertAnimationValueToCssString(
     cssProperty: CSSPropertyName,
@@ -378,13 +515,18 @@ export class StyleAnimator {
     throw new Error(`Unsupported value type for ${cssProperty}`);
   }
 
+  /**
+   * Returns the cached state for a property, if any.
+   * @internal
+   */
   private getCached(property: CSSPropertyName) {
     const cached = this.propertyCache.get(property);
     return cached;
   }
 
   /**
-   * Check if property is valid and animatable
+   * Returns true if the property is recognized as animatable (numeric or color).
+   * @internal
    */
   private isValidProperty(property: string): property is CSSPropertyName {
     return (
