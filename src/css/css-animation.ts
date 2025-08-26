@@ -2,7 +2,7 @@ import type {
   AnimationProperties,
   CSSAnimationConfig,
   ProcessedKeyframe,
-  AnimationValue,
+  ApiAnimationValue,
 } from "./types";
 import { ElementManager, PropertyAnimator, StaggerManager } from "./internal";
 import { ElementResolver } from "@/utils/dom";
@@ -220,7 +220,7 @@ export class CSSAnimator {
       const properties: Record<string, any> = {};
 
       Object.entries(allProps).forEach(([property, value]) => {
-        const resolved = this.resolveAnimationValue(value, index, element);
+        const resolved = this.resolveApiAnimationValue(value, index, element);
 
         if (Array.isArray(resolved)) {
           properties[property] = resolved[Math.min(i, resolved.length - 1)];
@@ -228,7 +228,7 @@ export class CSSAnimator {
         }
 
         if (i === 0 && this.config.from?.[property] !== undefined) {
-          properties[property] = this.resolveAnimationValue(
+          properties[property] = this.resolveApiAnimationValue(
             this.config.from[property],
             index,
             element
@@ -252,14 +252,14 @@ export class CSSAnimator {
    * Get the number of frames required based on longest array value (min 2).
    */
   private getMaxKeyFrameLengthGiven(
-    propValues: (AnimationValue | undefined)[],
+    propValues: (ApiAnimationValue | undefined)[],
     index: number,
     element: HTMLElement
   ): number {
     let maxLength = 2; // Minimum from/to
 
     propValues.forEach((value) => {
-      const resolved = this.resolveAnimationValue(value, index, element);
+      const resolved = this.resolveApiAnimationValue(value, index, element);
       if (Array.isArray(resolved)) {
         maxLength = Math.max(maxLength, resolved.length);
       }
@@ -292,7 +292,7 @@ export class CSSAnimator {
     Object.entries(properties).forEach(([prop, val]) => {
       if (prop === "offset" || prop === "easing") return;
 
-      const resolved = this.resolveAnimationValue(val, index, element);
+      const resolved = this.resolveApiAnimationValue(val, index, element);
       resolvedProperties[prop] = Array.isArray(resolved)
         ? resolved[0]
         : resolved;
@@ -303,8 +303,8 @@ export class CSSAnimator {
   /**
    * Resolve a value for an element (number|string|array|function).
    */
-  private resolveAnimationValue(
-    value: AnimationValue | undefined,
+  private resolveApiAnimationValue(
+    value: ApiAnimationValue | undefined,
     index: number,
     element: HTMLElement
   ): number | string | (number | string)[] {

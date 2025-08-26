@@ -4,7 +4,7 @@ import { EaseFunction } from "@/core/ease-fns";
 /**
  * Animation value types where arrays represent keyframes
  */
-export type AnimationValue =
+export type ApiAnimationValue =
   | number // Simple value: x: 100
   | string // String value: x: "100px"
   | number[] // Keyframes: x: [0, 50, 100]
@@ -13,27 +13,27 @@ export type AnimationValue =
   | ((index: number, element: HTMLElement) => number[] | string[]); // Function returning keyframes
 
 export type TransformProperties = {
-  translateX?: AnimationValue;
-  translateY?: AnimationValue;
-  translateZ?: AnimationValue;
-  rotateX?: AnimationValue;
-  rotateY?: AnimationValue;
-  rotateZ?: AnimationValue;
-  scale?: AnimationValue;
-  scaleX?: AnimationValue;
-  scaleY?: AnimationValue;
-  scaleZ?: AnimationValue;
-  skewX?: AnimationValue;
-  skewY?: AnimationValue;
+  translateX?: ApiAnimationValue;
+  translateY?: ApiAnimationValue;
+  translateZ?: ApiAnimationValue;
+  rotateX?: ApiAnimationValue;
+  rotateY?: ApiAnimationValue;
+  rotateZ?: ApiAnimationValue;
+  scale?: ApiAnimationValue;
+  scaleX?: ApiAnimationValue;
+  scaleY?: ApiAnimationValue;
+  scaleZ?: ApiAnimationValue;
+  skewX?: ApiAnimationValue;
+  skewY?: ApiAnimationValue;
 };
 
 export type CssProperties = {
-  opacity?: AnimationValue;
-  width?: AnimationValue;
-  height?: AnimationValue;
-  backgroundColor?: AnimationValue;
-  borderRadius?: AnimationValue;
-  color?: AnimationValue;
+  opacity?: ApiAnimationValue;
+  width?: ApiAnimationValue;
+  height?: ApiAnimationValue;
+  backgroundColor?: ApiAnimationValue;
+  borderRadius?: ApiAnimationValue;
+  color?: ApiAnimationValue;
 };
 
 /**
@@ -41,13 +41,13 @@ export type CssProperties = {
  */
 export type AnimationProperties = TransformProperties &
   CssProperties & {
-    [key: string]: AnimationValue | undefined;
+    [key: string]: ApiAnimationValue | undefined;
   };
 
 export interface AnimationKeyframe {
   offset: number; // 0 to 1
   ease?: EaseFunction;
-  [property: string]: AnimationValue | number | EaseFunction | undefined;
+  [property: string]: ApiAnimationValue | number | EaseFunction | undefined;
 }
 
 /**
