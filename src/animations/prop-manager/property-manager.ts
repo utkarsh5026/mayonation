@@ -2,7 +2,6 @@ import {
   isNumericValue,
   NumericValue,
   type AnimationValue,
-  type ColorSpace,
   isRGBColor,
   isHSLColor,
 } from "@/core";
@@ -10,62 +9,11 @@ import { StyleAnimator, CSSPropertyName } from "../styles";
 import { TransformHandler, TransformPropertyName } from "../transform";
 import { safeOperation, throwIf } from "@/utils/error";
 import { PropertyCache } from "./cache";
-
-/**
- * Options for configuring PropertyManager behavior.
- */
-interface PropertyManagerOptions {
-  /**
-   * Preferred color space for color parsing/interpolation.
-   * Defaults to 'hsl'.
-   */
-  colorSpace?: ColorSpace;
-
-  /**
-   * When true, defers DOM writes and batches them on the next animation frame.
-   * Greatly reduces layout thrashing and improves performance under load.
-   * Defaults to true.
-   */
-  batchUpdates?: boolean;
-
-  /**
-   * Number of decimal places to use when serializing numeric values.
-   * Defaults to 3.
-   */
-  precision?: number;
-
-  /**
-   * When true, enables GPU-friendly transforms (e.g., translateZ(0)) where supported.
-   * Actual behavior is delegated to the underlying handlers.
-   * Defaults to true.
-   */
-  useGPUAcceleration?: boolean;
-}
-
-/**
- * A property that can be animated by PropertyManager.
- *
- * This can be either a transform property (e.g., 'translateX', 'rotate', 'scale')
- * or a CSS property supported by StyleAnimator (e.g., 'opacity', 'backgroundColor').
- *
- * @example
- * ```ts
- * const p: AnimatableProperty = 'opacity';     // CSS property
- * const t: AnimatableProperty = 'translateX';  // transform property
- * ```
- */
-export type AnimatableProperty = TransformPropertyName | CSSPropertyName;
-
+import type { PropertyManagerOptions, AnimatableProperty } from "./types";
 /**
  * PropManager serves as a unified interface for handling both transform and CSS properties
  * during animations. It coordinates between TransformHandler and StyleAnimator while providing
  * a simpler API for the animation system.
- *
- * Key features:
- * - Consistent parsing and interpolation across transforms and CSS
- * - Validation and meaningful error messages
- * - Optional batching via requestAnimationFrame to minimize DOM writes
- * - Caching of current values for efficiency
  */
 export class PropertyManager {
   private readonly transformHandler: TransformHandler;
@@ -109,19 +57,6 @@ export class PropertyManager {
   /**
    * Parses a raw input into a normalized AnimationValue for a given property.
    * Delegates to the appropriate handler based on property type.
-   *
-   * @param property The property to parse (transform or CSS).
-   * @param value A string or number input value (e.g., 100, "50%", "#ff0", "hsl(0 100% 50%)").
-   * @returns A normalized AnimationValue or null if parsing fails safely.
-   *
-   * @throws If the property is not animatable.
-   *
-   * @example
-   * ```ts
-   * const v1 = pm.parse('opacity', 0.5);          // numeric AnimationValue
-   * const v2 = pm.parse('backgroundColor', '#09f'); // color AnimationValue
-   * const v3 = pm.parse('translateX', 100);       // numeric AnimationValue (px by handler convention)
-   * ```
    */
   parse(
     property: AnimatableProperty,
@@ -167,27 +102,6 @@ export class PropertyManager {
 
   /**
    * Interpolates between two AnimationValues for a given property at a specific progress.
-   *
-   * @param property Animatable property to interpolate.
-   * @param from Start value (must match type of `to`).
-   * @param to End value (must match type of `from`).
-   * @param progress A number in [0, 1].
-   * @returns Interpolated AnimationValue.
-   *
-   * @throws If:
-   *  - property is not animatable
-   *  - progress is out of [0, 1]
-   *  - value types mismatch
-   *  - transform properties receive non-numeric values
-   *
-   * On internal errors, falls back to `from` for progress < 0.5, else `to`.
-   *
-   * @example
-   * ```ts
-   * const from = pm.parse('opacity', 0)!;
-   * const to = pm.parse('opacity', 1)!;
-   * const mid = pm.interpolate('opacity', from, to, 0.5);
-   * ```
    */
   interpolate(
     property: AnimatableProperty,
@@ -227,18 +141,24 @@ export class PropertyManager {
   }
 
   /**
+   * Get recommended 'from' values for animations
+   * This is what CSSAnimator should call when user doesn't specify 'from'
+   */
+  getRecommendedFromValue(property: AnimatableProperty): AnimationValue {
+    if (this.isTransformProperty(property)) {
+      return this.transformHandler.getRecommendedFromValue(property);
+    }
+
+    if (this.isCSSProperty(property)) {
+      return this.styleAnimator.getRecommendedFromValue(property);
+    }
+
+    throw new Error(`Unknown property type: ${property}`);
+  }
+
+  /**
    * Returns the current computed AnimationValue for a property.
    * Uses internal caching to avoid redundant reads.
-   *
-   * @param prop The target property.
-   * @returns The current AnimationValue.
-   *
-   * @throws If the property is not animatable.
-   *
-   * @example
-   * ```ts
-   * const current = pm.getCurrentValue('opacity');
-   * ```
    */
   getCurrentValue(prop: AnimatableProperty): AnimationValue {
     this.validateProperty(prop);
@@ -266,17 +186,6 @@ export class PropertyManager {
    * Behavior depends on `batchUpdates`:
    * - When true (default): queues the change and flushes it on the next rAF tick.
    * - When false: applies immediately to the DOM/handler.
-   *
-   * @param prop The property to update.
-   * @param val The normalized AnimationValue to apply.
-   *
-   * @throws If the property is invalid or the value fails validation.
-   *
-   * @example
-   * ```ts
-   * const val = pm.parse('translateY', 120)!;
-   * pm.updateProperty('translateY', val); // queued when batchUpdates = true
-   * ```
    */
   updateProperty(prop: AnimatableProperty, val: AnimationValue): void {
     this.validateProperty(prop);
@@ -306,11 +215,6 @@ export class PropertyManager {
    *
    * - If batching is enabled: flushes all queued updates in one pass and writes to DOM.
    * - If batching is disabled: recomputes the transform string and writes to DOM if needed.
-   *
-   * @example
-   * ```ts
-   * pm.applyUpdates();
-   * ```
    */
   applyUpdates(): void {
     if (this.options.batchUpdates) {
@@ -409,7 +313,7 @@ export class PropertyManager {
    */
   private readCurrentValueFromDOM(prop: AnimatableProperty) {
     if (this.isTransformProperty(prop)) {
-      return this.transformHandler.getCurrentTransform(prop);
+      return this.transformHandler.currentValue(prop);
     }
 
     if (this.isCSSProperty(prop)) {
@@ -500,14 +404,12 @@ export class PropertyManager {
    */
   private flushPendingUpdates(): void {
     try {
-      // Apply transform updates as a batch
       if (this.pendingTransformUpdates.size > 0) {
         const transformUpdates = new Map(this.pendingTransformUpdates);
         this.transformHandler.updateTransforms(transformUpdates);
         this.pendingTransformUpdates.clear();
       }
 
-      // Apply CSS updates
       this.pendingCSSUpdates.forEach((value, property) => {
         this.styleAnimator.applyAnimatedPropertyValue(property, value);
       });
@@ -521,16 +423,6 @@ export class PropertyManager {
 
   /**
    * Determines if a string refers to an animatable property known to this manager.
-   *
-   * @param property The property name to test.
-   * @returns true if the property is a supported transform or CSS property.
-   *
-   * @example
-   * ```ts
-   * PropertyManager.isAnimatable('opacity');     // true
-   * PropertyManager.isAnimatable('translateX');  // true
-   * PropertyManager.isAnimatable('display');     // false
-   * ```
    */
   public static isAnimatable(property: string): property is AnimatableProperty {
     return (
