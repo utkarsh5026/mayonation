@@ -222,17 +222,13 @@ export class KeyframesBuilder {
 
       if (to[prop] !== undefined) {
         const currentVal = propertyManager.getRecommendedFromValue(prop);
-        toProps[prop] = this.serializeAnimationValue(currentVal);
+        fromProps[prop] = this.serializeAnimationValue(currentVal);
       }
     };
 
     const handleTo = (prop: AnimatableProperty) => {
       if (to[prop] !== undefined) {
-        const resolved = this.resolveValue(
-          this.config.to[prop],
-          elementIndex,
-          element
-        );
+        const resolved = this.resolveValue(to[prop], elementIndex, element);
         toProps[prop] = Array.isArray(resolved) ? resolved[0] : resolved;
       }
     };
@@ -247,22 +243,22 @@ export class KeyframesBuilder {
 
       handleFrom(prop);
       handleTo(prop);
-
-      const keyframes: ProcessedKeyframe[] = [
-        {
-          offset: 0,
-          properties: fromProps,
-          easing: resolveEaseFn(this.config.ease),
-        },
-        {
-          offset: 1,
-          properties: toProps,
-          easing: resolveEaseFn(this.config.ease),
-        },
-      ];
-
-      this.resolvedKeyframes.set(elementIndex, keyframes);
     });
+
+    const keyframes: ProcessedKeyframe[] = [
+      {
+        offset: 0,
+        properties: fromProps,
+        easing: resolveEaseFn(this.config.ease),
+      },
+      {
+        offset: 1,
+        properties: toProps,
+        easing: resolveEaseFn(this.config.ease),
+      },
+    ];
+
+    this.resolvedKeyframes.set(elementIndex, keyframes);
   }
 
   private serializeAnimationValue(animValue: AnimationValue): number | string {
