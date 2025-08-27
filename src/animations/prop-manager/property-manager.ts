@@ -10,6 +10,7 @@ import { TransformHandler, TransformPropertyName } from "../transform";
 import { safeOperation, throwIf } from "@/utils/error";
 import { PropertyCache } from "./cache";
 import type { PropertyManagerOptions, AnimatableProperty } from "./types";
+import { PropValidator } from "./validator";
 /**
  * PropManager serves as a unified interface for handling both transform and CSS properties
  * during animations. It coordinates between TransformHandler and StyleAnimator while providing
@@ -67,7 +68,7 @@ export class PropertyManager {
     property: AnimatableProperty,
     value: string | number
   ): AnimationValue | null {
-    this.validateProperty(property);
+    PropValidator.validateProperty(property);
 
     return safeOperation(
       () => {
@@ -114,9 +115,9 @@ export class PropertyManager {
     to: AnimationValue,
     progress: number
   ): AnimationValue {
-    this.validateProperty(property);
+    PropValidator.validateProperty(property);
     this.validateProgress(progress);
-    this.validateValueTypes(from, to, property);
+    PropValidator.validateValueTypes(from, to, property);
 
     return safeOperation(
       () => {
@@ -166,7 +167,7 @@ export class PropertyManager {
    * Uses internal caching to avoid redundant reads.
    */
   getCurrentValue(prop: AnimatableProperty): AnimationValue {
-    this.validateProperty(prop);
+    PropValidator.validateProperty(prop);
     if (this.cache.isValid(prop)) {
       const cached = this.cache.get(prop);
       console.log(`📋 Cache hit for ${prop}:`, cached?.value);
@@ -193,8 +194,8 @@ export class PropertyManager {
    * - When false: applies immediately to the DOM/handler.
    */
   updateProperty(prop: AnimatableProperty, val: AnimationValue): void {
-    this.validateProperty(prop);
-    this.validateValue(val, prop);
+    PropValidator.validateProperty(prop);
+    PropValidator.validateValue(val, prop);
 
     if (this.isDisposed) {
       console.warn("PropertyManager is disposed, ignoring update");
@@ -344,17 +345,6 @@ export class PropertyManager {
   }
 
   /**
-   * Asserts that a property is animatable by this manager.
-   * @internal
-   */
-  private validateProperty(prop: string): void {
-    throwIf(
-      !PropertyManager.isAnimatable(prop),
-      `Property "${prop}" is not animatable`
-    );
-  }
-
-  /**
    * Type guard: checks if a property is a transform.
    * @internal
    */
@@ -382,21 +372,6 @@ export class PropertyManager {
     throwIf(
       typeof progress !== "number" || progress < 0 || progress > 1,
       `Invalid progress value: ${progress}. Must be between 0 and 1.`
-    );
-  }
-
-  /**
-   * Ensures from/to values share the same AnimationValue type.
-   * @internal
-   */
-  private validateValueTypes(
-    from: AnimationValue,
-    to: AnimationValue,
-    property: string
-  ): void {
-    throwIf(
-      from.type !== to.type,
-      `Value type mismatch for ${property}: ${from.type} vs ${to.type}`
     );
   }
 
@@ -434,68 +409,5 @@ export class PropertyManager {
       TransformHandler.isTransformProperty(property) ||
       StyleAnimator.isAnimatableProperty(property)
     );
-  }
-
-  /**
-   * Validates an AnimationValue for a given property, ensuring correct shape and type.
-   * Throws with actionable messages when invalid.
-   * @internal
-   */
-  private validateValue(value: AnimationValue, property: string): void {
-    throwIf(
-      !value || typeof value !== "object",
-      `Invalid value for property ${property}`
-    );
-
-    throwIf(
-      !value.type,
-      `Invalid AnimationValue: missing type for property ${property}`
-    );
-
-    if (
-      value.type === "numeric" &&
-      (typeof value.value !== "number" || !isFinite(value.value))
-    ) {
-      throw new Error(`Invalid numeric value for property ${property}`);
-    }
-
-    if (value.type === "color") {
-      if (!value.value || typeof value.value !== "object") {
-        throw new Error(`Invalid color value for property ${property}`);
-      }
-
-      const colorValue = value.value;
-      if (isRGBColor(colorValue)) {
-        if (
-          typeof colorValue.r !== "number" ||
-          typeof colorValue.g !== "number" ||
-          typeof colorValue.b !== "number" ||
-          typeof colorValue.a !== "number"
-        ) {
-          throw new Error(`Invalid RGB color value for property ${property}`);
-        }
-      } else if (isHSLColor(colorValue)) {
-        if (
-          typeof colorValue.h !== "number" ||
-          typeof colorValue.s !== "number" ||
-          typeof colorValue.l !== "number" ||
-          typeof colorValue.a !== "number"
-        ) {
-          throw new Error(`Invalid HSL color value for property ${property}`);
-        }
-      }
-    }
-
-    if (!["numeric", "color"].includes((value as any).type)) {
-      throw new Error(
-        `Unknown AnimationValue type: ${
-          (value as any).type
-        } for property ${property}`
-      );
-    }
-
-    if (this.isTransformProperty(property) && !isNumericValue(value)) {
-      throw new Error(`Transform property ${property} requires numeric value`);
-    }
   }
 }
