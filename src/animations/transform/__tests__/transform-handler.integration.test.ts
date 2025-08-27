@@ -194,9 +194,9 @@ describe("TransformHandler - Integration Tests", () => {
       expect(handlers[2].computeTransform()).toBe("scale3d(2, 1, 1)");
 
       // Verify other elements are unaffected
-      expect(handlers[0].getCurrentTransform("rotateZ").value).toBe(0);
-      expect(handlers[1].getCurrentTransform("scaleX").value).toBe(1);
-      expect(handlers[2].getCurrentTransform("translateX").value).toBe(0);
+      expect(handlers[0].currentValue("rotateZ").value).toBe(0);
+      expect(handlers[1].currentValue("scaleX").value).toBe(1);
+      expect(handlers[2].currentValue("translateX").value).toBe(0);
     });
 
     it("should handle synchronized transforms across multiple elements", () => {
@@ -425,7 +425,9 @@ describe("TransformHandler - Integration Tests", () => {
       // First frame: translateX=0, rotateZ=0, scale=1 - all default values get optimized away
       expect(transformHistory[0]).toBe(""); // Empty string when all transforms are default
       // Final frame: translateX=0 (optimized away), rotateZ=360deg, scale=1 (optimized away)
-      expect(transformHistory[transformHistory.length - 1]).toBe("rotateZ(360deg)");
+      expect(transformHistory[transformHistory.length - 1]).toBe(
+        "rotateZ(360deg)"
+      );
 
       // Verify smooth progression (no identical consecutive frames except at keyframes)
       const uniqueTransforms = new Set(transformHistory);

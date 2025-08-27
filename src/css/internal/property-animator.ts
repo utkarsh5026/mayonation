@@ -1,7 +1,6 @@
 import type { AnimationProperties, ProcessedKeyframe } from "../types";
 import { EaseFunction, resolveEaseFn } from "@/core/ease-fns";
-import { PropertyManager } from "@/animations";
-import type { AnimatableProperty } from "@/animations/property-manager";
+import { AnimatableProperty, PropertyManager } from "@/animations/prop-manager";
 import { AnimationValue } from "@/core";
 
 interface KeyframeSegment {
@@ -111,8 +110,6 @@ export class PropertyAnimator {
       ...Object.keys(toProps),
     ]);
 
-    console.log("Resolved All properties ", allProps);
-
     allProps.forEach((prop) => {
       if (!PropertyManager.isAnimatable(prop)) return;
 
@@ -126,8 +123,6 @@ export class PropertyAnimator {
             : propertyManager.getCurrentValue(prop);
 
         if (toValue === undefined) return;
-
-        console.log("Resolved Actual from and to", actualFromValue, toValue);
         this.updateProperty(
           propertyManager,
           prop,
@@ -173,6 +168,14 @@ export class PropertyAnimator {
         progress
       );
 
+      console.log(
+        "Resolved ",
+        prop,
+        fromParsed,
+        toParsed,
+        interpolated,
+        progress
+      );
       propertyManager.updateProperty(prop as AnimatableProperty, interpolated);
     }
   }

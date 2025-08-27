@@ -1,6 +1,14 @@
 /// @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi, afterEach, beforeAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  vi,
+  afterEach,
+  beforeAll,
+} from "vitest";
 import { TransformHandler } from "../../transform/handler";
 import { createValue } from "../../../core/animation-val";
 
@@ -163,7 +171,7 @@ describe("TransformHandler - Edge Cases", () => {
         createValue.numeric(largeValue, "px")
       );
 
-      const result = handler.getCurrentTransform("translateX");
+      const result = handler.currentValue("translateX");
       expect(result.value).toBe(largeValue);
       expect(handler.computeTransform()).toContain(
         `translate3d(${largeValue}px, 0px, 0px)`
@@ -174,7 +182,7 @@ describe("TransformHandler - Edge Cases", () => {
       const tinyValue = Number.MIN_VALUE;
       handler.updateTransform("scaleX", createValue.numeric(tinyValue, ""));
 
-      const result = handler.getCurrentTransform("scaleX");
+      const result = handler.currentValue("scaleX");
       expect(result.value).toBe(tinyValue);
     });
 
@@ -185,7 +193,7 @@ describe("TransformHandler - Edge Cases", () => {
         createValue.numeric(largeRotation, "deg")
       );
 
-      const result = handler.getCurrentTransform("rotateZ");
+      const result = handler.currentValue("rotateZ");
       expect(result.value).toBe(largeRotation);
       expect(handler.computeTransform()).toContain(
         `rotateZ(${largeRotation}deg)`
@@ -199,7 +207,7 @@ describe("TransformHandler - Edge Cases", () => {
         createValue.numeric(negativeRotation, "deg")
       );
 
-      const result = handler.getCurrentTransform("rotateY");
+      const result = handler.currentValue("rotateY");
       expect(result.value).toBe(negativeRotation);
     });
 
@@ -207,7 +215,7 @@ describe("TransformHandler - Edge Cases", () => {
       const largeSkew = 1000;
       handler.updateTransform("skewX", createValue.numeric(largeSkew, "deg"));
 
-      const result = handler.getCurrentTransform("skewX");
+      const result = handler.currentValue("skewX");
       expect(result.value).toBe(largeSkew);
     });
   });
@@ -220,7 +228,7 @@ describe("TransformHandler - Edge Cases", () => {
         createValue.numeric(preciseValue, "px")
       );
 
-      const result = handler.getCurrentTransform("translateX");
+      const result = handler.currentValue("translateX");
       expect(result.value).toBeCloseTo(preciseValue, 8);
     });
 
@@ -231,7 +239,7 @@ describe("TransformHandler - Edge Cases", () => {
         createValue.numeric(scientificValue, "")
       );
 
-      const result = handler.getCurrentTransform("scaleX");
+      const result = handler.currentValue("scaleX");
       expect(result.value).toBe(scientificValue);
     });
 
@@ -242,7 +250,7 @@ describe("TransformHandler - Edge Cases", () => {
         createValue.numeric(nearZero, "px")
       );
 
-      const result = handler.getCurrentTransform("translateY");
+      const result = handler.currentValue("translateY");
       expect(result.value).toBe(nearZero);
       expect(handler.computeTransform()).toContain(
         `translate3d(0px, ${nearZero}px, 0px)`
@@ -352,7 +360,7 @@ describe("TransformHandler - Edge Cases", () => {
       expect(duration).toBeLessThan(1000);
 
       // Final value should be correct
-      const result = handler.getCurrentTransform("translateX");
+      const result = handler.currentValue("translateX");
       expect(result.value).toBe(iterations - 1);
     });
 
@@ -401,7 +409,7 @@ describe("TransformHandler - Edge Cases", () => {
           handler.updateTransform("translateX", createValue.numeric(i, "px"));
         });
         operations.push(() => {
-          return handler.getCurrentTransform("translateX");
+          return handler.currentValue("translateX");
         });
         operations.push(() => {
           return handler.computeTransform();
@@ -435,7 +443,7 @@ describe("TransformHandler - Edge Cases", () => {
 
       // Verify all values are correctly stored
       properties.forEach((prop, index) => {
-        const result = handler.getCurrentTransform(prop);
+        const result = handler.currentValue(prop);
         expect(result.value).toBe(values[index]);
       });
 
@@ -456,7 +464,7 @@ describe("TransformHandler - Edge Cases", () => {
         );
       }).not.toThrow();
 
-      const result = handler.getCurrentTransform("translateX");
+      const result = handler.currentValue("translateX");
       expect(result.value).toBe(Infinity);
     });
 
@@ -468,7 +476,7 @@ describe("TransformHandler - Edge Cases", () => {
         );
       }).not.toThrow();
 
-      const result = handler.getCurrentTransform("translateY");
+      const result = handler.currentValue("translateY");
       expect(result.value).toBe(-Infinity);
     });
 
@@ -477,7 +485,7 @@ describe("TransformHandler - Edge Cases", () => {
         handler.updateTransform("rotateZ", createValue.numeric(NaN, "deg"));
       }).not.toThrow();
 
-      const result = handler.getCurrentTransform("rotateZ");
+      const result = handler.currentValue("rotateZ");
       expect(result.value).toBeNaN();
     });
 

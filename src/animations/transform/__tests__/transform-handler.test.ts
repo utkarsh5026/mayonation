@@ -300,14 +300,14 @@ describe("TransformHandler", () => {
   describe("getCurrentTransform", () => {
     it("should return current transform values", () => {
       handler.updateTransform("translateX", createValue.numeric(100, "px"));
-      const value = handler.getCurrentTransform("translateX");
+      const value = handler.currentValue("translateX");
       expect(value).toEqual(createValue.numeric(100, "px"));
     });
 
     it("should return default values for unset properties", () => {
-      const translateX = handler.getCurrentTransform("translateX");
-      const rotateZ = handler.getCurrentTransform("rotateZ");
-      const scaleX = handler.getCurrentTransform("scaleX");
+      const translateX = handler.currentValue("translateX");
+      const rotateZ = handler.currentValue("rotateZ");
+      const scaleX = handler.currentValue("scaleX");
 
       expect(translateX).toEqual(createValue.numeric(0, "px"));
       expect(rotateZ).toEqual(createValue.numeric(0, "deg"));
@@ -316,7 +316,7 @@ describe("TransformHandler", () => {
 
     it("should throw error for invalid property", () => {
       expect(() => {
-        handler.getCurrentTransform("invalid" as any);
+        handler.currentValue("invalid" as any);
       }).toThrow("Unsupported property: invalid");
     });
 
@@ -341,7 +341,7 @@ describe("TransformHandler", () => {
 
       properties.forEach(({ prop, value, unit }) => {
         handler.updateTransform(prop, createValue.numeric(value, unit as any));
-        const result = handler.getCurrentTransform(prop);
+        const result = handler.currentValue(prop);
         expect(result).toEqual(createValue.numeric(value, unit as any));
       });
     });
@@ -487,17 +487,17 @@ describe("TransformHandler", () => {
       handler.updateTransforms(updates);
       handler.reset();
 
-      expect(handler.getCurrentTransform("translateX").value).toBe(0);
-      expect(handler.getCurrentTransform("translateY").value).toBe(0);
-      expect(handler.getCurrentTransform("translateZ").value).toBe(0);
-      expect(handler.getCurrentTransform("rotateX").value).toBe(0);
-      expect(handler.getCurrentTransform("rotateY").value).toBe(0);
-      expect(handler.getCurrentTransform("rotateZ").value).toBe(0);
-      expect(handler.getCurrentTransform("scaleX").value).toBe(1);
-      expect(handler.getCurrentTransform("scaleY").value).toBe(1);
-      expect(handler.getCurrentTransform("scaleZ").value).toBe(1);
-      expect(handler.getCurrentTransform("skewX").value).toBe(0);
-      expect(handler.getCurrentTransform("skewY").value).toBe(0);
+      expect(handler.currentValue("translateX").value).toBe(0);
+      expect(handler.currentValue("translateY").value).toBe(0);
+      expect(handler.currentValue("translateZ").value).toBe(0);
+      expect(handler.currentValue("rotateX").value).toBe(0);
+      expect(handler.currentValue("rotateY").value).toBe(0);
+      expect(handler.currentValue("rotateZ").value).toBe(0);
+      expect(handler.currentValue("scaleX").value).toBe(1);
+      expect(handler.currentValue("scaleY").value).toBe(1);
+      expect(handler.currentValue("scaleZ").value).toBe(1);
+      expect(handler.currentValue("skewX").value).toBe(0);
+      expect(handler.currentValue("skewY").value).toBe(0);
     });
 
     it("should apply reset to DOM element", () => {
@@ -626,7 +626,7 @@ describe("TransformHandler", () => {
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       handler.updateTransform("scaleX", createValue.numeric(-1, ""));
-      const result = handler.getCurrentTransform("scaleX");
+      const result = handler.currentValue("scaleX");
 
       expect(result.value).toBe(0);
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -727,8 +727,8 @@ describe("TransformHandler", () => {
       testElement.style.transform = "matrix(1, 0, 0, 1, 100, 50)";
       const testHandler = new TransformHandler(testElement);
 
-      const translateX = testHandler.getCurrentTransform("translateX");
-      const translateY = testHandler.getCurrentTransform("translateY");
+      const translateX = testHandler.currentValue("translateX");
+      const translateY = testHandler.currentValue("translateY");
 
       expect(translateX.value).toBeCloseTo(100, 1);
       expect(translateY.value).toBeCloseTo(50, 1);
@@ -738,9 +738,9 @@ describe("TransformHandler", () => {
       testElement.style.transform = "translateX(50px) rotateZ(45deg) scale(2)";
       const testHandler = new TransformHandler(testElement);
 
-      const translateX = testHandler.getCurrentTransform("translateX");
-      const rotateZ = testHandler.getCurrentTransform("rotateZ");
-      const scaleX = testHandler.getCurrentTransform("scaleX");
+      const translateX = testHandler.currentValue("translateX");
+      const rotateZ = testHandler.currentValue("rotateZ");
+      const scaleX = testHandler.currentValue("scaleX");
 
       expect(translateX.value).toBe(50);
       expect(rotateZ.value).toBe(45);
@@ -852,8 +852,8 @@ describe("TransformHandler", () => {
     it("should handle shorthand properties correctly", () => {
       handler.updateTransform("scale", createValue.numeric(2, ""));
 
-      const scaleX = handler.getCurrentTransform("scaleX");
-      const scaleY = handler.getCurrentTransform("scaleY");
+      const scaleX = handler.currentValue("scaleX");
+      const scaleY = handler.currentValue("scaleY");
 
       expect(scaleX.value).toBe(2);
       expect(scaleY.value).toBe(2);
