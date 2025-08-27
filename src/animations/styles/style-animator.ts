@@ -1,5 +1,4 @@
 import { CSSHandlerOptions, PropertyCache, CSSPropertyName } from "./type";
-import { ConversionContext } from "@/utils/unit";
 import {
   AnimationValue,
   ColorValue,
@@ -26,30 +25,6 @@ import { clampProgress } from "@/utils/progress";
  * - Interpolating numeric and color values with consistent semantics
  * - Batching and applying DOM style writes efficiently
  * - Caching current values to minimize reads and re-parsing
- *
- * Typical usage:
- * @example
- * ```ts
- * const el = document.querySelector<HTMLElement>('#box')!;
- * const styles = new StyleAnimator(el, {
- *   colorSpace: 'rgb',       // default
- *   precision: 3,            // default
- *   useGPUAcceleration: true // default (delegated where relevant)
- * });
- *
- * // Parse start/end values
- * const from = styles.parse('opacity', '0');     // => { type: 'numeric', value: 0, unit: '' }
- * const to   = styles.parse('opacity', '1');     // => { type: 'numeric', value: 1, unit: '' }
- *
- * // Interpolate and apply
- * const mid = styles.interpolate('opacity', from, to, 0.5);
- * styles.applyAnimatedPropertyValue('opacity', mid); // batched and flushed on next rAF
- * ```
- *
- * Notes:
- * - Batching: applyAnimatedPropertyValue stores pending style changes and flushes them on the next frame.
- * - Precision: numeric values are rounded when converted to CSS strings, not during interpolation.
- * - Color space: interpolation occurs in the configured color space ('rgb' or 'hsl'); default is 'rgb'.
  */
 export class StyleAnimator {
   private readonly targetElement: HTMLElement;
@@ -57,7 +32,6 @@ export class StyleAnimator {
 
   private readonly propertyCache: Map<string, PropertyCache> = new Map();
   private readonly config: Required<CSSHandlerOptions>;
-  private readonly conversionContext: ConversionContext;
   private batchedUpdates: Map<string, string> = new Map();
   private updateScheduled: boolean = false;
   private parser: StyleParser;
@@ -70,11 +44,6 @@ export class StyleAnimator {
    *  - colorSpace: 'rgb' | 'hsl' (default: 'rgb')
    *  - precision: number of digits used when serializing numeric CSS (default: 3)
    *  - useGPUAcceleration: hint for GPU-friendly behavior (delegated; default: true)
-   *
-   * Behavior:
-   * - Reads computed styles with safe fallbacks.
-   * - Initializes a parser with the desired color space.
-   * - Creates a unit conversion context from the element, its parent, and viewport.
    */
   constructor(targetElement: HTMLElement, options: CSSHandlerOptions = {}) {
     this.targetElement = targetElement;
@@ -92,7 +61,6 @@ export class StyleAnimator {
       useGPUAcceleration: options.useGPUAcceleration ?? true,
     };
     this.parser = new StyleParser(this.config.colorSpace);
-    this.conversionContext = this.createConversionContext();
   }
 
   /**
@@ -101,23 +69,6 @@ export class StyleAnimator {
    * - Colors: interpolated in the configured color space ('rgb' or 'hsl').
    * - Numbers: interpolated linearly; rounding applied only when serializing to CSS.
    * - Progress is clamped to [0, 1].
-   *
-   * @param property CSS property name.
-   * @param from Start value (must be same type as `to`).
-   * @param to End value (must be same type as `from`).
-   * @param progress Number in [0, 1].
-   * @returns Interpolated AnimationValue.
-   *
-   * @throws If types differ or value types are unsupported for the property.
-   *
-   * Fallback: on internal error, returns `from` when progress < 0.5, else `to`.
-   *
-   * @example
-   * ```ts
-   * const from = styles.parse('backgroundColor', 'rgb(255 0 0)')!;
-   * const to = styles.parse('backgroundColor', '#00f')!;
-   * const mid = styles.interpolate('backgroundColor', from, to, 0.5);
-   * ```
    */
   interpolate(
     property: CSSPropertyName,
@@ -149,55 +100,49 @@ export class StyleAnimator {
     );
   }
 
+  markPropertyDirty(property: CSSPropertyName): void {
+    const state = this.propertyCache.get(property);
+    if (state) {
+      state.isDirty = true;
+    }
+  }
+
   /**
    * Returns the current computed AnimationValue for a CSS property.
    *
    * - Uses a cache to avoid repeated parsing.
    * - Falls back to defaults when computed is empty/auto/none.
-   *
-   * @param cssProperty CSS property name.
-   * @returns Parsed AnimationValue in normalized form.
-   *
-   * @example
-   * ```ts
-   * const current = styles.currentValue('opacity'); // => { type: 'numeric', value: 1, unit: '' }
-   * ```
    */
-  currentValue(cssProperty: CSSPropertyName): AnimationValue {
-    const cacheKey = cssProperty;
-    const cached = this.propertyCache.get(cacheKey);
+  currentValue(prop: CSSPropertyName): AnimationValue {
+    const cached = this.propertyCache.get(prop);
 
+    const orignal = cached?.originalValue;
     if (cached && !cached.isDirty) {
       return cached.currentValue;
     }
 
-    const computedValue = this.getComputedPropertyValue(cssProperty);
-    const parsedValue = this.parser.parsePropertyValue(
-      cssProperty,
-      computedValue
-    );
+    const computedValue = this.readCurrentValueFromDOM(prop);
 
     if (!cached) {
-      this.propertyCache.set(cacheKey, {
-        originalValue: computedValue,
-        currentValue: parsedValue,
+      this.propertyCache.set(prop, {
+        originalValue: orignal || this.getRawComputedVal(prop),
+        currentValue: computedValue,
         isDirty: false,
       });
-      return parsedValue;
+      return computedValue;
     }
-    cached.currentValue = parsedValue;
+    cached.currentValue = computedValue;
     cached.isDirty = false;
-    return parsedValue;
+    return computedValue;
+  }
+
+  getRecommendedFromValue(property: CSSPropertyName): AnimationValue {
+    this.markPropertyDirty(property);
+    return this.currentValue(property);
   }
 
   /**
    * Parses a CSS string into a normalized AnimationValue for a property.
-   *
-   * @param cssProperty CSS property name.
-   * @param cssValue Raw CSS string (e.g., '16px', '50%', '#09f', 'hsl(0 100% 50%)').
-   * @returns Parsed AnimationValue.
-   *
-   * @throws If the property is not supported/animatable or parsing fails.
    */
   parse(cssProperty: CSSPropertyName, cssValue: string): AnimationValue {
     if (!this.isValidProperty(cssProperty)) {
@@ -213,15 +158,6 @@ export class StyleAnimator {
    * - Converts the AnimationValue to a CSS string (with precision rounding for numbers).
    * - Updates internal cache to reflect the new value.
    * - Defers DOM writes to the next animation frame for performance.
-   *
-   * @param prop CSS property to update.
-   * @param val Normalized AnimationValue to apply.
-   *
-   * @example
-   * ```ts
-   * const v = styles.parse('opacity', '0.25')!;
-   * styles.applyAnimatedPropertyValue('opacity', v); // flushed on next rAF
-   * ```
    */
   applyAnimatedPropertyValue(prop: CSSPropertyName, val: AnimationValue): void {
     const cssVal = this.convertAnimationValueToCssString(prop, val);
@@ -402,14 +338,14 @@ export class StyleAnimator {
    * - Replaces empty/auto/none values with defaults for interpolation.
    * @internal
    */
-  private getComputedPropertyValue(property: CSSPropertyName): string {
-    let value = this.getComputedVal(property);
+  private readCurrentValueFromDOM(property: CSSPropertyName): AnimationValue {
+    let value = this.getRawComputedVal(property);
 
     if (!value || value === "auto" || value === "none") {
       value = this.getDefaultPropertyValue(property);
     }
 
-    return value;
+    return this.parser.parsePropertyValue(property, value);
   }
 
   /**
@@ -417,7 +353,7 @@ export class StyleAnimator {
    * Errors are caught and return empty string.
    * @internal
    */
-  private getComputedVal(property: CSSPropertyName): string {
+  private getRawComputedVal(property: CSSPropertyName): string {
     return safeOperation(
       () => this.elementComputedStyles.getPropertyValue(camelToDash(property)),
       `Failed to get computed value for ${property}:`,
@@ -445,43 +381,6 @@ export class StyleAnimator {
     };
 
     return defaults[property] || "0";
-  }
-
-  /**
-   * Builds a conversion context for units based on:
-   * - Parent element bounding rect
-   * - Element font size
-   * - Viewport size
-   * @internal
-   */
-  private createConversionContext(): ConversionContext {
-    const parentElement = this.targetElement.parentElement;
-    const parentRect = safeOperation(
-      () => parentElement?.getBoundingClientRect() ?? { width: 0, height: 0 },
-      "Failed to get parent bounding rect:",
-      { width: 0, height: 0 }
-    );
-
-    const fontSize = safeOperation(
-      () => parseFloat(this.elementComputedStyles.fontSize) || 16,
-      "Failed to get font size:",
-      16
-    );
-
-    const viewportSize = safeOperation(
-      () => ({ width: window.innerWidth, height: window.innerHeight }),
-      "Failed to get viewport size:",
-      { width: 1024, height: 768 }
-    );
-
-    return {
-      parentSize: {
-        width: parentRect.width,
-        height: parentRect.height,
-      },
-      fontSize,
-      viewportSize,
-    };
   }
 
   /**
