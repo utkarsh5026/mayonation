@@ -1,12 +1,11 @@
-import type {
-  AnimationProperties,
-  CSSAnimationConfig,
-  ProcessedKeyframe,
-  ApiAnimationValue,
-} from "./types";
-import { ElementManager, PropertyAnimator, StaggerManager } from "./internal";
+import type { CSSAnimationConfig, ProcessedKeyframe } from "./types";
+import {
+  ElementManager,
+  KeyframesBuilder,
+  PropertyAnimator,
+  StaggerManager,
+} from "./internal";
 import { ElementResolver } from "@/utils/dom";
-import { resolveEaseFn } from "@/core/ease-fns";
 
 export class CSSAnimator {
   private readonly config: Required<CSSAnimationConfig>;
@@ -44,14 +43,20 @@ export class CSSAnimator {
       this.config.duration
     );
 
-    this.resolveAllPropertiesAndKeyframes();
+    const kfBuilder = new KeyframesBuilder(
+      this.elements,
+      this.elementManager,
+      this.config
+    );
+    kfBuilder.prepareAllKeyframes();
+    this.resolvedKeyframes = kfBuilder.getFinalKeyframes();
   }
 
   /**
    * Advance the animation to a normalized progress [0..1] and update all elements.
    * @param globalProgress Global timeline progress.
    */
-  public update(globalProgress: number): void {
+  update(globalProgress: number): void {
     const elapsed = globalProgress * this.totalDuration;
 
     this.elements.forEach((_, i) => {
@@ -65,56 +70,56 @@ export class CSSAnimator {
       this.elementManager.updateElement(i, progress, isActive, isComplete);
 
       if (isActive || isComplete) {
-        this.updateElement(i, progress);
+        this.applyAtProgress(i, progress);
       }
     });
 
     this.config.onUpdate(globalProgress, {
       elapsed,
       remaining: this.totalDuration - elapsed,
-      activeElements: this.getActiveElementCount(),
+      activeElements: this.countActiveElements(),
     });
   }
 
   /**
    * Resets the animation state
    */
-  public reset(): void {
+  reset(): void {
     this.elementManager.reset();
   }
 
   /**
    * Total duration including stagger and delay (ms).
    */
-  public get totalDuration(): number {
+  get totalDuration(): number {
     return this.staggerManager.getTotalDuration();
   }
 
   /**
    * Base animation duration excluding stagger (ms).
    */
-  public get baseDuration(): number {
+  get baseDuration(): number {
     return this.config.duration;
   }
 
   /**
    * Initial delay before starting (ms).
    */
-  public get delay(): number {
+  get delay(): number {
     return this.config.delay;
   }
 
   /**
    * Number of target elements.
    */
-  public get elementCount(): number {
+  get elementCount(): number {
     return this.elements.length;
   }
 
   /**
    * Invoke onStart hook.
    */
-  public start(): void {
+  start(): void {
     this.config.onStart();
   }
 
@@ -127,210 +132,11 @@ export class CSSAnimator {
   }
 
   /**
-   * Prepare per-element keyframes from from/to, arrays, or explicit keyframes.
-   */
-  private resolveAllPropertiesAndKeyframes(): void {
-    const { from, to } = this.config;
-
-    const handleArrayProperties = (index: number, element: HTMLElement) => {
-      const keyframes = this.buildKeyframesForElement(index, element);
-      this.resolvedKeyframes.set(index, keyframes);
-    };
-
-    const handleSimpleProperties = (index: number, element: HTMLElement) => {
-      const fromProps = this.resolvePropertiesForElement(from, index, element);
-      const toProps = this.resolvePropertiesForElement(to, index, element);
-      const keyframes: ProcessedKeyframe[] = [
-        {
-          offset: 0,
-          properties: fromProps,
-          easing: resolveEaseFn(this.config.ease),
-        },
-        {
-          offset: 1,
-          properties: toProps,
-          easing: resolveEaseFn(this.config.ease),
-        },
-      ];
-
-      this.resolvedKeyframes.set(index, keyframes);
-    };
-
-    this.elements.forEach((element, index) => {
-      const hasArrayProps =
-        this.hasArrayProperties(to) || this.hasArrayProperties(from);
-
-      if (hasArrayProps || this.config.keyframes.length > 0) {
-        handleArrayProperties(index, element);
-        return;
-      }
-
-      handleSimpleProperties(index, element);
-    });
-
-    console.log(
-      "Resolved Keyframes",
-      this.resolvedKeyframes,
-      " Len",
-      this.resolvedKeyframes.size
-    );
-  }
-
-  /**
-   * Build processed keyframes for an element from config keyframes or array props.
-   * @param index Element index.
-   * @param element Target element.
-   */
-  private buildKeyframesForElement(
-    index: number,
-    element: HTMLElement
-  ): ProcessedKeyframe[] {
-    const { keyframes } = this.config;
-    if (keyframes.length > 0) {
-      // already has keyframes
-      return keyframes.map((kf) => ({
-        offset: kf.offset,
-        properties: this.resolvePropertiesForElement(kf, index, element),
-        easing: resolveEaseFn(kf.ease || this.config.ease),
-      }));
-    }
-
-    return this.buildKeyframesFromArrayProperties(index, element);
-  }
-
-  /**
-   * Expand array/functional values into evenly spaced keyframes.
-   * @param index Element index.
-   * @param element Target element.
-   */
-  private buildKeyframesFromArrayProperties(
-    index: number,
-    element: HTMLElement
-  ): ProcessedKeyframe[] {
-    const allProps = { ...this.config.from, ...this.config.to };
-    const maxLength = this.getMaxKeyFrameLengthGiven(
-      Object.values(allProps),
-      index,
-      element
-    );
-    const keyframes: ProcessedKeyframe[] = [];
-
-    for (let i = 0; i < maxLength; i++) {
-      const offset = i / (maxLength - 1); // 0, 0.5, 1 for 3 keyframes
-      const properties: Record<string, any> = {};
-
-      Object.entries(allProps).forEach(([property, value]) => {
-        const resolved = this.resolveApiAnimationValue(value, index, element);
-
-        if (Array.isArray(resolved)) {
-          properties[property] = resolved[Math.min(i, resolved.length - 1)];
-          return;
-        }
-
-        if (i === 0 && this.config.from?.[property] !== undefined) {
-          properties[property] = this.resolveApiAnimationValue(
-            this.config.from[property],
-            index,
-            element
-          );
-          return;
-        }
-
-        properties[property] = resolved;
-      });
-
-      keyframes.push({
-        offset,
-        properties,
-        easing: resolveEaseFn(this.config.ease),
-      });
-    }
-    return keyframes;
-  }
-
-  /**
-   * Get the number of frames required based on longest array value (min 2).
-   */
-  private getMaxKeyFrameLengthGiven(
-    propValues: (ApiAnimationValue | undefined)[],
-    index: number,
-    element: HTMLElement
-  ): number {
-    let maxLength = 2; // Minimum from/to
-
-    propValues.forEach((value) => {
-      const resolved = this.resolveApiAnimationValue(value, index, element);
-      if (Array.isArray(resolved)) {
-        maxLength = Math.max(maxLength, resolved.length);
-      }
-    });
-
-    return maxLength;
-  }
-
-  /**
-   * Check if any property is an array or function (needs keyframe expansion).
-   */
-  private hasArrayProperties(properties: AnimationProperties): boolean {
-    return Object.values(properties).some((value) => {
-      if (typeof value === "function") {
-        return true;
-      }
-      return Array.isArray(value);
-    });
-  }
-
-  /**
-   * Resolve simple per-element values (ignores offset/easing).
-   */
-  private resolvePropertiesForElement(
-    properties: AnimationProperties,
-    index: number,
-    element: HTMLElement
-  ): Record<string, number | string> {
-    const resolvedProperties: Record<string, number | string> = {};
-    Object.entries(properties).forEach(([prop, val]) => {
-      if (prop === "offset" || prop === "easing") return;
-
-      const resolved = this.resolveApiAnimationValue(val, index, element);
-      resolvedProperties[prop] = Array.isArray(resolved)
-        ? resolved[0]
-        : resolved;
-    });
-    return resolvedProperties;
-  }
-
-  /**
-   * Resolve a value for an element (number|string|array|function).
-   */
-  private resolveApiAnimationValue(
-    value: ApiAnimationValue | undefined,
-    index: number,
-    element: HTMLElement
-  ): number | string | (number | string)[] {
-    if (value === undefined) return 0;
-
-    if (typeof value === "number" || typeof value === "string") {
-      return value;
-    }
-
-    if (Array.isArray(value)) {
-      return value;
-    }
-
-    if (typeof value === "function") {
-      return value(index, element);
-    }
-
-    return 0;
-  }
-
-  /**
    * Apply keyframes to one element at the given progress.
    * @param elementIndex Element index.
    * @param progress Normalized progress [0..1].
    */
-  private updateElement(elementIndex: number, progress: number): void {
+  private applyAtProgress(elementIndex: number, progress: number): void {
     const propMgr = this.elementManager.getPropertyManager(elementIndex);
     if (!propMgr) return;
 
@@ -342,9 +148,10 @@ export class CSSAnimator {
   }
 
   /**
-   * Count active elements (for diagnostics).
+   * Count elements currently active (for diagnostics/insight in onUpdate).
+   * @returns number
    */
-  private getActiveElementCount(): number {
+  private countActiveElements(): number {
     return this.elementManager.getAllStates().filter((state) => state.isActive)
       .length;
   }
