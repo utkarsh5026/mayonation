@@ -1,7 +1,7 @@
 /// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { PropertyManager } from "../property-manager";
+import { PropertyManager } from "../prop-manager/property-manager";
 import { createValue } from "../../core/animation-val";
 import type { CSSPropertyName } from "../styles/type";
 import type { TransformPropertyName } from "../transform/types";
@@ -60,24 +60,44 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
 
     it("should handle invalid property names", () => {
       const invalidProps = [
-        "", "   ", null, undefined, 123, {}, [], 
-        "nonExistentProp", "display", "position", "z-index"
+        "",
+        "   ",
+        null,
+        undefined,
+        123,
+        {},
+        [],
+        "nonExistentProp",
+        "display",
+        "position",
+        "z-index",
       ];
 
-      invalidProps.forEach(prop => {
+      invalidProps.forEach((prop) => {
         expect(() => manager.parse(prop as any, "10px")).toThrow();
         expect(() => manager.getCurrentValue(prop as any)).toThrow();
-        expect(() => manager.updateProperty(prop as any, createValue.numeric(10, "px"))).toThrow();
+        expect(() =>
+          manager.updateProperty(prop as any, createValue.numeric(10, "px"))
+        ).toThrow();
       });
     });
 
     it("should handle invalid values", () => {
       const invalidValues = [
-        null, undefined, "", "   ", NaN, Infinity, -Infinity,
-        {}, [], () => {}, Symbol("test")
+        null,
+        undefined,
+        "",
+        "   ",
+        NaN,
+        Infinity,
+        -Infinity,
+        {},
+        [],
+        () => {},
+        Symbol("test"),
       ];
 
-      invalidValues.forEach(value => {
+      invalidValues.forEach((value) => {
         expect(() => manager.updateProperty("width", value as any)).toThrow();
       });
     });
@@ -91,7 +111,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
         { type: "numeric", value: "not-a-number", unit: "px" }, // non-numeric value
       ];
 
-      malformedValues.forEach(value => {
+      malformedValues.forEach((value) => {
         expect(() => manager.updateProperty("width", value as any)).toThrow();
       });
     });
@@ -107,16 +127,26 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
         -0,
       ];
 
-      extremeValues.forEach(value => {
+      extremeValues.forEach((value) => {
         const numericValue = createValue.numeric(value, "px");
-        expect(() => manager.updateProperty("width", numericValue)).not.toThrow();
+        expect(() =>
+          manager.updateProperty("width", numericValue)
+        ).not.toThrow();
       });
     });
 
     it("should handle invalid units", () => {
-      const invalidUnits = ["invalid-unit", "pxx", "%x", "emm", null, undefined, 123];
-      
-      invalidUnits.forEach(unit => {
+      const invalidUnits = [
+        "invalid-unit",
+        "pxx",
+        "%x",
+        "emm",
+        null,
+        undefined,
+        123,
+      ];
+
+      invalidUnits.forEach((unit) => {
         // For parsing, invalid units should result in fallback values
         const result = manager.parse("width", `10${unit}`);
         // Should fallback to a valid value (likely 0px for width)
@@ -139,10 +169,10 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
 
     it("should handle elements removed from DOM during operation", () => {
       manager.updateProperty("width", createValue.numeric(200, "px"));
-      
+
       // Remove element from DOM
       element.remove();
-      
+
       // Operations should still work gracefully
       expect(() => {
         manager.updateProperty("height", createValue.numeric(100, "px"));
@@ -198,7 +228,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
           getPropertyValue: (prop: string) => {
             const specialValues: Record<string, string> = {
               width: "initial",
-              height: "inherit", 
+              height: "inherit",
               opacity: "unset",
               "background-color": "revert",
               "border-radius": "revert-layer",
@@ -211,7 +241,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       });
 
       const specialManager = new PropertyManager(element);
-      
+
       expect(() => {
         specialManager.getCurrentValue("width");
         specialManager.getCurrentValue("height");
@@ -225,19 +255,32 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
   describe("memory and performance edge cases", () => {
     it("should handle large numbers of property updates", () => {
       const properties: Array<CSSPropertyName | TransformPropertyName> = [
-        "width", "height", "opacity", "backgroundColor", "borderRadius",
-        "translateX", "translateY", "scaleX", "scaleY", "rotateZ"
+        "width",
+        "height",
+        "opacity",
+        "backgroundColor",
+        "borderRadius",
+        "translateX",
+        "translateY",
+        "scaleX",
+        "scaleY",
+        "rotateZ",
       ];
 
       // Apply updates rapidly in large batches
       for (let batch = 0; batch < 10; batch++) {
         properties.forEach((prop, index) => {
-          const value = prop === "opacity" ? createValue.numeric(Math.random(), "")
-                       : prop === "backgroundColor" ? createValue.rgb(Math.random() * 255, 100, 150, 1)
-                       : prop === "rotateZ" ? createValue.numeric(Math.random() * 360, "deg")
-                       : prop.startsWith("scale") ? createValue.numeric(0.5 + Math.random(), "")
-                       : createValue.numeric(50 + Math.random() * 200, "px");
-          
+          const value =
+            prop === "opacity"
+              ? createValue.numeric(Math.random(), "")
+              : prop === "backgroundColor"
+              ? createValue.rgb(Math.random() * 255, 100, 150, 1)
+              : prop === "rotateZ"
+              ? createValue.numeric(Math.random() * 360, "deg")
+              : prop.startsWith("scale")
+              ? createValue.numeric(0.5 + Math.random(), "")
+              : createValue.numeric(50 + Math.random() * 200, "px");
+
           manager.updateProperty(prop as any, value);
         });
       }
@@ -251,10 +294,10 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
         manager.updateProperty("width", createValue.numeric(100 + cycle, "px"));
         manager.updateProperty("translateX", createValue.numeric(cycle, "px"));
         manager.getCurrentValue("opacity");
-        
+
         // Reset
         manager.reset();
-        
+
         // Verify cleanup
         expect((manager as any).propertyStates.size).toBe(0);
         expect((manager as any).pendingTransformUpdates.size).toBe(0);
@@ -275,7 +318,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       // Style should not be modified when disposed
       const originalWidth = element.style.width;
       manager.updateProperty("width", createValue.numeric(500, "px"));
-      
+
       setTimeout(() => {
         expect(element.style.width).toBe(originalWidth);
       }, 100);
@@ -285,7 +328,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       for (let i = 0; i < 20; i++) {
         const tempManager = new PropertyManager(element);
         tempManager.updateProperty("width", createValue.numeric(100 + i, "px"));
-        
+
         // Simulate disposal
         (tempManager as any).isDisposed = true;
         tempManager.reset();
@@ -316,7 +359,12 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       // Transparent to opaque
       const transparent = createValue.rgb(255, 0, 0, 0);
       const opaque = createValue.rgb(255, 0, 0, 1);
-      const result1 = manager.interpolate("backgroundColor", transparent, opaque, 0.5);
+      const result1 = manager.interpolate(
+        "backgroundColor",
+        transparent,
+        opaque,
+        0.5
+      );
       expect(result1.type).toBe("color");
       expect((result1 as any).value.a).toBeCloseTo(0.5, 3);
 
@@ -329,17 +377,22 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       // Same color different alpha
       const sameColorDiffAlpha1 = createValue.rgb(128, 128, 128, 0.2);
       const sameColorDiffAlpha2 = createValue.rgb(128, 128, 128, 0.8);
-      const result3 = manager.interpolate("backgroundColor", sameColorDiffAlpha1, sameColorDiffAlpha2, 0.25);
+      const result3 = manager.interpolate(
+        "backgroundColor",
+        sameColorDiffAlpha1,
+        sameColorDiffAlpha2,
+        0.25
+      );
       expect((result3 as any).value.a).toBeCloseTo(0.35, 2);
     });
 
     it("should handle interpolation precision edge cases", () => {
       const preciseManager = new PropertyManager(element, { precision: 10 });
-      
+
       const from = createValue.numeric(1.123456789, "px");
       const to = createValue.numeric(2.987654321, "px");
       const result = preciseManager.interpolate("width", from, to, 0.123456789);
-      
+
       // Should handle high precision without issues (adjust for actual floating point precision)
       expect((result as any).value).toBeCloseTo(1.3536046304, 6);
     });
@@ -348,7 +401,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       const from = createValue.numeric(100.000001, "px");
       const to = createValue.numeric(100.000002, "px");
       const result = manager.interpolate("width", from, to, 0.5);
-      
+
       expect((result as any).value).toBeCloseTo(100.0000015, 5);
     });
 
@@ -374,15 +427,25 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
     it("should handle transform interpolation with extreme values", () => {
       const extremeRotation = createValue.numeric(7200, "deg"); // 20 full rotations
       const normalRotation = createValue.numeric(45, "deg");
-      
-      const result = manager.interpolate("rotateZ", normalRotation, extremeRotation, 0.5);
+
+      const result = manager.interpolate(
+        "rotateZ",
+        normalRotation,
+        extremeRotation,
+        0.5
+      );
       // 45 + (7200 - 45) * 0.5 = 45 + 3577.5 = 3622.5
       expect((result as any).value).toBeCloseTo(3622.5, 0);
 
       const extremeScale = createValue.numeric(100, "");
       const normalScale = createValue.numeric(1, "");
-      
-      const scaleResult = manager.interpolate("scaleX", normalScale, extremeScale, 0.1);
+
+      const scaleResult = manager.interpolate(
+        "scaleX",
+        normalScale,
+        extremeScale,
+        0.1
+      );
       // The transform handler may use different interpolation (e.g., logarithmic for scale)
       // Just verify it returns a reasonable value between the bounds
       expect((scaleResult as any).value).toBeGreaterThanOrEqual(1);
@@ -405,17 +468,26 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
 
       return new Promise<void>((resolve) => {
         setTimeout(() => {
-          managers.forEach(m => {
-            try { m.applyUpdates(); } catch (e) {}
+          managers.forEach((m) => {
+            try {
+              m.applyUpdates();
+            } catch (e) {}
           });
-          
+
           setTimeout(() => {
             // One of the width values should win
             const finalWidth = element.style.width;
-            expect(finalWidth === "200px" || finalWidth === "300px" || finalWidth === "100px").toBe(true);
-            
+            expect(
+              finalWidth === "200px" ||
+                finalWidth === "300px" ||
+                finalWidth === "100px"
+            ).toBe(true);
+
             // At least some properties should be applied
-            expect(element.style.height === "150px" || element.style.opacity === "0.7").toBe(true);
+            expect(
+              element.style.height === "150px" ||
+                element.style.opacity === "0.7"
+            ).toBe(true);
             resolve();
           }, 50);
         }, 10);
@@ -441,7 +513,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       return new Promise<void>((resolve) => {
         setTimeout(() => {
           manager.applyUpdates();
-          
+
           setTimeout(() => {
             // Should end with the last value
             expect(element.style.width).toBe("75px");
@@ -458,14 +530,16 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       // Create interleaved operations
       for (let i = 0; i < 50; i++) {
         const prop = properties[i % properties.length];
-        
+
         // Add set operation
         operations.push(() => {
-          const value = prop === "opacity" ? createValue.numeric(Math.random(), "")
-                       : createValue.numeric(100 + Math.random() * 100, "px");
+          const value =
+            prop === "opacity"
+              ? createValue.numeric(Math.random(), "")
+              : createValue.numeric(100 + Math.random() * 100, "px");
           manager.updateProperty(prop, value);
         });
-        
+
         // Add get operation
         operations.push(() => {
           manager.getCurrentValue(prop);
@@ -474,7 +548,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
 
       // Execute all operations rapidly
       expect(() => {
-        operations.forEach(op => op());
+        operations.forEach((op) => op());
       }).not.toThrow();
     });
   });
@@ -482,15 +556,15 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
   describe("browser compatibility edge cases", () => {
     it("should handle missing requestAnimationFrame", () => {
       const originalRAF = window.requestAnimationFrame;
-      
+
       // Remove requestAnimationFrame
       delete (window as any).requestAnimationFrame;
-      
+
       expect(() => {
         const fallbackManager = new PropertyManager(element);
         fallbackManager.updateProperty("width", createValue.numeric(200, "px"));
       }).not.toThrow();
-      
+
       // Restore
       window.requestAnimationFrame = originalRAF;
     });
@@ -508,7 +582,8 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       formats.forEach((format, index) => {
         Object.defineProperty(window, "getComputedStyle", {
           value: () => ({
-            getPropertyValue: (prop: string) => format[prop as keyof typeof format] || "auto",
+            getPropertyValue: (prop: string) =>
+              format[prop as keyof typeof format] || "auto",
             fontSize: "16px",
           }),
           configurable: true,
@@ -531,10 +606,11 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
         "invalid-transform", // invalid
       ];
 
-      transformMatrices.forEach(matrix => {
+      transformMatrices.forEach((matrix) => {
         Object.defineProperty(window, "getComputedStyle", {
           value: () => ({
-            getPropertyValue: (prop: string) => prop === "transform" ? matrix : "0",
+            getPropertyValue: (prop: string) =>
+              prop === "transform" ? matrix : "0",
             fontSize: "16px",
           }),
           configurable: true,
@@ -561,7 +637,7 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
         { useGPUAcceleration: null as any },
       ];
 
-      invalidConfigs.forEach(config => {
+      invalidConfigs.forEach((config) => {
         // Should not throw, should use defaults
         expect(() => {
           const configManager = new PropertyManager(element, config);
@@ -573,31 +649,33 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
     it("should handle extreme precision values", () => {
       const precisionValues = [0, 1, 50, 100]; // Removed MAX_SAFE_INTEGER as it causes NaN
 
-      precisionValues.forEach(precision => {
+      precisionValues.forEach((precision) => {
         const precisionManager = new PropertyManager(element, { precision });
-        
+
         expect(() => {
           const result = precisionManager.interpolate(
-            "width", 
-            createValue.numeric(1.123456789, "px"), 
-            createValue.numeric(2.987654321, "px"), 
+            "width",
+            createValue.numeric(1.123456789, "px"),
+            createValue.numeric(2.987654321, "px"),
             0.333333333
           );
-          
+
           precisionManager.updateProperty("width", result);
         }).not.toThrow();
       });
 
       // Test extreme precision separately with validation
       expect(() => {
-        const extremeManager = new PropertyManager(element, { precision: Number.MAX_SAFE_INTEGER });
+        const extremeManager = new PropertyManager(element, {
+          precision: Number.MAX_SAFE_INTEGER,
+        });
         const result = extremeManager.interpolate(
-          "width", 
-          createValue.numeric(1, "px"), 
-          createValue.numeric(2, "px"), 
+          "width",
+          createValue.numeric(1, "px"),
+          createValue.numeric(2, "px"),
           0.5
         );
-        
+
         // Only update if result is valid (not NaN/infinite)
         if (isFinite(result.value as number)) {
           extremeManager.updateProperty("width", result);
@@ -607,12 +685,18 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
 
     it("should handle configuration changes during runtime", () => {
       // Create managers with different configs
-      const manager1 = new PropertyManager(element, { batchUpdates: true, precision: 1 });
-      const manager2 = new PropertyManager(element, { batchUpdates: false, precision: 5 });
+      const manager1 = new PropertyManager(element, {
+        batchUpdates: true,
+        precision: 1,
+      });
+      const manager2 = new PropertyManager(element, {
+        batchUpdates: false,
+        precision: 5,
+      });
 
       // Apply same value with different managers
       const value = createValue.numeric(123.456789, "px");
-      
+
       manager1.updateProperty("width", value);
       manager2.updateProperty("height", value);
 
@@ -633,13 +717,13 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
       // Try to parse invalid values
       const invalidInputs = [
         "not-a-number-px",
-        "10invalid-unit", 
+        "10invalid-unit",
         "#invalid-color",
         "rgb(300, 400, 500)",
         "hsl(400deg, 150%, 200%)",
       ];
 
-      invalidInputs.forEach(input => {
+      invalidInputs.forEach((input) => {
         // Should not throw, should return null or fallback values
         const result = manager.parse("width", input);
         expect(result).toBeDefined();
@@ -696,12 +780,15 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
 
       // Transform operations should also work
       expect(() => {
-        mixedManager.updateProperty("translateX", createValue.numeric(50, "px"));
+        mixedManager.updateProperty(
+          "translateX",
+          createValue.numeric(50, "px")
+        );
       }).not.toThrow();
 
       // Apply updates synchronously for testing
       mixedManager.applyUpdates();
-      
+
       // Basic validation that manager maintains functionality
       expect(mixedManager).toBeInstanceOf(PropertyManager);
     });
@@ -712,30 +799,50 @@ describe("PropertyManager - Edge Cases and Error Scenarios", () => {
         // Wrong value type for property (transform needs numeric)
         { prop: "translateX", value: createValue.rgb(255, 0, 0, 1) },
         // Invalid progress values
-        { prop: "width", from: createValue.numeric(0, "px"), to: createValue.numeric(100, "px"), progress: 2 },
-        { prop: "opacity", from: createValue.numeric(0, ""), to: createValue.numeric(1, ""), progress: -1 },
+        {
+          prop: "width",
+          from: createValue.numeric(0, "px"),
+          to: createValue.numeric(100, "px"),
+          progress: 2,
+        },
+        {
+          prop: "opacity",
+          from: createValue.numeric(0, ""),
+          to: createValue.numeric(1, ""),
+          progress: -1,
+        },
       ];
 
       invalidCombinations.forEach(({ prop, value, from, to, progress }) => {
         if (value) {
           expect(() => manager.updateProperty(prop as any, value)).toThrow();
         }
-        
+
         if (from && to && progress !== undefined) {
-          expect(() => manager.interpolate(prop as any, from, to, progress)).toThrow();
+          expect(() =>
+            manager.interpolate(prop as any, from, to, progress)
+          ).toThrow();
         }
       });
 
       // Valid backgroundColor with color value should work
       expect(() => {
-        manager.updateProperty("backgroundColor", createValue.rgb(100, 50, 25, 1));
+        manager.updateProperty(
+          "backgroundColor",
+          createValue.rgb(100, 50, 25, 1)
+        );
       }).not.toThrow();
 
       // Manager should still be functional after validation errors
       expect(() => {
         manager.updateProperty("width", createValue.numeric(150, "px"));
         manager.getCurrentValue("height");
-        manager.interpolate("opacity", createValue.numeric(0, ""), createValue.numeric(1, ""), 0.5);
+        manager.interpolate(
+          "opacity",
+          createValue.numeric(0, ""),
+          createValue.numeric(1, ""),
+          0.5
+        );
       }).not.toThrow();
     });
   });

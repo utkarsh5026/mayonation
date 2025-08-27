@@ -1,7 +1,7 @@
 /// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { PropertyManager } from "../property-manager";
+import { PropertyManager } from "../prop-manager/property-manager";
 import { createValue } from "../../core/animation-val";
 import type { CSSPropertyName } from "../styles/type";
 import type { TransformPropertyName } from "../transform/types";
@@ -145,13 +145,15 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
 
     describe("updateProperty method", () => {
       it("should handle CSS property updates with batching disabled", async () => {
-        const noBatchManager = new PropertyManager(element, { batchUpdates: false });
+        const noBatchManager = new PropertyManager(element, {
+          batchUpdates: false,
+        });
         const value = createValue.numeric(250, "px");
 
         noBatchManager.updateProperty("width", value);
-        
+
         // Give some time for DOM update
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         expect(element.style.width).toBe("250px");
       });
 
@@ -161,8 +163,8 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
 
         // Apply updates manually to avoid timing issues
         manager.applyUpdates();
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         expect(element.style.transform).toContain("50px"); // May be translate3d
       });
 
@@ -173,7 +175,9 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
 
       it("should validate transform property values are numeric", () => {
         const colorValue = createValue.rgb(255, 0, 0, 1);
-        expect(() => manager.updateProperty("translateX", colorValue)).toThrow();
+        expect(() =>
+          manager.updateProperty("translateX", colorValue)
+        ).toThrow();
       });
     });
 
@@ -218,17 +222,20 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
 
       // Apply both CSS and transform properties
       manager.updateProperty("width", createValue.numeric(200, "px"));
-      manager.updateProperty("backgroundColor", createValue.rgb(255, 0, 128, 1));
+      manager.updateProperty(
+        "backgroundColor",
+        createValue.rgb(255, 0, 128, 1)
+      );
       manager.updateProperty("translateX", createValue.numeric(100, "px"));
       manager.updateProperty("scaleY", createValue.numeric(1.2, ""));
 
       manager.applyUpdates();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Check CSS properties were applied
       expect(element.style.width).toBe("200px");
       expect(element.style.backgroundColor).toContain("rgb");
-      
+
       // Check transform properties were combined correctly
       expect(element.style.transform).toContain("100px"); // May be translate3d
       expect(element.style.transform).toContain("1.2"); // scaleY value
@@ -236,11 +243,26 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
 
     it("should handle complex transform combinations", async () => {
       const transforms = [
-        { prop: "translateX" as TransformPropertyName, value: createValue.numeric(50, "px") },
-        { prop: "translateY" as TransformPropertyName, value: createValue.numeric(-25, "px") },
-        { prop: "rotateZ" as TransformPropertyName, value: createValue.numeric(30, "deg") },
-        { prop: "scaleX" as TransformPropertyName, value: createValue.numeric(1.1, "") },
-        { prop: "scaleY" as TransformPropertyName, value: createValue.numeric(0.9, "") },
+        {
+          prop: "translateX" as TransformPropertyName,
+          value: createValue.numeric(50, "px"),
+        },
+        {
+          prop: "translateY" as TransformPropertyName,
+          value: createValue.numeric(-25, "px"),
+        },
+        {
+          prop: "rotateZ" as TransformPropertyName,
+          value: createValue.numeric(30, "deg"),
+        },
+        {
+          prop: "scaleX" as TransformPropertyName,
+          value: createValue.numeric(1.1, ""),
+        },
+        {
+          prop: "scaleY" as TransformPropertyName,
+          value: createValue.numeric(0.9, ""),
+        },
       ];
 
       transforms.forEach(({ prop, value }) => {
@@ -248,7 +270,7 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
       });
 
       manager.applyUpdates();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const transformStyle = element.style.transform;
       expect(transformStyle).toContain("50px"); // translateX
@@ -262,19 +284,34 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
       // Test CSS property interpolation
       const widthFrom = createValue.numeric(100, "px");
       const widthTo = createValue.numeric(200, "px");
-      const widthResult = manager.interpolate("width", widthFrom, widthTo, 0.75);
+      const widthResult = manager.interpolate(
+        "width",
+        widthFrom,
+        widthTo,
+        0.75
+      );
       expect(widthResult).toEqual(createValue.numeric(175, "px"));
 
       // Test color interpolation
       const colorFrom = createValue.rgb(255, 0, 0, 1);
       const colorTo = createValue.rgb(0, 255, 0, 1);
-      const colorResult = manager.interpolate("backgroundColor", colorFrom, colorTo, 0.5);
+      const colorResult = manager.interpolate(
+        "backgroundColor",
+        colorFrom,
+        colorTo,
+        0.5
+      );
       expect(colorResult.type).toBe("color");
 
       // Test transform interpolation
       const transformFrom = createValue.numeric(0, "px");
       const transformTo = createValue.numeric(100, "px");
-      const transformResult = manager.interpolate("translateX", transformFrom, transformTo, 0.25);
+      const transformResult = manager.interpolate(
+        "translateX",
+        transformFrom,
+        transformTo,
+        0.25
+      );
       expect(transformResult).toEqual(createValue.numeric(25, "px"));
     });
 
@@ -299,22 +336,30 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
 
   describe("Edge Cases and Error Handling", () => {
     it("should handle invalid property names gracefully", () => {
-      const invalidProps = ["", "   ", "nonExistentProp", "display", "position"];
+      const invalidProps = [
+        "",
+        "   ",
+        "nonExistentProp",
+        "display",
+        "position",
+      ];
 
-      invalidProps.forEach(prop => {
+      invalidProps.forEach((prop) => {
         expect(() => manager.parse(prop as any, "10px")).toThrow();
         expect(() => manager.getCurrentValue(prop as any)).toThrow();
-        expect(() => manager.updateProperty(prop as any, createValue.numeric(10, "px"))).toThrow();
+        expect(() =>
+          manager.updateProperty(prop as any, createValue.numeric(10, "px"))
+        ).toThrow();
       });
     });
 
     it("should handle malformed value objects", () => {
       const invalidValues = [null, undefined];
 
-      invalidValues.forEach(value => {
+      invalidValues.forEach((value) => {
         expect(() => manager.updateProperty("width", value as any)).toThrow();
       });
-      
+
       // These should also be handled as validation errors
       expect(() => manager.updateProperty("width", {} as any)).toThrow(); // Empty object now throws due to enhanced validation
       expect(() => manager.updateProperty("width", "string" as any)).toThrow();
@@ -328,9 +373,11 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
         -0,
       ];
 
-      extremeValues.forEach(value => {
+      extremeValues.forEach((value) => {
         const numericValue = createValue.numeric(value, "px");
-        expect(() => manager.updateProperty("width", numericValue)).not.toThrow();
+        expect(() =>
+          manager.updateProperty("width", numericValue)
+        ).not.toThrow();
       });
     });
 
@@ -380,7 +427,10 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
     it("should handle reset during complex operations", async () => {
       // Apply various properties
       manager.updateProperty("width", createValue.numeric(300, "px"));
-      manager.updateProperty("backgroundColor", createValue.rgb(255, 128, 0, 1));
+      manager.updateProperty(
+        "backgroundColor",
+        createValue.rgb(255, 128, 0, 1)
+      );
       manager.updateProperty("translateX", createValue.numeric(100, "px"));
       manager.updateProperty("scaleY", createValue.numeric(1.5, ""));
 
@@ -404,7 +454,7 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
         { batchUpdates: "not-boolean" as any },
       ];
 
-      invalidConfigs.forEach(config => {
+      invalidConfigs.forEach((config) => {
         // Should not throw, should use defaults
         expect(() => {
           const configManager = new PropertyManager(element, config);
@@ -416,8 +466,13 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
     it("should handle color interpolation with transparency", () => {
       const transparent = createValue.rgb(255, 0, 0, 0);
       const opaque = createValue.rgb(255, 0, 0, 1);
-      const result = manager.interpolate("backgroundColor", transparent, opaque, 0.5);
-      
+      const result = manager.interpolate(
+        "backgroundColor",
+        transparent,
+        opaque,
+        0.5
+      );
+
       expect(result.type).toBe("color");
       expect((result as any).value.a).toBeCloseTo(0.5, 2);
     });
@@ -434,13 +489,22 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
   describe("Performance and Batching", () => {
     it("should batch multiple property updates", async () => {
       const properties = [
-        { prop: "width" as CSSPropertyName, value: createValue.numeric(200, "px") },
-        { prop: "height" as CSSPropertyName, value: createValue.numeric(150, "px") },
-        { prop: "opacity" as CSSPropertyName, value: createValue.numeric(0.8, "") },
+        {
+          prop: "width" as CSSPropertyName,
+          value: createValue.numeric(200, "px"),
+        },
+        {
+          prop: "height" as CSSPropertyName,
+          value: createValue.numeric(150, "px"),
+        },
+        {
+          prop: "opacity" as CSSPropertyName,
+          value: createValue.numeric(0.8, ""),
+        },
       ];
 
       const spy = vi.spyOn(window, "requestAnimationFrame");
-      
+
       properties.forEach(({ prop, value }) => {
         manager.updateProperty(prop, value);
       });
@@ -448,7 +512,7 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
       // Should only schedule one update despite multiple property changes
       expect(spy).toHaveBeenCalledTimes(1);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(element.style.width).toBe("200px");
       expect(element.style.height).toBe("150px");
@@ -473,17 +537,21 @@ describe("PropertyManager - Comprehensive Test Suite", () => {
     it("should maintain performance with cache access", () => {
       const accessCount = 100;
       const properties: Array<CSSPropertyName | TransformPropertyName> = [
-        "width", "height", "opacity", "translateX", "scaleX"
+        "width",
+        "height",
+        "opacity",
+        "translateX",
+        "scaleX",
       ];
-      
+
       const startTime = performance.now();
-      
+
       for (let i = 0; i < accessCount; i++) {
-        properties.forEach(prop => {
+        properties.forEach((prop) => {
           manager.getCurrentValue(prop as any);
         });
       }
-      
+
       const endTime = performance.now();
       expect(endTime - startTime).toBeLessThan(50); // Should be very fast due to caching
     });

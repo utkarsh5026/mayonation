@@ -1,7 +1,7 @@
 /// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { PropertyManager } from "../property-manager";
+import { PropertyManager } from "../prop-manager/property-manager";
 import { createValue } from "../../core/animation-val";
 
 describe("PropertyManager - Unit Tests", () => {
@@ -254,7 +254,7 @@ describe("PropertyManager - Unit Tests", () => {
 
       noBatchManager.updateProperty("translateX", value);
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       expect(element.style.transform).toContain("50px"); // May be translate3d
     });
 
@@ -265,7 +265,7 @@ describe("PropertyManager - Unit Tests", () => {
       // Should not be applied immediately
       expect(element.style.width).not.toBe("300px");
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(element.style.width).toBe("300px");
     });
 
@@ -340,7 +340,7 @@ describe("PropertyManager - Unit Tests", () => {
 
       manager.applyUpdates();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(element.style.transform).toContain("100px"); // translateX
       expect(element.style.transform).toContain("1.5"); // scaleX
     });
