@@ -72,11 +72,11 @@ export class PropertyManager {
 
     return safeOperation(
       () => {
-        if (this.isCSSProperty(property)) {
+        if (PropValidator.isCSSProperty(property)) {
           return this.styleAnimator.parse(property, value.toString());
         }
 
-        if (this.isTransformProperty(property)) {
+        if (PropValidator.isTransformProperty(property)) {
           return this.transformHandler.parse(property, value);
         }
 
@@ -121,7 +121,7 @@ export class PropertyManager {
 
     return safeOperation(
       () => {
-        if (this.isTransformProperty(property)) {
+        if (PropValidator.isTransformProperty(property)) {
           throwIf(
             !isNumericValue(from) || !isNumericValue(to),
             `Transform properties require numeric values: ${property}`
@@ -135,7 +135,7 @@ export class PropertyManager {
           );
         }
 
-        if (this.isCSSProperty(property)) {
+        if (PropValidator.isCSSProperty(property)) {
           return this.styleAnimator.interpolate(property, from, to, progress);
         }
 
@@ -151,11 +151,11 @@ export class PropertyManager {
    * This is what CSSAnimator should call when user doesn't specify 'from'
    */
   getRecommendedFromValue(property: AnimatableProperty): AnimationValue {
-    if (this.isTransformProperty(property)) {
+    if (PropValidator.isTransformProperty(property)) {
       return this.transformHandler.getRecommendedFromValue(property);
     }
 
-    if (this.isCSSProperty(property)) {
+    if (PropValidator.isCSSProperty(property)) {
       return this.styleAnimator.getRecommendedFromValue(property);
     }
 
@@ -176,7 +176,7 @@ export class PropertyManager {
 
     try {
       const value = this.readCurrentValueFromDOM(prop);
-      const hasTransformChanges = this.isTransformProperty(prop);
+      const hasTransformChanges = PropValidator.isTransformProperty(prop);
       this.cache.set(prop, value, hasTransformChanges);
 
       return value;
@@ -251,12 +251,12 @@ export class PropertyManager {
    * @internal
    */
   private update(prop: AnimatableProperty, val: AnimationValue): void {
-    if (this.isTransformProperty(prop)) {
+    if (PropValidator.isTransformProperty(prop)) {
       this.handleTransformUpdate(prop, val);
       return;
     }
 
-    if (this.isCSSProperty(prop)) {
+    if (PropValidator.isCSSProperty(prop)) {
       this.handleCSSUpdate(prop, val);
       return;
     }
@@ -288,7 +288,7 @@ export class PropertyManager {
     prop: AnimatableProperty,
     value: AnimationValue
   ): void {
-    const isTransform = this.isTransformProperty(prop);
+    const isTransform = PropValidator.isTransformProperty(prop);
     this.cache.set(prop, value, isTransform);
   }
 
@@ -318,11 +318,11 @@ export class PropertyManager {
    * @internal
    */
   private readCurrentValueFromDOM(prop: AnimatableProperty) {
-    if (this.isTransformProperty(prop)) {
+    if (PropValidator.isTransformProperty(prop)) {
       return this.transformHandler.currentValue(prop);
     }
 
-    if (this.isCSSProperty(prop)) {
+    if (PropValidator.isCSSProperty(prop)) {
       return this.styleAnimator.currentValue(prop);
     }
 
@@ -342,26 +342,6 @@ export class PropertyManager {
       return;
     }
     this.styleAnimator.applyAnimatedPropertyValue(property, value);
-  }
-
-  /**
-   * Type guard: checks if a property is a transform.
-   * @internal
-   */
-  private isTransformProperty(
-    property: string | AnimatableProperty
-  ): property is TransformPropertyName {
-    return TransformHandler.isTransformProperty(property);
-  }
-
-  /**
-   * Type guard: checks if a property is an animatable CSS property.
-   * @internal
-   */
-  private isCSSProperty(
-    property: string | AnimatableProperty
-  ): property is CSSPropertyName {
-    return StyleAnimator.isAnimatableProperty(property);
   }
 
   /**

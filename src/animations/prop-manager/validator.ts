@@ -4,8 +4,8 @@ import {
   isRGBColor,
   isHSLColor,
 } from "@/core";
-import { StyleAnimator } from "../styles";
-import { TransformHandler } from "../transform";
+import { CSSPropertyName, StyleAnimator } from "../styles";
+import { TransformHandler, TransformPropertyName } from "../transform";
 import { throwIf } from "@/utils/error";
 import type { AnimatableProperty } from "./types";
 
@@ -104,5 +104,23 @@ export class PropValidator {
       TransformHandler.isTransformProperty(property) ||
       StyleAnimator.isAnimatableProperty(property)
     );
+  }
+
+  /**
+   * Type guard: checks if a property is a transform.
+   */
+  static isTransformProperty(
+    property: string | AnimatableProperty
+  ): property is TransformPropertyName {
+    return TransformHandler.isTransformProperty(property);
+  }
+
+  /**
+   * Type guard: checks if a property is an animatable CSS property.
+   */
+  static isCSSProperty(
+    property: string | AnimatableProperty
+  ): property is CSSPropertyName {
+    return StyleAnimator.isAnimatableProperty(property);
   }
 }
