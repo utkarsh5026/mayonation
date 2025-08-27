@@ -209,6 +209,7 @@ export class KeyframesBuilder {
       ...Object.keys(to),
     ]);
 
+    propertyManager.markDirty();
     const fromProps: Record<string, number | string> = {};
     const toProps: Record<string, number | string> = {};
 

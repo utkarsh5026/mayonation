@@ -114,6 +114,10 @@ export class TransformHandler {
     return structuredClone(this.transformState);
   }
 
+  markDirty(): void {
+    this.isDirty = true;
+  }
+
   /**
    * Enhanced reset with cleanup
    */

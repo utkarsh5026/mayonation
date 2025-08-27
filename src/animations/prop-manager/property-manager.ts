@@ -54,6 +54,11 @@ export class PropertyManager {
     });
   }
 
+  markDirty(): void {
+    this.transformHandler.markDirty();
+    this.styleAnimator.markAllDirty();
+  }
+
   /**
    * Parses a raw input into a normalized AnimationValue for a given property.
    * Delegates to the appropriate handler based on property type.

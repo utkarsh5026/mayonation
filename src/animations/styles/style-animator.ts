@@ -141,6 +141,12 @@ export class StyleAnimator {
     return this.currentValue(property);
   }
 
+  markAllDirty(): void {
+    this.propertyCache.forEach((state) => {
+      state.isDirty = true;
+    });
+  }
+
   /**
    * Parses a CSS string into a normalized AnimationValue for a property.
    */
