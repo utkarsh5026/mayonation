@@ -11,40 +11,39 @@ import type {
   TransformState,
   TransformAxis,
   TransformPropertyName,
-  TransformCache,
 } from "./types";
 import { safeOperation, throwIf } from "@/utils/error";
 import { TransformParser } from "./transform-parser";
 import { clamp } from "@/utils/math";
 
 /**
- * Enhanced TransformHandler with better performance and error handling
+ * TransformHandler with better performance and error handling
  */
 export class TransformHandler {
   private transformState: TransformState;
-  private hasStateChanges: boolean = false;
-  private transformCache: TransformCache = {
-    transformString: "",
-    hash: "",
-    isValid: false,
-  };
   private readonly element: HTMLElement;
   private readonly supportedProperties: Set<string>;
   private readonly parser: TransformParser;
+
+  private isDirty: boolean = true;
+  private lastComputedTransform: string = "";
 
   constructor(el: HTMLElement) {
     this.element = el;
     this.supportedProperties = new Set(TRANSFORM_PROPERTIES.keys());
     this.transformState = this.createInitialState();
     this.parser = new TransformParser();
-    this.parseInitialTransforms(el);
+    this.syncFromDOM();
   }
 
   /**
    * Enhanced current value getter with validation
    */
-  getCurrentTransform(property: TransformPropertyName): NumericValue {
+  currentValue(property: TransformPropertyName): NumericValue {
     this.validateProp(property);
+    if (this.isDirty) {
+      this.syncFromDOM();
+    }
 
     const [stateKey, axis] = this.parser.parseTransformProperty(property);
     const transform = this.transformState[stateKey];
@@ -119,41 +118,33 @@ export class TransformHandler {
    * Enhanced reset with cleanup
    */
   reset(): void {
-    this.transformState = this.createInitialState();
-    this.transformCache = {
-      transformString: "",
-      hash: "",
-      isValid: false,
-    };
-    this.hasStateChanges = true;
-
-    const transform = this.computeTransform();
-    this.element.style.transform = transform || "";
+    this.element.style.transform = "";
+    this.element.offsetHeight; // Trigger reflow
+    this.isDirty = true;
+    this.syncFromDOM();
   }
 
   /**
    * Enhanced compute transform with caching
    */
   computeTransform(): string {
-    if (!this.hasStateChanges && this.transformCache.isValid) {
-      return this.transformCache.transformString;
+    if (!this.isDirty) {
+      return this.lastComputedTransform;
     }
 
     const newHash = this.generateStateHash();
-    if (newHash === this.transformCache.hash && this.transformCache.isValid) {
-      return this.transformCache.transformString;
+    if (newHash === this.lastComputedTransform) {
+      return this.lastComputedTransform;
     }
 
     const transformString = this.generateTransformString();
-
-    this.transformCache = {
-      transformString,
-      hash: newHash,
-      isValid: true,
-    };
-
-    this.hasStateChanges = false;
+    this.lastComputedTransform = transformString;
     return transformString;
+  }
+
+  getRecommendedFromValue(property: TransformPropertyName): NumericValue {
+    this.syncFromDOM();
+    return this.currentValue(property);
   }
 
   static isTransformProperty(
@@ -172,29 +163,6 @@ export class TransformHandler {
       scale: { x: 1, y: 1, z: 1 },
       skew: { x: 0, y: 0 },
     };
-  }
-
-  /**
-   * Enhanced initial transform parsing with better error handling
-   */
-  private parseInitialTransforms(element: HTMLElement): void {
-    safeOperation(() => {
-      const computedStyle = window.getComputedStyle(element);
-      const transform = computedStyle.transform;
-
-      if (
-        transform &&
-        transform !== "none" &&
-        transform !== "matrix(1, 0, 0, 1, 0, 0)"
-      ) {
-        if (transform.startsWith("matrix")) {
-          const matrix = new DOMMatrix(transform);
-          this.transformState = decomposeMatrix(matrix);
-        } else {
-          this.parseTransformFunctions(transform);
-        }
-      }
-    }, "Failed to parse initial transforms");
   }
 
   /**
@@ -241,8 +209,6 @@ export class TransformHandler {
         (transform as any)[currentAxis] = value.value;
       }
     });
-
-    this.invalidateCache();
   }
 
   private validateProp(property: string) {
@@ -250,14 +216,6 @@ export class TransformHandler {
       !this.supportedProperties.has(property),
       `Unsupported property: ${property}`
     );
-  }
-
-  /**
-   * Invalidate transform cache
-   */
-  private invalidateCache(): void {
-    this.hasStateChanges = true;
-    this.transformCache.isValid = false;
   }
 
   /**
@@ -304,5 +262,65 @@ export class TransformHandler {
     }
 
     return transforms.join(" ");
+  }
+
+  /**
+   * ✅ NEW: Core responsibility - sync internal state with DOM reality
+   * This is called:
+   * - On construction
+   * - After reset()
+   * - When state is marked dirty
+   * - Before providing current values (if needed)
+   */
+  private syncFromDOM(): void {
+    safeOperation(
+      () => {
+        const { transform } = window.getComputedStyle(this.element);
+
+        if (transform !== this.lastComputedTransform) {
+          this.lastComputedTransform = transform;
+
+          if (transform === "none" || !transform) {
+            // Element has no transform - use defaults
+            this.transformState = this.createDefaultState();
+          } else this.parseTransformFromDOM(transform);
+        }
+
+        this.isDirty = false;
+      },
+      "Failed to sync transform state from DOM",
+      null,
+      () => {
+        this.transformState = this.createDefaultState();
+        this.isDirty = false;
+      }
+    );
+  }
+
+  private parseTransformFromDOM(transformString: string): void {
+    try {
+      if (transformString.startsWith("matrix")) {
+        const matrix = new DOMMatrix(transformString);
+        this.transformState = decomposeMatrix(matrix);
+        return;
+      }
+
+      this.parseTransformFunctions(transformString);
+    } catch (error) {
+      console.warn("Failed to parse transform, using defaults:", error);
+      this.transformState = this.createDefaultState();
+    }
+  }
+
+  /**
+   * ✅ PROPER: Default transform state (browser defaults)
+   */
+  private createDefaultState(): TransformState {
+    return {
+      translate: { x: 0, y: 0, z: 0 },
+      rotate: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+      skew: { x: 0, y: 0 },
+    };
   }
 }
