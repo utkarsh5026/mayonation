@@ -1,10 +1,10 @@
 export { Mayonation, type MayonationConfig } from "./api";
-export { Timeline } from "./timeline";
+export { Timeline, Position } from "./timeline";
 export type { ElementLike } from "./utils/dom";
 
 export * from "./core/ease-fns";
 import { Mayonation, MayonationConfig } from "./api";
-import { Timeline } from "./timeline";
+import { Timeline, Position } from "./timeline";
 import { ElementLike } from "./utils/dom";
 
 /**
