@@ -39,6 +39,30 @@ export class KeyframesBuilder {
   }
 
   /**
+   * Only sync "from" values, don't rebuild structure
+   */
+  syncFromDOM(): void {
+    this.elements.forEach((_, elementIndex) => {
+      const keyframes = this.resolvedKeyframes.get(elementIndex);
+      if (!keyframes || keyframes.length === 0) return;
+
+      const firstKeyframe = keyframes[0]; // The "from" keyframe
+      const propManager = this.elementManager.getPropertyManager(elementIndex);
+      if (!propManager) return;
+      propManager.markDirty();
+
+      Object.keys(firstKeyframe.properties).forEach((property) => {
+        if (this.config.from[property] !== undefined) return;
+        if (!PropertyManager.isAnimatable(property)) return;
+
+        const freshValue = propManager.getRecommendedFromValue(property);
+        firstKeyframe.properties[property] =
+          this.serializeAnimationValue(freshValue);
+      });
+    });
+  }
+
+  /**
    * Precompute per-element keyframes from:
    * - explicit config.keyframes, or
    * - array/function-based props (expanded to keyframes), or
