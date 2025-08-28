@@ -164,7 +164,6 @@ export class PropertyManager {
     PropValidator.validateProperty(prop);
     if (this.cache.isValid(prop)) {
       const cached = this.cache.get(prop);
-      console.log(`📋 Cache hit for ${prop}:`, cached?.value);
       return cached!.value;
     }
 

@@ -167,15 +167,6 @@ export class PropertyAnimator {
         toParsed,
         progress
       );
-
-      console.log(
-        "Resolved ",
-        prop,
-        fromParsed,
-        toParsed,
-        interpolated,
-        progress
-      );
       propertyManager.updateProperty(prop as AnimatableProperty, interpolated);
     }
   }
