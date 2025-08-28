@@ -39,7 +39,6 @@ export class PropertyCache {
   }
 
   clear(): void {
-    console.log("🧹 Clearing property cache");
     this.cache.clear();
   }
 
