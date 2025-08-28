@@ -7,7 +7,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { mayo, timeline } from "mayonation";
+import { mayo, timeline, Position } from "mayonation";
 import { examples } from "./examples";
 import Prism from "prismjs";
 import "prismjs/themes/prism-tomorrow.css";
@@ -20,7 +20,7 @@ const ExamplesSection: React.FC = () => {
 
   // Track active animations and timeouts for cleanup
   const activeAnimationsRef = useRef<
-    Array<{ stop?: () => void; reset?: () => void }>
+    Array<{ stop?: () => void; reset?: () => void; pause?: () => void }>
   >([]);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -40,7 +40,7 @@ const ExamplesSection: React.FC = () => {
 
     // Stop all active animations
     activeAnimationsRef.current.forEach((animation) => {
-      if (animation.stop) animation.stop();
+      if (animation.pause) animation.pause();
       if (animation.reset) animation.reset();
     });
     activeAnimationsRef.current = [];
@@ -61,6 +61,8 @@ const ExamplesSection: React.FC = () => {
       const htmlItem = item as HTMLElement;
       htmlItem.style.transform = "";
       htmlItem.style.opacity = "";
+      htmlItem.style.backgroundColor = "";
+      htmlItem.style.borderRadius = "";
       htmlItem.style.transition = "";
       htmlItem.style.transitionDelay = "";
     });
@@ -108,23 +110,34 @@ const ExamplesSection: React.FC = () => {
         animationInstance.play();
         break;
 
-      case "colorMorphing":
-        animationInstance = mayo({
-          target,
-          duration: 2000,
-          to: {
-            backgroundColor: "#FF6B9D",
-            borderRadius: "50%",
-            scale: 1.2,
-          },
-          ease: "easeInOut",
-        });
+      case "orchestratedElements":
+        animationInstance = timeline()
+          .add(target, {
+            to: { scale: 0.8, rotateZ: -45 },
+            duration: 600,
+          })
+          .add(`${target} .stagger-item`, {
+            to: { translateY: -30, rotateZ: 180 },
+            duration: 800,
+            stagger: 100,
+            position: { before: 400 },
+          })
+          .add(target, {
+            to: { translateX: 60, backgroundColor: "#10B981" },
+            duration: 700,
+            position: { before: 200 },
+          })
+          .add(`${target} .stagger-item`, {
+            to: { scale: 1.2, rotateZ: 360 },
+            duration: 500,
+            stagger: 80,
+          });
+
         activeAnimationsRef.current.push(animationInstance);
         animationInstance.play();
         break;
 
       case "staggerWave":
-        // For stagger wave, we'll use mayo with stagger instead of manual CSS transitions
         animationInstance = mayo({
           target: `${target} .stagger-item`,
           duration: 1000,
@@ -140,55 +153,164 @@ const ExamplesSection: React.FC = () => {
         animationInstance.play();
         break;
 
-      case "keyframePath":
-        animationInstance = mayo({
-          target,
-          duration: 3000,
-          keyframes: [
-            { offset: 0, translateX: 0, translateY: 0, scale: 1 },
-            { offset: 0.25, translateX: 100, translateY: -50, scale: 0.8 },
-            { offset: 0.5, translateX: 50, translateY: -100, scale: 1.2 },
-            { offset: 0.75, translateX: -50, translateY: -50, scale: 0.9 },
-            { offset: 1, translateX: 0, translateY: 0, scale: 1 },
-          ],
-          ease: "easeIn",
+      case "sequentialReveals": {
+        element.style.opacity = "0";
+        const staggerItems = element.querySelectorAll(".stagger-item");
+        staggerItems.forEach((item) => {
+          (item as HTMLElement).style.opacity = "0";
         });
-        activeAnimationsRef.current.push(animationInstance);
-        animationInstance.play();
-        break;
 
-      case "elasticBounce":
-        animationInstance = mayo({
-          target,
-          duration: 2000,
-          to: {
-            translateX: 120,
-            scale: 1.4,
-            rotateZ: 360,
-          },
-          ease: "easeInOutCubic",
-        });
-        activeAnimationsRef.current.push(animationInstance);
-        animationInstance.play();
-        break;
-
-      case "chainSequence":
         animationInstance = timeline()
           .add(target, {
-            to: { scale: 1.3, rotateZ: 90 },
-            duration: 500,
+            label: "mainStart",
+            from: { opacity: 0, scale: 0 },
+            to: { opacity: 1, scale: 1.2 },
+            duration: 800,
+            ease: "easeOut",
           })
-          .add(
-            target,
-            {
-              to: { translateX: 80, backgroundColor: "#10B981" },
-              duration: 800,
-            },
-            "+=100"
-          )
-          .add(target, {
-            to: { rotateZ: 270, borderRadius: "50%" },
+          .add(`${target} .stagger-item`, {
+            from: { translateY: 50, opacity: 0 },
+            to: { translateY: 0, opacity: 1 },
             duration: 600,
+            stagger: 120,
+            ease: "easeOutCubic",
+            position: Position.with("mainStart", 200),
+          })
+          .add(target, {
+            to: { rotateZ: 360, borderRadius: "50%" },
+            duration: 1000,
+            ease: "easeInOutQuad",
+            position: { before: 800 },
+          });
+
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
+        break;
+      }
+
+      case "complexChoreography":
+        animationInstance = timeline()
+          .add(target, {
+            to: { scale: 0.7, opacity: 0.8 },
+            duration: 1000,
+          })
+          .add(target, {
+            to: { translateX: -40, rotateZ: -90 },
+            duration: 1800,
+            ease: "easeInOut",
+          })
+          .add(`${target} .stagger-item`, {
+            to: { scale: 0.8, translateY: -20 },
+            duration: 1600,
+            stagger: 100,
+            ease: "easeInOut",
+            position: { before: 800 },
+          })
+          .add(target, {
+            to: {
+              translateX: 40,
+              translateY: -30,
+              scale: 1.3,
+              rotateZ: 180,
+              backgroundColor: "#8B5CF6",
+            },
+            duration: 1200,
+            ease: "easeOut",
+            position: { after: 200 },
+          })
+          .add(`${target} .stagger-item`, {
+            to: { translateY: 0, scale: 1.1, rotateZ: 360 },
+            duration: 1800,
+            stagger: 80,
+            ease: "easeOut",
+            position: { before: 600 },
+          });
+
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
+        break;
+
+      case "morphingSequence":
+        animationInstance = timeline()
+          .add(target, {
+            to: {
+              backgroundColor: "#FF6B9D",
+              borderRadius: "25%",
+              scale: 1.4,
+              translateX: 80,
+            },
+            duration: 1800,
+            ease: "easeInOut",
+          })
+          .add(target, {
+            to: {
+              rotateZ: 45,
+              translateX: 30,
+              backgroundColor: "#06D6A0",
+            },
+            duration: 1700,
+          })
+          .add(target, {
+            to: {
+              borderRadius: "50px",
+              scale: 1.9,
+              rotateZ: 100,
+              backgroundColor: "#F59E0B",
+            },
+            duration: 2000,
+            ease: "easeIn",
+          })
+          .add(target, {
+            to: {
+              translateX: 0,
+              scale: 1,
+              borderRadius: "12px",
+              backgroundColor: "#3B82F6",
+            },
+            duration: 2000,
+            ease: "easeInOutCubic",
+            position: { after: 200 },
+          });
+
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
+        break;
+
+      case "enhancedChainSequence":
+        animationInstance = timeline()
+          .add(target, {
+            label: "firstMove",
+            to: { scale: 1.3, translateY: 100 },
+            duration: 1500,
+            ease: "easeOutBack",
+          })
+          .add(target, {
+            to: { translateX: 80 },
+            duration: 1000,
+            ease: "easeInOutQuad",
+          })
+          .add(target, {
+            to: { rotateZ: 20 },
+            duration: 1600,
+            ease: "easeOut",
+          })
+          .add(target, {
+            to: {
+              translateY: -40,
+              scale: 0.9,
+            },
+            duration: 1700,
+          })
+          .add(target, {
+            to: {
+              translateX: 0,
+              translateY: 0,
+              scale: 1,
+              rotateZ: 360,
+              borderRadius: "12px",
+            },
+            duration: 1800,
+            ease: "easeInOut",
           });
 
         activeAnimationsRef.current.push(animationInstance);
@@ -212,7 +334,53 @@ const ExamplesSection: React.FC = () => {
         animationInstance.play();
         break;
 
-      case "springPhysics": {
+      case "timelineSync":
+        animationInstance = timeline()
+          .add(target, {
+            label: "sync-start",
+            to: { translateX: -60, scale: 0.8 },
+            duration: 1000,
+          })
+          .add(`${target} .stagger-item:nth-child(1)`, {
+            to: { translateY: -50, rotateZ: 180 },
+            duration: 800,
+            position: Position.percent(10),
+          })
+          .add(`${target} .stagger-item:nth-child(3)`, {
+            to: { translateY: -30, rotateZ: -90 },
+            duration: 600,
+            position: Position.percent(25),
+          })
+          .add(`${target} .stagger-item:nth-child(5)`, {
+            to: { translateY: -40, rotateZ: 90 },
+            duration: 700,
+            position: Position.percent(40),
+          })
+          .add(target, {
+            to: {
+              translateX: 60,
+              scale: 1.2,
+              rotateZ: 180,
+            },
+            duration: 900,
+            position: Position.percent(60),
+          })
+          .add(`${target} .stagger-item`, {
+            to: {
+              translateY: 0,
+              rotateZ: 360,
+              scale: 1.1,
+            },
+            duration: 800,
+            stagger: 100,
+            position: Position.percent(80),
+          });
+
+        activeAnimationsRef.current.push(animationInstance);
+        animationInstance.play();
+        break;
+
+      case "springPhysicsChain": {
         // Create a custom easing function for spring physics
         const springEasing = (t: number) => {
           const c4 = (2 * Math.PI) / 3;
@@ -223,29 +391,63 @@ const ExamplesSection: React.FC = () => {
             : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
         };
 
-        animationInstance = mayo({
-          target,
-          duration: 2500,
-          to: {
-            translateX: 100,
-            translateY: -60,
-            rotateZ: 180,
-            scale: 1.2,
-          },
-          ease: springEasing,
-        });
+        animationInstance = timeline()
+          .add(target, {
+            to: {
+              scale: 1.4,
+              rotateZ: 45,
+            },
+            duration: 1200,
+            ease: springEasing,
+          })
+          .add(target, {
+            to: {
+              translateX: 80,
+              rotateZ: 180,
+            },
+            duration: 1500,
+            ease: springEasing,
+            position: { before: 600 },
+          })
+          .add(target, {
+            to: {
+              translateY: -60,
+              scale: 0.9,
+              backgroundColor: "#059669",
+            },
+            duration: 1800,
+            ease: springEasing,
+            position: { before: 900 },
+          })
+          .add(target, {
+            to: {
+              translateX: 0,
+              translateY: 0,
+              scale: 1,
+              rotateZ: 360,
+              borderRadius: "50%",
+            },
+            duration: 2000,
+            ease: springEasing,
+          });
+
         activeAnimationsRef.current.push(animationInstance);
         animationInstance.play();
         break;
       }
+
+      default:
+        console.warn(`Unknown demo type: ${demoType}`);
+        break;
     }
 
     // Set up cleanup after animation completes
+    const cleanupDelay = demoType === "pulseEffect" ? 8000 : 16000;
     cleanupTimeoutRef.current = setTimeout(() => {
       resetElement(element);
       setIsPlaying(false);
       cleanupAnimations();
-    }, 4000);
+    }, cleanupDelay);
 
     return cleanupTimeoutRef.current;
   };
@@ -295,26 +497,33 @@ const ExamplesSection: React.FC = () => {
   }, []);
 
   const renderDemoElement = () => {
-    switch (currentDemo.demo) {
-      case "staggerWave":
-        return (
-          <div id={`demo-element-${currentExample}`} className="flex space-x-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="stagger-item w-4 h-16 bg-emerald-500 rounded-lg"
-              />
-            ))}
-          </div>
-        );
-      default:
-        return (
-          <div
-            id={`demo-element-${currentExample}`}
-            className={`w-20 h-20 bg-gradient-to-br ${currentDemo.gradient} rounded-xl shadow-lg`}
-          />
-        );
+    const needsStaggerItems = [
+      "staggerWave",
+      "orchestratedElements",
+      "sequentialReveals",
+      "complexChoreography",
+      "timelineSync",
+    ];
+
+    if (needsStaggerItems.includes(currentDemo.demo)) {
+      return (
+        <div id={`demo-element-${currentExample}`} className="flex space-x-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="stagger-item w-4 h-16 bg-emerald-500 rounded-lg"
+            />
+          ))}
+        </div>
+      );
     }
+
+    return (
+      <div
+        id={`demo-element-${currentExample}`}
+        className={`w-20 h-20 bg-gradient-to-br ${currentDemo.gradient} rounded-xl shadow-lg`}
+      />
+    );
   };
 
   return (
@@ -375,7 +584,7 @@ const ExamplesSection: React.FC = () => {
         {/* Main Example Display */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
           {/* Code Side */}
-          <div className="flex flex-col justify-between min-h-[600px]">
+          <div className="flex flex-col justify-between max-h-[600px] overflow-hidden">
             {/* Header Section */}
             <div className="space-y-6">
               <div className="space-y-4">
