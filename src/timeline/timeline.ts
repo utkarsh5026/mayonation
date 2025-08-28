@@ -306,7 +306,8 @@ export class Timeline {
 
       if (!item.hasStarted && currentTime >= item.startTime) {
         item.hasStarted = true;
-        item.animator.start();
+        console.log("Animatioon Started for item", item);
+        item.animator.start(true);
       }
 
       if (currentTime >= item.endTime) {
