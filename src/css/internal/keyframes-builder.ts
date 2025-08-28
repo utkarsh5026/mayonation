@@ -10,7 +10,7 @@ import {
   NumericValue,
   resolveEaseFn,
 } from "@/core";
-import { AnimatableProperty, PropertyManager } from "@/animations/prop-manager";
+import { PropertyManager } from "@/animations/prop-manager";
 import { convertColorValueToCssString } from "@/utils/color";
 import { ElementManager } from "./element-manager";
 import { throwIf } from "@/utils/error";
@@ -201,7 +201,6 @@ export class KeyframesBuilder {
    */
   private prepareKeyframesFromFromTo(elementIndex: number) {
     const propertyManager = this.getPropMgr(elementIndex);
-
     const { from, to } = this.config;
     const element = this.elements[elementIndex];
     const allAnimatedProps = new Set([
@@ -213,26 +212,6 @@ export class KeyframesBuilder {
     const fromProps: Record<string, number | string> = {};
     const toProps: Record<string, number | string> = {};
 
-    const handleFrom = (prop: AnimatableProperty) => {
-      if (from[prop] !== undefined) {
-        const resolved = this.resolveValue(from[prop], elementIndex, element);
-        fromProps[prop] = Array.isArray(resolved) ? resolved[0] : resolved;
-        return;
-      }
-
-      if (to[prop] !== undefined) {
-        const currentVal = propertyManager.getRecommendedFromValue(prop);
-        fromProps[prop] = this.serializeAnimationValue(currentVal);
-      }
-    };
-
-    const handleTo = (prop: AnimatableProperty) => {
-      if (to[prop] !== undefined) {
-        const resolved = this.resolveValue(to[prop], elementIndex, element);
-        toProps[prop] = Array.isArray(resolved) ? resolved[0] : resolved;
-      }
-    };
-
     allAnimatedProps.forEach((prop) => {
       if (
         prop === "offset" ||
@@ -241,20 +220,34 @@ export class KeyframesBuilder {
       )
         return;
 
-      handleFrom(prop);
-      handleTo(prop);
+      const fromVal = from[prop];
+      const toVal = to[prop];
+
+      if (fromVal !== undefined) {
+        const resolved = this.resolveValue(fromVal, elementIndex, element);
+        fromProps[prop] = Array.isArray(resolved) ? resolved[0] : resolved;
+      } else if (toVal !== undefined) {
+        const currentVal = propertyManager.getRecommendedFromValue(prop);
+        fromProps[prop] = this.serializeAnimationValue(currentVal);
+      }
+
+      if (toVal !== undefined) {
+        const resolved = this.resolveValue(toVal, elementIndex, element);
+        toProps[prop] = Array.isArray(resolved) ? resolved[0] : resolved;
+      }
     });
 
-    const keyframes: ProcessedKeyframe[] = [
+    const easing = resolveEaseFn(this.config.ease);
+    const keyframes = [
       {
         offset: 0,
         properties: fromProps,
-        easing: resolveEaseFn(this.config.ease),
+        easing,
       },
       {
         offset: 1,
         properties: toProps,
-        easing: resolveEaseFn(this.config.ease),
+        easing,
       },
     ];
 
