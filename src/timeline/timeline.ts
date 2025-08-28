@@ -57,18 +57,19 @@ export interface TimelineAddOptions {
   stagger?: number;
 }
 
+interface TimelineItem {
+  animator: CSSAnimator;
+  startTime: number;
+  endTime: number;
+  label?: string;
+  hasStarted: boolean;
+}
 /**
  * Orchestrates multiple CSSAnimator instances on a shared timeline.
  * Use play/pause/resume/seek/reset to control playback.
  */
 export class Timeline {
-  private items: Array<{
-    animator: CSSAnimator;
-    startTime: number;
-    endTime: number;
-    label?: string;
-    hasStarted: boolean;
-  }> = [];
+  private items: Array<TimelineItem> = [];
 
   private engine: AnimationEngine | null = null;
   private totalDuration: number = 0;
@@ -314,11 +315,23 @@ export class Timeline {
       }
 
       if (item.hasStarted) {
-        const localProgress =
-          (currentTime - item.startTime) / (item.endTime - item.startTime);
-        item.animator.update(clampProgress(localProgress));
+        const progress = this.getItemProgress(item, currentTime);
+        item.animator.update(progress);
       }
     });
+  }
+
+  /**
+   * Calculates the progress of a timeline item based on the current time.
+   *
+   * @param item - The timeline item containing the start and end times.
+   * @param currentTime - The current time to calculate the progress against.
+   * @returns The progress of the item as a number between 0 and 1, clamped to ensure it stays within this range.
+   */
+  private getItemProgress(item: TimelineItem, currentTime: number): number {
+    const { startTime, endTime } = item;
+    const dur = endTime - startTime;
+    return clampProgress((currentTime - startTime) / dur);
   }
 
   /**
