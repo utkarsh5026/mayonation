@@ -16,9 +16,6 @@ import { safeOperation, throwIf } from "@/utils/error";
 import { TransformParser } from "./transform-parser";
 import { clamp } from "@/utils/math";
 
-/**
- * TransformHandler with better performance and error handling
- */
 export class TransformHandler {
   private transformState: TransformState;
   private readonly element: HTMLElement;
@@ -28,6 +25,10 @@ export class TransformHandler {
   private isDirty: boolean = true;
   private lastComputedTransform: string = "";
 
+  /**
+   * Create a handler for a specific element.
+   * @param el Target HTMLElement whose transform will be read/updated.
+   */
   constructor(el: HTMLElement) {
     this.element = el;
     this.supportedProperties = new Set(TRANSFORM_PROPERTIES.keys());
@@ -37,7 +38,14 @@ export class TransformHandler {
   }
 
   /**
-   * Enhanced current value getter with validation
+   * Get the current value of a transform property from the element.
+   *
+   * Ensures internal state is synced from the DOM if needed and returns a value
+   * with the correct unit for that property.
+   *
+   * @param property Transform property name (e.g., "translateX", "rotateZ", "scaleY").
+   * @returns NumericValue representing the current value and unit.
+   * @throws If the property is unsupported or axis is invalid for the property.
    */
   currentValue(property: TransformPropertyName): NumericValue {
     this.validateProp(property);
@@ -58,13 +66,38 @@ export class TransformHandler {
     return createValue.numeric(value, unit);
   }
 
+  /**
+   * Parse a user-provided value (number or string) into a normalized NumericValue.
+   *
+   * Examples:
+   * - parse("translateX", "20px") -> { value: 20, unit: "px" }
+   * - parse("rotateZ", 45)        -> { value: 45, unit: "deg" }
+   *
+   * @param property Transform property name.
+   * @param value A number (assumes default unit for the property) or a unit string.
+   * @returns Normalized NumericValue.
+   * @throws If the property is unsupported or the value cannot be parsed.
+   */
   parse(property: TransformPropertyName, value: number | string): NumericValue {
     this.validateProp(property);
     return this.parser.parse(this.supportedProperties, property, value);
   }
 
   /**
-   * Enhanced interpolation with validation
+   * Interpolate between two values for a specific property.
+   *
+   * Behavior:
+   * - Clamps progress to [0, 1].
+   * - Validates that units match.
+   * - Uses shortest-path interpolation for rotations.
+   * - Uses multiplicative-safe interpolation for scale.
+   *
+   * @param prop Transform property name.
+   * @param from Starting value (unit must match "to").
+   * @param to Ending value (unit must match "from").
+   * @param progress A number between 0 and 1 (values are clamped).
+   * @returns Interpolated NumericValue.
+   * @throws If units do not match or property is unsupported.
    */
   interpolate(
     prop: TransformPropertyName,
@@ -92,7 +125,13 @@ export class TransformHandler {
   }
 
   /**
-   * Batch updates for better performance
+   * Apply multiple transform property updates to the internal state.
+   *
+   * Notes:
+   * - Does not mutate the DOM automatically. Call computeTransform() and
+   *   assign the result to element.style.transform to apply.
+   *
+   * @param updates Map of property -> NumericValue to set.
    */
   updateTransforms(updates: Map<TransformPropertyName, NumericValue>): void {
     updates.forEach((value, property) => {
@@ -101,25 +140,40 @@ export class TransformHandler {
   }
 
   /**
-   * Single transform update
+   * Update a single transform property in the internal state.
+   *
+   * Notes:
+   * - Negative scale values are clamped to 0 (with a console warning).
+   * - Does not mutate the DOM automatically. Use computeTransform() to get the string.
+   *
+   * @param property Transform property name.
+   * @param value Normalized NumericValue for that property.
    */
   updateTransform(property: TransformPropertyName, value: NumericValue): void {
     this.updateTransformState(property, value);
   }
 
   /**
-   * Get current transform state (read-only)
+   * Snapshot of the current internal transform state.
+   *
+   * Returns a deep clone to prevent accidental mutation.
+   * @returns Read-only TransformState clone.
    */
   getTransformState(): Readonly<TransformState> {
     return structuredClone(this.transformState);
   }
 
+  /**
+   * Mark the internal state as dirty so the next read will re-sync from the DOM.
+   */
   markDirty(): void {
     this.isDirty = true;
   }
 
   /**
-   * Enhanced reset with cleanup
+   * Reset the element's inline transform, force a reflow, and resync state.
+   *
+   * Use this to clear local overrides and reflect the browser's default transform.
    */
   reset(): void {
     this.element.style.transform = "";
@@ -129,28 +183,36 @@ export class TransformHandler {
   }
 
   /**
-   * Enhanced compute transform with caching
+   * Compose the current internal transform state into a CSS transform string.
+   *
+   * Also caches the last computed string to aid sync decisions.
+   *
+   * @returns CSS transform string (e.g., "translate3d(... ) rotateZ(... ) scale3d(... )").
    */
   computeTransform(): string {
-    if (!this.isDirty) {
-      return this.lastComputedTransform;
-    }
-
-    const newHash = this.generateStateHash();
-    if (newHash === this.lastComputedTransform) {
-      return this.lastComputedTransform;
-    }
-
     const transformString = this.generateTransformString();
     this.lastComputedTransform = transformString;
     return transformString;
   }
 
+  /**
+   * Convenience helper that returns a safe "from" value for animating a property.
+   *
+   * Ensures the internal state reflects the DOM and returns currentValue(property).
+   *
+   * @param property Transform property name.
+   * @returns NumericValue appropriate as the animation's starting point.
+   */
   getRecommendedFromValue(property: TransformPropertyName): NumericValue {
     this.syncFromDOM();
     return this.currentValue(property);
   }
 
+  /**
+   * Type guard to check if a string is a supported transform property name.
+   * @param property String to test.
+   * @returns True if supported.
+   */
   static isTransformProperty(
     property: string
   ): property is TransformPropertyName {
@@ -158,7 +220,8 @@ export class TransformHandler {
   }
 
   /**
-   * Creates initial transform state with proper defaults
+   * Create the initial transform state with standard browser defaults.
+   * @returns Fresh TransformState.
    */
   private createInitialState(): TransformState {
     return {
@@ -170,7 +233,9 @@ export class TransformHandler {
   }
 
   /**
-   * Parse individual transform functions from transform string
+   * Parse individual transform functions from a transform string and apply to state.
+   * Supports functions like translateX, translate3d, rotateZ, scale, skew, etc.
+   * @param transform Raw CSS transform string (functional syntax).
    */
   private parseTransformFunctions(transform: string): void {
     const transformRegex = /(\w+)\(([^)]+)\)/g;
@@ -189,7 +254,15 @@ export class TransformHandler {
   }
 
   /**
-   * Enhanced state update with validation
+   * Update the internal transform state for a given property.
+   *
+   * Special handling:
+   * - Scale values < 0 are clamped to 0 with a warning.
+   * - Shorthand properties ("translate", "scale") apply to both x and y axes.
+   *
+   * @param property Transform property name.
+   * @param value Normalized NumericValue for that property.
+   * @throws If the property is unsupported.
    */
   private updateTransformState(
     property: TransformPropertyName,
@@ -215,6 +288,11 @@ export class TransformHandler {
     });
   }
 
+  /**
+   * Ensure the property is supported or throw.
+   * @param property Transform property string.
+   * @throws If unsupported.
+   */
   private validateProp(property: string) {
     throwIf(
       !this.supportedProperties.has(property),
@@ -223,22 +301,23 @@ export class TransformHandler {
   }
 
   /**
-   * Check if property affects multiple axes
+   * Whether the property is a 2D shorthand that targets multiple axes.
+   * @param property Property name ("translate" or "scale").
+   * @returns True if it updates multiple axes.
    */
   private isShorthandProperty(property: string): boolean {
     return property === "translate" || property === "scale";
   }
 
   /**
-   * Generate hash for caching
-   */
-  private generateStateHash(): string {
-    const { translate, rotate, scale, skew } = this.transformState;
-    return `${translate.x},${translate.y},${translate.z}|${rotate.x},${rotate.y},${rotate.z}|${scale.x},${scale.y},${scale.z}|${skew.x},${skew.y}`;
-  }
-
-  /**
-   * Enhanced transform string generation with proper CSS order
+   * Build a CSS transform string in a stable, browser-friendly order:
+   * - translate3d
+   * - rotateZ, rotateY, rotateX (ZYX)
+   * - scale3d
+   * - skew
+   *
+   * Only non-default components are emitted.
+   * @returns CSS transform string.
    */
   private generateTransformString(): string {
     const { translate, rotate, scale, skew } = this.transformState;
@@ -269,12 +348,13 @@ export class TransformHandler {
   }
 
   /**
-   * ✅ NEW: Core responsibility - sync internal state with DOM reality
-   * This is called:
-   * - On construction
-   * - After reset()
-   * - When state is marked dirty
-   * - Before providing current values (if needed)
+   * Sync internal state from the element's computed style.
+   *
+   * Tries to:
+   * 1) Detect unchanged transforms to avoid rework.
+   * 2) Parse matrix(...) via DOMMatrix decomposition when present.
+   * 3) Parse functional syntax when available.
+   * Falls back to defaults on error.
    */
   private syncFromDOM(): void {
     safeOperation(
@@ -301,6 +381,10 @@ export class TransformHandler {
     );
   }
 
+  /**
+   * Parse and apply a computed transform string to the internal state.
+   * @param transformString Computed style transform string.
+   */
   private parseTransformFromDOM(transformString: string): void {
     try {
       if (transformString.startsWith("matrix")) {
@@ -317,7 +401,8 @@ export class TransformHandler {
   }
 
   /**
-   * ✅ PROPER: Default transform state (browser defaults)
+   * Create default transform state reflecting browser defaults.
+   * @returns Default TransformState.
    */
   private createDefaultState(): TransformState {
     return {
