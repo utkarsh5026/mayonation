@@ -63,6 +63,7 @@ interface TimelineItem {
   endTime: number;
   label?: string;
   hasStarted: boolean;
+  hasCompleted: boolean;
 }
 /**
  * Orchestrates multiple CSSAnimator instances on a shared timeline.
@@ -115,6 +116,7 @@ export class Timeline {
       endTime,
       label: options.label,
       hasStarted: false,
+      hasCompleted: false,
     });
 
     console.log(this.items);
@@ -308,8 +310,9 @@ export class Timeline {
       }
 
       if (currentTime >= item.endTime) {
-        if (item.hasStarted) {
+        if (item.hasStarted && !item.hasCompleted) {
           item.animator.update(1);
+          item.hasCompleted = true;
         }
         return;
       }
