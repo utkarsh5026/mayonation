@@ -1,10 +1,4 @@
-import {
-  isNumericValue,
-  NumericValue,
-  type AnimationValue,
-  isRGBColor,
-  isHSLColor,
-} from "@/core";
+import { isNumericValue, NumericValue, type AnimationValue } from "@/core";
 import { StyleAnimator, CSSPropertyName } from "../styles";
 import { TransformHandler, TransformPropertyName } from "../transform";
 import { safeOperation, throwIf } from "@/utils/error";
@@ -236,12 +230,8 @@ export class PropertyManager {
    * @internal
    */
   private applyTransformToDom(): void {
-    const hasTransformChanges = Array.from(this.cache.getAll().values()).some(
-      (state) => state.hasTransformChanges
-    );
-
-    if (hasTransformChanges) {
-      const transformString = this.transformHandler.computeTransform();
+    const transformString = this.transformHandler.computeTransform();
+    if (transformString && transformString !== "") {
       this.element.style.transform = transformString;
     }
   }
@@ -368,14 +358,15 @@ export class PropertyManager {
         const transformUpdates = new Map(this.pendingTransformUpdates);
         this.transformHandler.updateTransforms(transformUpdates);
         this.pendingTransformUpdates.clear();
+
+        const transformString = this.transformHandler.computeTransform();
+        this.element.style.transform = transformString;
       }
 
       this.pendingCSSUpdates.forEach((value, property) => {
         this.styleAnimator.applyAnimatedPropertyValue(property, value);
       });
       this.pendingCSSUpdates.clear();
-
-      this.applyTransformToDom();
     } catch (error) {
       console.error("Error flushing pending updates:", error);
     }
