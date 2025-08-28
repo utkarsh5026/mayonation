@@ -6,28 +6,61 @@ import { clamp } from "@/utils/math";
 import { Position, type TimelinePos } from "./position";
 import { clampProgress } from "@/utils/progress";
 
+/**
+ * Options for adding a single animation to a Timeline.
+ */
 export interface TimelineAddOptions {
   /**
    * Optional label for this animation (for referencing)
+   * Use with positions like { with: "intro", offset: 200 }.
    */
   label?: string;
 
   /**
-   * Where to position this animation
+   * Where to position this animation.
+   * Accepts:
+   * - number (absolute ms)
+   * - "start" | "end"
+   * - Position instance (e.g., Position.after(200))
+   * - Object: { at }, { after }, { before }, { percent }, { with, offset? }
    */
   position?: TimelinePos;
 
   /**
-   * Animation configuration
+   * Total duration in milliseconds (defaults to 1000).
    */
   duration?: number;
+
+  /**
+   * Easing function for the animation.
+   */
   ease?: EaseFunction;
+
+  /**
+   * Starting CSS properties (if omitted, current computed state is used).
+   */
   from?: AnimationProperties;
+
+  /**
+   * Ending CSS properties.
+   */
   to?: AnimationProperties;
+
+  /**
+   * Explicit keyframes (overrides from/to if provided).
+   */
   keyframes?: AnimationKeyframe[];
+
+  /**
+   * Optional per-target delay (ms) for multi-target/staggered animations.
+   */
   stagger?: number;
 }
 
+/**
+ * Orchestrates multiple CSSAnimator instances on a shared timeline.
+ * Use play/pause/resume/seek/reset to control playback.
+ */
 export class Timeline {
   private items: Array<{
     animator: CSSAnimator;
@@ -42,8 +75,20 @@ export class Timeline {
   private lastEndTime: number = 0;
   private labels: Map<string, number> = new Map();
 
+  /**
+   * Create a Timeline.
+   * @param options.loop If true, restarts after reaching the end.
+   */
   constructor(private options: { loop?: boolean } = {}) {}
 
+  /**
+   * Add an animation to the timeline.
+   * Computes its start time, builds a CSSAnimator, and updates total duration.
+   *
+   * @param target Element or ElementLike to animate.
+   * @param options See TimelineAddOptions.
+   * @returns this
+   */
   add(target: ElementLike, options: TimelineAddOptions): Timeline {
     const position = this.resolvePosition(options.position);
     const animator = new CSSAnimator({
@@ -79,6 +124,15 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Convenience: animate TO the given properties.
+   *
+   * @param target Element or ElementLike.
+   * @param properties Ending CSS properties.
+   * @param duration Milliseconds (default 1000).
+   * @param position Where to place this item (see TimelinePos).
+   * @returns this
+   */
   to(
     target: ElementLike,
     properties: AnimationProperties,
@@ -92,6 +146,15 @@ export class Timeline {
     });
   }
 
+  /**
+   * Convenience: animate FROM the given properties.
+   *
+   * @param target Element or ElementLike.
+   * @param properties Starting CSS properties.
+   * @param duration Milliseconds (default 1000).
+   * @param position Where to place this item (see TimelinePos).
+   * @returns this
+   */
   from(
     target: ElementLike,
     properties: AnimationProperties,
@@ -106,7 +169,10 @@ export class Timeline {
   }
 
   /**
-   * Add a delay/pause to the timeline
+   * Insert a pause after the last scheduled end.
+   *
+   * @param milliseconds Gap length in ms.
+   * @returns this
    */
   delay(milliseconds: number): Timeline {
     this.lastEndTime += milliseconds;
@@ -114,6 +180,11 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Start playing from the current position.
+   * No-op if already playing.
+   * @returns this
+   */
   play(): Timeline {
     if (this.engine?.isPlaying) return this;
 
@@ -121,7 +192,7 @@ export class Timeline {
       duration: this.totalDuration,
       loop: this.options.loop,
       onStart: () => {
-        // Timeline starts, but individual animations start when their time comes
+        // Timeline starts, individual items fire at their own start times.
       },
       onUpdate: (progress: number) => {
         this.updateAllItems(progress * this.totalDuration);
@@ -139,16 +210,30 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Pause playback (if playing).
+   * @returns this
+   */
   pause(): Timeline {
     this.engine?.pause();
     return this;
   }
 
+  /**
+   * Resume playback (if paused).
+   * @returns this
+   */
   resume(): Timeline {
     this.engine?.play();
     return this;
   }
 
+  /**
+   * Jump to an absolute time on the timeline and update all items.
+   *
+   * @param time Milliseconds from start (clamped to [0, totalDuration]).
+   * @returns this
+   */
   seek(time: number): Timeline {
     const clampedTime = clamp(time, 0, this.totalDuration);
 
@@ -165,6 +250,10 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Reset timeline and all animations to their initial states.
+   * @returns this
+   */
   reset(): Timeline {
     this.engine?.reset();
     this.items.forEach((item) => {
@@ -174,6 +263,13 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Schedule multiple animations to start together as a group.
+   * The first uses the current end; others are pinned to that same start.
+   *
+   * @param animations Array of { target, options } (without position).
+   * @returns this
+   */
   group(
     animations: Array<{
       target: ElementLike;
@@ -192,6 +288,13 @@ export class Timeline {
     return this;
   }
 
+  /**
+   * Drive all scheduled items to a given global time.
+   * Starts items at their startTime, updates active items with local progress,
+   * and finalizes items that have passed endTime.
+   *
+   * @param currentTime Global time (ms).
+   */
   private updateAllItems(currentTime: number): void {
     this.items.forEach((item) => {
       if (currentTime < item.startTime) {
@@ -218,10 +321,15 @@ export class Timeline {
     });
   }
 
+  /**
+   * Resolve a TimelinePos into an absolute time in ms.
+   *
+   * @param position Timeline position or undefined (defaults to lastEndTime).
+   * @returns Absolute time in milliseconds.
+   */
   private resolvePosition(position?: TimelinePos): number {
     if (!position) return this.lastEndTime;
 
-    // Handle Position class
     if (position instanceof Position) {
       return position._resolve({
         currentEnd: this.lastEndTime,
@@ -231,22 +339,26 @@ export class Timeline {
       });
     }
 
-    // Handle number
     if (typeof position === "number") {
       return position;
     }
 
-    // Handle string literals
     if (position === "start") return 0;
     if (position === "end") return this.lastEndTime;
 
     if (typeof position === "object") {
-      if ("at" in position) return position.at;
-      if ("after" in position) return this.lastEndTime + position.after;
-      if ("before" in position)
+      if ("at" in position) {
+        return position.at;
+      }
+      if ("after" in position) {
+        return this.lastEndTime + position.after;
+      }
+      if ("before" in position) {
         return Math.max(0, this.lastEndTime - position.before);
-      if ("percent" in position)
+      }
+      if ("percent" in position) {
         return (position.percent / 100) * this.totalDuration;
+      }
       if ("with" in position) {
         const labelTime = this.labels.get(position.with) ?? 0;
         return labelTime + (position.offset ?? 0);
