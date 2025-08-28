@@ -6,6 +6,7 @@ import {
   StaggerManager,
 } from "./internal";
 import { ElementResolver } from "@/utils/dom";
+import { PropertyManager } from "@/animations";
 
 export class CSSAnimator {
   private readonly config: Required<CSSAnimationConfig>;
@@ -14,14 +15,14 @@ export class CSSAnimator {
   private readonly staggerManager: StaggerManager;
 
   private readonly elements: HTMLElement[];
-  private readonly resolvedKeyframes: Map<number, ProcessedKeyframe[]>;
+  private kfBuilder: KeyframesBuilder;
+  private hasStarted: boolean = false;
 
   /**
    * Prepare managers, resolve targets, and precompute keyframes.
    * @param config Animation configuration.
    */
   constructor(config: CSSAnimationConfig) {
-    this.resolvedKeyframes = new Map();
     this.config = {
       ...config,
       delay: config.delay ?? 0,
@@ -43,13 +44,13 @@ export class CSSAnimator {
       this.config.duration
     );
 
-    const kfBuilder = new KeyframesBuilder(
+    this.kfBuilder = new KeyframesBuilder(
       this.elements,
       this.elementManager,
       this.config
     );
-    kfBuilder.prepareAllKeyframes();
-    this.resolvedKeyframes = kfBuilder.getFinalKeyframes();
+
+    this.kfBuilder.prepareAllKeyframes();
   }
 
   /**
@@ -119,7 +120,15 @@ export class CSSAnimator {
   /**
    * Invoke onStart hook.
    */
-  start(): void {
+  start(syncWithDOM?: boolean): void {
+    if (this.hasStarted) return;
+    this.hasStarted = true;
+
+    if (syncWithDOM) {
+      this.kfBuilder.syncFromDOM();
+    }
+
+    console.log("Keyframes ", this.kfBuilder.getFinalKeyframes());
     this.config.onStart();
   }
 
@@ -140,7 +149,7 @@ export class CSSAnimator {
     const propMgr = this.elementManager.getPropertyManager(elementIndex);
     if (!propMgr) return;
 
-    const keyframes = this.resolvedKeyframes.get(elementIndex);
+    const keyframes = this.kfBuilder.getFinalKeyframes().get(elementIndex);
     if (!keyframes) return;
 
     const animator = new PropertyAnimator(keyframes);
