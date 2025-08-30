@@ -15,6 +15,7 @@ import type {
 import { safeOperation, throwIf } from "@/utils/error";
 import { TransformParser } from "./transform-parser";
 import { clamp } from "@/utils/math";
+import { GPUAccelerator } from "@/core/gpu";
 
 export class TransformHandler {
   private transformState: TransformState;
@@ -190,7 +191,9 @@ export class TransformHandler {
    * @returns CSS transform string (e.g., "translate3d(... ) rotateZ(... ) scale3d(... )").
    */
   computeTransform(): string {
-    const transformString = this.generateTransformString();
+    const transformString = GPUAccelerator.optimizeTransformString(
+      this.generateTransformString()
+    );
     this.lastComputedTransform = transformString;
     return transformString;
   }
