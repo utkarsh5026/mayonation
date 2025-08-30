@@ -1,4 +1,4 @@
-import type { CSSAnimationConfig, ProcessedKeyframe } from "./types";
+import type { CSSAnimationConfig } from "./types";
 import {
   ElementManager,
   KeyframesBuilder,
@@ -6,7 +6,7 @@ import {
   StaggerManager,
 } from "./internal";
 import { ElementResolver } from "@/utils/dom";
-import { PropertyManager } from "@/animations";
+import { GPUAccelerator } from "@/core/gpu";
 
 export class CSSAnimator {
   private readonly config: Required<CSSAnimationConfig>;
@@ -51,6 +51,12 @@ export class CSSAnimator {
     );
 
     this.kfBuilder.prepareAllKeyframes();
+    this.elements.forEach((el) => {
+      GPUAccelerator.prepareElementForAcceleration(
+        el,
+        Object.keys(this.config.to)
+      );
+    });
   }
 
   /**
